@@ -1,25 +1,39 @@
 import os
 import sys
+import json
 import torch
+
+os.environ["HF_HOME"] = r"D:\.cache\huggingface"
+
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
 
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
-print("=" * 70)
-print("🚀 CHATBOT: FINE-TUNED MODEL (ĐÃ HUẤN LUYỆN VỚI CODEBASE)")
-print("Model ID: Qwen/Qwen2.5-Coder-1.5B-Instruct + QLoRA Adapter")
-print("=" * 70)
-
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 lora_dir = os.path.join(base_dir, "outputs", "course-management-lora-adapter")
-base_model_id = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
 if not os.path.exists(lora_dir):
     print(f"\n[LỖI]: Chưa tìm thấy thư mục LoRA Adapter tại '{lora_dir}'.")
     print("Vui lòng chạy 'python train_local.py' ở thư mục gốc trước!")
     sys.exit(1)
+
+# Tự động phát hiện Base Model đã dùng trong adapter
+base_model_id = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+adapter_config_path = os.path.join(lora_dir, "adapter_config.json")
+if os.path.exists(adapter_config_path):
+    try:
+        with open(adapter_config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            base_model_id = cfg.get("base_model_name_or_path", base_model_id)
+    except Exception:
+        pass
+
+print("=" * 70)
+print("🚀 CHATBOT: FINE-TUNED MODEL (ĐÃ HUẤN LUYỆN VỚI CODEBASE)")
+print(f"Base Model: {base_model_id} + QLoRA Adapter")
+print("=" * 70)
 
 has_cuda = torch.cuda.is_available()
 print(f"Thiết bị: {'CUDA (GPU: ' + torch.cuda.get_device_name(0) + ')' if has_cuda else 'CPU'}")
@@ -72,7 +86,7 @@ while True:
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=512,
+                max_new_tokens=2048,
                 temperature=0.7,
                 top_p=0.9,
                 repetition_penalty=1.1

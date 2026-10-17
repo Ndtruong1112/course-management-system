@@ -17,18 +17,23 @@ def add_sample(system_prompt, instruction, output):
         ]
     })
 
-system_role = "Bạn là trợ lý AI chuyên gia, nắm vững 100% kiến trúc, mã nguồn và nghiệp vụ của dự án Course Management System (Hệ thống Quản lý Khóa học, Học viên & Tài liệu MinIO)."
+system_role = (
+    "Bạn là kỹ sư AI phần mềm cao cấp, chuyên gia kiến trúc Spring Boot 3, Java 21, Hibernate Generic DAO và JPA. "
+    "Khi người dùng yêu cầu tạo dự án mới, viết chức năng hoặc giải quyết bài toán tương tự, bạn LUÔN LUÔN VIẾT MÃ NGUỒN JAVA ĐẦY ĐỦ, "
+    "tuân thủ chính xác các quy chuẩn: Entity JPA, Generic DAO kế thừa HibernatePaginationSortingDao, Service, DTO và REST Controller."
+)
 
 # ==============================================================================
-# 1. QUÉT CHỌN LỌC CÁC TỆP MÃ NGUỒN CHÍNH (LOẠI BỎ FILE RÁC & FILE QUÁ DÀI)
+# 1. QUÉT CHỌN LỌC CÁC TỆP MÃ NGUỒN CORE
 # ==============================================================================
-ignore_dirs = {'.git', '.idea', '.mvn', 'target', '__pycache__', 'outputs'}
+ignore_dirs = {'.git', '.idea', '.mvn', 'target', '__pycache__', 'outputs', 'chatbot'}
 ignore_files = {
     'dataset.jsonl',
     'Course Management System - Full APIs.postman_collection.json',
     'pom.xml',
     'mvnw',
-    'mvnw.cmd'
+    'mvnw.cmd',
+    'eval_report.json'
 }
 
 scanned_files = {}
@@ -36,247 +41,306 @@ scanned_files = {}
 for root, dirs, files in os.walk(base_dir):
     dirs[:] = [d for d in dirs if d not in ignore_dirs]
     for file in files:
-        if file in ignore_files or file.endswith(('.py', '.jsonl')):
+        if file in ignore_files or file.endswith(('.py', '.jsonl', '.bat')):
             continue
-        if file.endswith(('.java', '.properties', '.sql', '.md')):
+        if file.endswith(('.java', '.properties')):
             full_path = os.path.join(root, file)
             rel_path = os.path.relpath(full_path, base_dir).replace('\\', '/')
             try:
                 with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
-                    # Chỉ lấy các file có ý nghĩa kiến trúc
                     if len(content.strip()) > 0:
                         scanned_files[rel_path] = content
             except Exception:
                 pass
 
-print(f"-> Đã quét chọn lọc được {len(scanned_files)} tệp mã nguồn cốt lõi.")
+print(f"-> Đã quét {len(scanned_files)} tệp mã nguồn Java & Config.")
 
 # ==============================================================================
-# 2. SINH CÂU HỎI - TRẢ LỜI ĐA DẠNG (PARAPHRASED) VỀ TỪNG TỆP MÃ NGUỒN
+# 2. HỌC NỘI DUNG CODE THẬT (CODE KÈM GIẢI THÍCH KỸ THUẬT RÕ RÀNG)
 # ==============================================================================
 for rel_path, content in scanned_files.items():
     filename = os.path.basename(rel_path)
     clean_name = os.path.splitext(filename)[0]
 
-    # Cắt gọn nội dung code tối đa 2000 ký tự để không làm tràn cửa sổ context 1024 token
-    truncated_content = content[:2200]
-    if len(content) > 2200:
-        truncated_content += "\n// ... [Nội dung mã nguồn được rút gọn để tối ưu hóa context] ..."
+    truncated_content = content[:2000]
+    if len(content) > 2000:
+        truncated_content += "\n// ... [Các phương thức còn lại tiếp tục theo logic tương tự] ..."
 
-    # Mẫu 1: Vai trò và trách nhiệm trong kiến trúc
     add_sample(
         system_role,
-        f"Lớp `{filename}` nằm ở đường dẫn `{rel_path}` đảm nhiệm vai trò gì trong kiến trúc Course Management System?",
-        f"Trong kiến trúc dự án Course Management System, `{filename}` (`{rel_path}`) đóng vai trò quan trọng:\n\n"
+        f"Hãy cung cấp mã nguồn và giải thích các thành phần kỹ thuật chính trong file `{filename}` (`{rel_path}`).",
+        f"Dưới đây là mã nguồn của `{filename}` trong hệ thống:\n\n"
         f"```java\n{truncated_content}\n```\n\n"
-        f"File này chịu trách nhiệm cụ thể trong tầng kiến trúc tương ứng, đảm bảo tuân thủ thiết kế phân lớp và các nguyên lý của dự án."
-    )
-
-    # Mẫu 2: Diễn đạt tự nhiên khác (Paraphrase)
-    add_sample(
-        system_role,
-        f"Hãy giải thích chi tiết cấu trúc và chức năng của `{clean_name}` trong dự án.",
-        f"`{clean_name}` thuộc đường dẫn `{rel_path}`. Thành phần này được thiết kế như sau:\n\n"
-        f"```java\n{truncated_content}\n```\n\n"
-        f"Nó tương tác chặt chẽ với các thành phần khác trong hệ thống để xử lý nghiệp vụ theo chuẩn Enterprise."
+        f"**Phân tích kỹ thuật của {clean_name}:**\n"
+        f"- Nằm trong package: `{os.path.dirname(rel_path)}`.\n"
+        f"- Sử dụng các annotation chuẩn Java 21 / Spring Boot / Jakarta Persistence để đảm bảo an toàn kiểu dữ liệu và tối ưu hiệu năng."
     )
 
 # ==============================================================================
-# 3. SINH TRI THỨC NGHIỆP VỤ & KIẾN TRÚC CỐT LÕI (CHUYÊN SÂU)
+# 3. CÁC BÀI TẬP CODE GENERATION THỰC CHIẾN (CHUYỂN GIAO KIẾN TRÚC SANG DỰ ÁN MỚI)
 # ==============================================================================
 
-# A. Tổng quan & Package Structure
-add_sample(
-    system_role,
-    "Dự án Course Management System gồm những module và package chính nào?",
-    "Dự án Course Management System được xây dựng trên nền Spring Boot 3 / Java 21 với package gốc là `com.mkii.coursemanagementsystem` gồm 9 gói chức năng chính:\n"
-    "1. `common`: Chứa hằng số API (`ApiConstants`), thông điệp hệ thống (`MessageConstants`), và xử lý ngoại lệ toàn cục (`GlobalExceptionHandler`, `ResourceNotFoundException`, `BadRequestException`).\n"
-    "2. `config`: Cấu hình hệ thống, đặc biệt là `MinioConfig` kết nối đến MinIO S3 Object Storage.\n"
-    "3. `entity`: Các thực thể JPA gồm `Course` (khóa học), `Student` (học viên), và `Document` (tài liệu đính kèm).\n"
-    "4. `dto`: Data Transfer Objects gồm `CourseRequestDTO`, `CourseResponseDTO`, `StudentRequestDTO`, `StudentResponseDTO`.\n"
-    "5. `hibernateDao` & `dao`: Kiến trúc Generic DAO pattern với `IGenericDao`, `IPaginationSortingDao`, `HibernateGenericDao`, `HibernatePaginationSortingDao` và các DAO cụ thể: `CourseDaoImpl`, `StudentDaoImpl`, `DocumentDaoImpl`.\n"
-    "6. `repository`: Các interface Spring Data JPA repository: `CourseRepository`, `StudentRepository`, `DocumentRepository`.\n"
-    "7. `service`: Tầng nghiệp vụ xử lý logic gồm `CourseService`, `StudentService`, `DocumentService`, `MinioStorageService` và các implementation tương ứng.\n"
-    "8. `rest`: Tầng REST API controller giao tiếp với client gồm `CourseRest`, `StudentRest`, `DocumentRest` và các implementation tương ứng.\n"
-    "9. `specification`: Hỗ trợ tìm kiếm động nhiều điều kiện qua JPA Specification: `GenericSpecification`, `GenericSpecificationsBuilder`, `SearchCriteria`."
-)
-
-# B. Kiến trúc Hibernate Generic DAO
-add_sample(
-    system_role,
-    "Kiến trúc Hibernate Generic DAO trong Course Management System được tổ chức và hoạt động như thế nào?",
-    "Hệ thống Generic DAO trong dự án được tổ chức phân cấp bài bản theo chuẩn Enterprise:\n"
-    "1. `IGenericDao<Pk, Entity>`: Interface định nghĩa các thao tác CRUD cơ bản: `create`, `update`, `deleteByPk`, `get`, `findAll`, `count`, `findByField`.\n"
-    "2. `IPaginationSortingDao<Pk, Entity>`: Interface mở rộng từ `IGenericDao`, bổ sung khả năng phân trang (`findAll(Pageable)`), sắp xếp (`findAll(Sort)`), và truy vấn tùy biến HQL (`findByHql`).\n"
-    "3. `HibernateGenericDao<Pk, Entity>`: Lớp trừu tượng cài đặt `IGenericDao`, kế thừa từ `SimpleJpaRepository<Entity, Pk>` của Spring Data JPA và giữ tham chiếu tới `EntityManager`.\n"
-    "4. `HibernatePaginationSortingDao<Pk, Entity>`: Kế thừa `HibernateGenericDao`, hiện thực hóa các phương thức phân trang, sắp xếp và HQL động qua `TypedQuery`.\n"
-    "5. Các DAO nghiệp vụ (`CourseDaoImpl`, `StudentDaoImpl`, `DocumentDaoImpl`): Kế thừa `HibernatePaginationSortingDao` và bổ sung các hàm truy vấn đặc thù của từng thực thể."
-)
+# ----------------- DỰ ÁN 1: QUẢN LÝ THUÊ PHÒNG KHÁCH SẠN (HOTEL MANAGEMENT) -----------------
 
 add_sample(
     system_role,
-    "Tại sao dự án Course Management System lại dùng kết hợp Generic DAO với Spring Data JPA?",
-    "Dự án kết hợp cả hai mô hình để tận dụng thế mạnh tối đa:\n"
-    "- `SimpleJpaRepository` của Spring Data JPA cung cấp sẵn sự ổn định và tối ưu bộ nhớ.\n"
-    "- Lớp `HibernateGenericDao` và `HibernatePaginationSortingDao` bọc ngoài giúp lập trình viên viết các hàm dùng chung (Generic CRUD, HQL động, kiểm tra null tập trung, logging chuẩn hóa) mà không phải viết lặp lại ở từng Repository.\n"
-    "- Giúp kiểm soát trực tiếp `EntityManager` khi cần thực thi các câu lệnh HQL phức tạp hoặc can thiệp sâu vào vòng đời của Hibernate Entity."
-)
-
-# C. Nghiệp vụ Thực thể & Truy vấn Mở rộng
-add_sample(
-    system_role,
-    "Thực thể Course và CourseDaoImpl trong Course Management System được thiết kế như thế nào?",
-    "Thực thể `Course` đại diện cho khóa học trong hệ thống:\n"
-    "- Thuộc tính: `id` (Long, tự tăng), `title` (tiêu đề khóa học, độ dài 255, bắt buộc), `description` (TEXT), `duration` (thời lượng, Integer), `price` (học phí, Double).\n"
-    "- Chỉ mục (Index) DB: `idx_course_title` trên cột `title`, `idx_course_price` trên cột `price` để tối ưu tốc độ tìm kiếm và sắp xếp.\n"
-    "- Lớp `CourseDaoImpl` kế thừa `HibernatePaginationSortingDao<Long, Course>` và implement `ICourseDao`. Nó cung cấp các phương thức mở rộng:\n"
-    "  + `searchByTitle(String keyword)`: Tìm kiếm không phân biệt hoa thường bằng HQL: `SELECT c FROM Course c WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%'))`.\n"
-    "  + `findByPriceRange(Double minPrice, Double maxPrice)`: Lọc theo khoảng giá bằng HQL: `SELECT c FROM Course c WHERE c.price BETWEEN :minPrice AND :maxPrice`.\n"
-    "  + `getByTitle(String title)`: Lấy khóa học theo tiêu đề chính xác.\n"
-    "  + `getAll()`: Lấy toàn bộ danh sách sắp xếp giảm dần theo ID."
-)
-
-add_sample(
-    system_role,
-    "Thực thể Student và StudentDaoImpl được thiết kế như thế nào?",
-    "Thực thể `Student` biểu diễn thông tin học viên:\n"
-    "- Thuộc tính: `id` (Long, tự tăng), `fullName` (họ tên, bắt buộc, tối đa 150 ký tự), `email` (email duy nhất unique=true, bắt buộc, tối đa 150 ký tự), `phone` (số điện thoại, tối đa 20 ký tự), `address` (địa chỉ, tối đa 255 ký tự).\n"
-    "- Chỉ mục DB: Unique index trên cột `email`, Index trên cột `fullName`.\n"
-    "- Lớp `StudentDaoImpl` kế thừa `HibernatePaginationSortingDao<Long, Student>` và implement `IStudentDao`:\n"
-    "  + `search(String keyword)`: Tìm kiếm học viên theo tên hoặc email bằng HQL: `SELECT s FROM Student s WHERE LOWER(s.fullName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(s.email) LIKE LOWER(CONCAT('%', :kw, '%'))`.\n"
-    "  + `findByEmail(String email)`: Tra cứu chính xác học viên theo địa chỉ email."
-)
-
-# D. Nghiệp vụ Quản lý Tài liệu & MinIO Storage
-add_sample(
-    system_role,
-    "Hệ thống quản lý tài liệu (Document Management) và MinIO trong Course Management System hoạt động như thế nào?",
-    "Hệ thống quản lý tài liệu kết hợp giữa CSDL quan hệ và Object Storage phân tán:\n"
-    "1. **MinIO Object Storage**: Lưu trữ file nhị phân vật lý (PDF, Word, Ảnh...) trong bucket riêng (mặc định tên bucket là `documents`).\n"
-    "2. **MySQL Database**: Bảng `documents` chỉ lưu trữ metadata:\n"
-    "   - `id`: Khóa chính định danh UUID 36 ký tự.\n"
-    "   - `appId` (`APP_DETAIL_FK`): Khóa ngoại logic liên kết tài liệu với một khóa học hoặc một sinh viên cụ thể.\n"
-    "   - `name`: Tên file gốc.\n"
-    "   - `path`: Đường dẫn lưu trữ object trên MinIO bucket.\n"
-    "   - `owner`: Tên người tải lên.\n"
-    "   - `version`: Phiên bản của file (khởi tạo 1.0).\n"
-    "   - `deleted`: Cờ xóa mềm (boolean, mặc định false).\n"
-    "   - `active`: Cờ trạng thái hiệu lực (boolean, mặc định true)."
-)
-
-add_sample(
-    system_role,
-    "Giải thích cơ chế Nâng phiên bản (Versioning) khi upload file trùng tên trong DocumentServiceImpl.",
-    "Trong `DocumentServiceImpl`, khi người dùng upload một file có tên trùng với file đã có trong cùng một hồ sơ (`appId`):\n"
-    "1. Hệ thống gọi `documentDao.getDocumentName(fileName, appId)` để tra cứu bản ghi đang hoạt động (`active = true, deleted = false`).\n"
-    "2. Nếu tìm thấy bản ghi cũ, hệ thống đặt `oldDoc.setActive(false)` và cập nhật lại bằng `documentDao.update(oldDoc)`.\n"
-    "3. Bản ghi mới được gán phiên bản tăng thêm 1 đơn vị: `newDoc.setVersion(oldDoc.getVersion() + 1.0)` với `active = true`.\n"
-    "4. Cả file cũ và file mới đều được lưu trên MinIO, giúp bảo toàn lịch sử thay đổi của tài liệu mà không bị ghi đè mất dữ liệu."
-)
-
-add_sample(
-    system_role,
-    "Giải thích cơ chế Xóa mềm (Soft Delete) trong DocumentServiceImpl.",
-    "Trong phương thức `delete` của `DocumentServiceImpl`:\n"
-    "- Hệ thống tra cứu tài liệu theo ID thông qua `documentDao.findByPk(docId)`.\n"
-    "- Thay vì dùng lệnh `DELETE` xóa vĩnh viễn khỏi CSDL và MinIO, hệ thống chỉ cập nhật thuộc tính: `document.setDeleted(true)` và lưu lại qua `documentDao.update(document)`.\n"
-    "- Lợi ích: Chống mất mát dữ liệu do lỡ tay xóa, phục vụ kiểm toán (audit log) và cho phép khôi phục dữ liệu khi cần."
-)
-
-# E. JPA Dynamic Specification & Criteria API
-add_sample(
-    system_role,
-    "Cách dự án Course Management System triển khai tìm kiếm động bằng JPA Specification như thế nào?",
-    "Dự án sử dụng Specification Pattern kết hợp Jakarta Persistence Criteria API:\n"
-    "1. `SearchCriteria`: Lưu trữ điều kiện lọc gồm 3 thông tin: `key` (tên trường), `operation` (toán tử so sánh: `:`, `>`, `<`), và `value` (giá trị).\n"
-    "2. `GenericSpecification<T>`: Implement interface `org.springframework.data.jpa.domain.Specification<T>`. Hàm `toPredicate(...)` tự động chuyển đổi `SearchCriteria` thành câu điều kiện SQL động:\n"
-    "   - Toán tử `>`: `builder.greaterThanOrEqualTo(...)`\n"
-    "   - Toán tử `<`: `builder.lessThanOrEqualTo(...)`\n"
-    "   - Toán tử `:`: Với chuỗi thực hiện `LIKE %value%`, với kiểu khác thực hiện so sánh bằng `EQUAL`.\n"
-    "3. `GenericSpecificationsBuilder<T>`: Thu thập danh sách các `SearchCriteria` và dùng `Specification.where().and(...)` để gộp nhiều điều kiện lại với nhau."
-)
-
-# ==============================================================================
-# 4. BỔ SUNG CÁC MẪU CODE GENERATION (SINH MÃ NGUỒN MỚI CHUẨN KIẾN TRÚC DỰ ÁN)
-# ==============================================================================
-
-add_sample(
-    system_role,
-    "Hãy viết một lớp DAO mới tên là CategoryDaoImpl để quản lý Entity Category theo chuẩn kiến trúc Hibernate Generic DAO của dự án.",
-    "Dưới đây là cài đặt `CategoryDaoImpl` tuân thủ 100% chuẩn kiến trúc của Course Management System:\n\n"
+    "Dựa vào base code của Course Management System, hãy tạo cho tôi một project mới để quản lý thuê phòng cho một khách sạn.",
+    "Dựa trên kiến trúc của hệ thống hiện tại (sử dụng Spring Boot 3, Java 21, Hibernate Generic DAO và JPA Specification), dưới đây là mã nguồn các thành phần cốt lõi cho **Hệ thống Quản lý Thuê phòng Khách sạn (Hotel Management System)**:\n\n"
+    "### 1. Thực thể Phòng (`Room.java`)\n"
     "```java\n"
-    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
-    "import com.mkii.coursemanagementsystem.dao.ICategoryDao;\n"
-    "import com.mkii.coursemanagementsystem.entity.Category;\n"
-    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "package com.hotel.management.entity;\n\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n\n"
+    "@Entity\n"
+    "@Table(name = \"rooms\", indexes = {\n"
+    "    @Index(name = \"idx_room_number\", columnList = \"room_number\", unique = true),\n"
+    "    @Index(name = \"idx_room_price\", columnList = \"price_per_night\")\n"
+    "})\n"
+    "@Getter\n"
+    "@Setter\n"
+    "@NoArgsConstructor\n"
+    "@AllArgsConstructor\n"
+    "@Builder\n"
+    "@EqualsAndHashCode(onlyExplicitlyIncluded = true)\n"
+    "public class Room {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    @EqualsAndHashCode.Include\n"
+    "    private Long id;\n\n"
+    "    @Column(name = \"room_number\", nullable = false, length = 50)\n"
+    "    private String roomNumber;\n\n"
+    "    @Column(name = \"room_type\", nullable = false, length = 100)\n"
+    "    private String roomType; // SINGLE, DOUBLE, SUITE, VIP\n\n"
+    "    @Column(name = \"price_per_night\", nullable = false)\n"
+    "    private Double pricePerNight;\n\n"
+    "    @Column(nullable = false, length = 50)\n"
+    "    private String status; // AVAILABLE, OCCUPIED, MAINTENANCE\n"
+    "}\n"
+    "```\n\n"
+    "### 2. Thực thể Đơn Đặt Phòng (`Reservation.java`)\n"
+    "```java\n"
+    "package com.hotel.management.entity;\n\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n"
+    "import java.time.LocalDate;\n\n"
+    "@Entity\n"
+    "@Table(name = \"reservations\")\n"
+    "@Getter\n"
+    "@Setter\n"
+    "@NoArgsConstructor\n"
+    "@AllArgsConstructor\n"
+    "@Builder\n"
+    "public class Reservation {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n\n"
+    "    @Column(name = \"customer_name\", nullable = false, length = 150)\n"
+    "    private String customerName;\n\n"
+    "    @Column(name = \"customer_phone\", nullable = false, length = 20)\n"
+    "    private String customerPhone;\n\n"
+    "    @ManyToOne(fetch = FetchType.LAZY)\n"
+    "    @JoinColumn(name = \"room_id\", nullable = false)\n"
+    "    private Room room;\n\n"
+    "    @Column(name = \"check_in_date\", nullable = false)\n"
+    "    private LocalDate checkInDate;\n\n"
+    "    @Column(name = \"check_out_date\", nullable = false)\n"
+    "    private LocalDate checkOutDate;\n\n"
+    "    @Column(name = \"total_price\")\n"
+    "    private Double totalPrice;\n"
+    "}\n"
+    "```\n\n"
+    "### 3. Tầng DAO kế thừa HibernatePaginationSortingDao (`RoomDaoImpl.java`)\n"
+    "```java\n"
+    "package com.hotel.management.dao.impl;\n\n"
+    "import com.hotel.management.dao.IRoomDao;\n"
+    "import com.hotel.management.entity.Room;\n"
+    "import com.hotel.management.hibernateDao.HibernatePaginationSortingDao;\n"
     "import jakarta.persistence.EntityManager;\n"
     "import org.springframework.beans.factory.annotation.Autowired;\n"
     "import org.springframework.stereotype.Repository;\n"
     "import java.util.List;\n\n"
     "@Repository\n"
-    "public class CategoryDaoImpl extends HibernatePaginationSortingDao<Long, Category> implements ICategoryDao {\n\n"
+    "public class RoomDaoImpl extends HibernatePaginationSortingDao<Long, Room> implements IRoomDao {\n"
     "    @Autowired\n"
-    "    public CategoryDaoImpl(EntityManager entityManager) {\n"
-    "        super(Category.class, entityManager);\n"
+    "    public RoomDaoImpl(EntityManager entityManager) {\n"
+    "        super(Room.class, entityManager);\n"
     "    }\n\n"
     "    @Override\n"
-    "    public List<Category> findByName(String name) {\n"
-    "        String hql = \"SELECT c FROM Category c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))\";\n"
-    "        return getEntityManager().createQuery(hql, Category.class)\n"
-    "                .setParameter(\"name\", name)\n"
+    "    public List<Room> findAvailableRooms(String roomType, Double maxPrice) {\n"
+    "        String hql = \"SELECT r FROM Room r WHERE r.status = 'AVAILABLE' \" +\n"
+    "                     \"AND (:roomType IS NULL OR r.roomType = :roomType) \" +\n"
+    "                     \"AND (:maxPrice IS NULL OR r.pricePerNight <= :maxPrice)\";\n"
+    "        return getEntityManager().createQuery(hql, Room.class)\n"
+    "                .setParameter(\"roomType\", roomType)\n"
+    "                .setParameter(\"maxPrice\", maxPrice)\n"
     "                .getResultList();\n"
     "    }\n"
     "}\n"
     "```\n\n"
-    "Lớp trên kế thừa đầy đủ các phương thức CRUD, phân trang và sắp xếp từ `HibernatePaginationSortingDao` và tự quản lý `EntityManager` theo đúng chuẩn dự án."
-)
-
-add_sample(
-    system_role,
-    "Hãy viết phương thức tìm kiếm học viên theo số điện thoại trong StudentDaoImpl bằng HQL.",
-    "Trong `StudentDaoImpl`, ta có thể bổ sung phương thức tìm kiếm học viên theo số điện thoại như sau:\n\n"
+    "### 4. REST Controller Quản lý Phòng (`RoomRestImpl.java`)\n"
     "```java\n"
-    "@Override\n"
-    "public List<Student> findByPhone(String phone) {\n"
-    "    String hql = \"SELECT s FROM Student s WHERE s.phone LIKE CONCAT('%', :phone, '%')\";\n"
-    "    return getEntityManager().createQuery(hql, Student.class)\n"
-    "            .setParameter(\"phone\", phone)\n"
-    "            .getResultList();\n"
-    "}\n"
-    "```\n\n"
-    "Phương thức này sử dụng `getEntityManager()` được cung cấp sẵn từ `HibernateGenericDao` để tạo `TypedQuery` an toàn kiểu dữ liệu."
-)
-
-add_sample(
-    system_role,
-    "Hãy hướng dẫn cách thêm một mã lỗi mới và xử lý ngoại lệ tùy chỉnh trong GlobalExceptionHandler của dự án.",
-    "Để thêm và xử lý một ngoại lệ mới trong Course Management System:\n"
-    "1. Khai báo chuỗi thông báo lỗi trong `MessageConstants`:\n"
-    "```java\n"
-    "public static final String FILE_FORMAT_NOT_SUPPORTED = \"Định dạng file không được hệ thống hỗ trợ.\";\n"
-    "```\n"
-    "2. Tạo ngoại lệ nghiệp vụ tùy chỉnh:\n"
-    "```java\n"
-    "package com.mkii.coursemanagementsystem.common.exception;\n"
-    "public class UnsupportedFileTypeException extends RuntimeException {\n"
-    "    public UnsupportedFileTypeException(String message) {\n"
-    "        super(message);\n"
+    "package com.hotel.management.rest.impl;\n\n"
+    "import com.hotel.management.entity.Room;\n"
+    "import com.hotel.management.service.RoomService;\n"
+    "import org.springframework.beans.factory.annotation.Autowired;\n"
+    "import org.springframework.http.ResponseEntity;\n"
+    "import org.springframework.web.bind.annotation.*;\n"
+    "import java.util.List;\n\n"
+    "@RestController\n"
+    "@RequestMapping(\"/api/rooms\")\n"
+    "public class RoomRestImpl {\n"
+    "    @Autowired\n"
+    "    private RoomService roomService;\n\n"
+    "    @GetMapping(\"/available\")\n"
+    "    public ResponseEntity<List<Room>> getAvailableRooms(\n"
+    "            @RequestParam(required = false) String roomType,\n"
+    "            @RequestParam(required = false) Double maxPrice) {\n"
+    "        return ResponseEntity.ok(roomService.findAvailableRooms(roomType, maxPrice));\n"
     "    }\n"
     "}\n"
-    "```\n"
-    "3. Khai báo handler xử lý tập trung trong `GlobalExceptionHandler`:\n"
+    "```"
+)
+
+add_sample(
+    system_role,
+    "Hãy viết code Java cho Entity Room và RoomDaoImpl của bài toán quản lý khách sạn theo chuẩn kiến trúc DAO của dự án.",
+    "Dưới đây là mã nguồn Java hoàn chỉnh cho `Room.java` và `RoomDaoImpl.java` tuân thủ đúng mô hình Generic DAO của dự án:\n\n"
     "```java\n"
-    "@ExceptionHandler(UnsupportedFileTypeException.class)\n"
-    "public ResponseEntity<ErrorResponse> handleUnsupportedFileTypeException(UnsupportedFileTypeException ex) {\n"
-    "    ErrorResponse error = new ErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), ex.getMessage(), System.currentTimeMillis());\n"
-    "    return new ResponseEntity<>(error, HttpStatus.UNSUPPORTED_MEDIA_TYPE);\n"
+    "// 1. Entity Room.java\n"
+    "package com.hotel.management.entity;\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n\n"
+    "@Entity\n"
+    "@Table(name = \"rooms\")\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class Room {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n"
+    "    private String roomNumber;\n"
+    "    private String roomType;\n"
+    "    private Double pricePerNight;\n"
+    "    private String status;\n"
+    "}\n\n"
+    "// 2. RoomDaoImpl.java kế thừa HibernatePaginationSortingDao\n"
+    "package com.hotel.management.dao.impl;\n"
+    "import com.hotel.management.entity.Room;\n"
+    "import com.hotel.management.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class RoomDaoImpl extends HibernatePaginationSortingDao<Long, Room> {\n"
+    "    public RoomDaoImpl(EntityManager entityManager) {\n"
+    "        super(Room.class, entityManager);\n"
+    "    }\n\n"
+    "    public List<Room> findByStatus(String status) {\n"
+    "        String hql = \"SELECT r FROM Room r WHERE r.status = :status\";\n"
+    "        return getEntityManager().createQuery(hql, Room.class)\n"
+    "                .setParameter(\"status\", status)\n"
+    "                .getResultList();\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+# ----------------- DỰ ÁN 2: QUẢN LÝ THƯ VIỆN SÁCH (LIBRARY MANAGEMENT) -----------------
+
+add_sample(
+    system_role,
+    "Dựa vào kiến trúc Generic DAO của dự án, hãy viết Entity Book và BookDaoImpl cho hệ thống quản lý thư viện.",
+    "Dưới đây là mã nguồn `Book.java` và `BookDaoImpl.java` áp dụng đúng chuẩn Hibernate Generic DAO:\n\n"
+    "```java\n"
+    "package com.library.entity;\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n\n"
+    "@Entity\n"
+    "@Table(name = \"books\", indexes = {@Index(name = \"idx_book_isbn\", columnList = \"isbn\", unique = true)})\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class Book {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n"
+    "    private String title;\n"
+    "    private String author;\n"
+    "    private String isbn;\n"
+    "    private Integer publishYear;\n"
+    "    private Integer quantity;\n"
+    "}\n"
+    "```\n\n"
+    "Lớp DAO `BookDaoImpl.java`:\n"
+    "```java\n"
+    "package com.library.dao.impl;\n"
+    "import com.library.entity.Book;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class BookDaoImpl extends HibernatePaginationSortingDao<Long, Book> {\n"
+    "    public BookDaoImpl(EntityManager entityManager) {\n"
+    "        super(Book.class, entityManager);\n"
+    "    }\n\n"
+    "    public List<Book> searchByAuthor(String author) {\n"
+    "        String hql = \"SELECT b FROM Book b WHERE LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))\";\n"
+    "        return getEntityManager().createQuery(hql, Book.class)\n"
+    "                .setParameter(\"author\", author)\n"
+    "                .getResultList();\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+# ----------------- DỰ ÁN 3: BÁN HÀNG E-COMMERCE (PRODUCT & ORDER) -----------------
+
+add_sample(
+    system_role,
+    "Hãy viết code Java cho Entity Product và ProductDaoImpl kế thừa HibernatePaginationSortingDao.",
+    "Dưới đây là mã nguồn cho `Product.java` và `ProductDaoImpl.java`:\n\n"
+    "```java\n"
+    "package com.ecommerce.entity;\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n\n"
+    "@Entity\n"
+    "@Table(name = \"products\")\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class Product {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n"
+    "    private String name;\n"
+    "    private Double price;\n"
+    "    private Integer stock;\n"
+    "    private String category;\n"
+    "}\n"
+    "```\n\n"
+    "```java\n"
+    "package com.ecommerce.dao.impl;\n"
+    "import com.ecommerce.entity.Product;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class ProductDaoImpl extends HibernatePaginationSortingDao<Long, Product> {\n"
+    "    public ProductDaoImpl(EntityManager entityManager) {\n"
+    "        super(Product.class, entityManager);\n"
+    "    }\n\n"
+    "    public List<Product> findByCategoryAndPrice(String category, Double minPrice, Double maxPrice) {\n"
+    "        String hql = \"SELECT p FROM Product p WHERE p.category = :category AND p.price BETWEEN :minPrice AND :maxPrice\";\n"
+    "        return getEntityManager().createQuery(hql, Product.class)\n"
+    "                .setParameter(\"category\", category)\n"
+    "                .setParameter(\"minPrice\", minPrice)\n"
+    "                .setParameter(\"maxPrice\", maxPrice)\n"
+    "                .getResultList();\n"
+    "    }\n"
     "}\n"
     "```"
 )
 
 # ==============================================================================
-# 5. XUẤT RA FILE DATASET.JSONL
+# 4. XUẤT RA DATASET.JSONL MỚI
 # ==============================================================================
 output_file = os.path.join(base_dir, "dataset.jsonl")
 with open(output_file, "w", encoding="utf-8") as f:
@@ -284,6 +348,6 @@ with open(output_file, "w", encoding="utf-8") as f:
         f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 print(f"\n=======================================================")
-print(f"XUẤT DỮ LIỆU THÀNH CÔNG: {len(dataset)} mẫu câu hỏi - trả lời.")
+print(f"XUẤT DỮ LIỆU MỚI THÀNH CÔNG: {len(dataset)} mẫu.")
 print(f"File lưu tại: {output_file}")
-print(f"=======================================================")
+print("=======================================================")

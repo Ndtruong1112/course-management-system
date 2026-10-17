@@ -1,7 +1,11 @@
 import os
 import sys
 import time
+import json
 import torch
+
+os.environ["HF_HOME"] = r"D:\.cache\huggingface"
+
 from flask import Flask, request, jsonify, render_template_string
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
@@ -16,8 +20,18 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 lora_dir = os.path.join(root_dir, "outputs", "course-management-lora-adapter")
 base_model_id = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
+# Tự động đọc base model từ adapter config nếu có
+adapter_config_path = os.path.join(lora_dir, "adapter_config.json")
+if os.path.exists(adapter_config_path):
+    try:
+        with open(adapter_config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+            base_model_id = cfg.get("base_model_name_or_path", base_model_id)
+    except Exception:
+        pass
+
 print("=" * 70)
-print("KHỞI CHẠY DUAL-CHATBOT WEB UI (BASE vs FINE-TUNED)")
+print(f"KHỞI CHẠY DUAL-CHATBOT WEB UI (BASE: {base_model_id})")
 print("=" * 70)
 
 has_cuda = torch.cuda.is_available()
@@ -71,7 +85,7 @@ def generate_text(prompt, use_adapter=True):
             with model.disable_adapter():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=512,
+                    max_new_tokens=2048,
                     temperature=0.7,
                     top_p=0.9,
                     repetition_penalty=1.1
@@ -79,7 +93,7 @@ def generate_text(prompt, use_adapter=True):
         else:
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=512,
+                max_new_tokens=2048,
                 temperature=0.7,
                 top_p=0.9,
                 repetition_penalty=1.1
