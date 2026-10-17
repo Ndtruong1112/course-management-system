@@ -1,0 +1,1508 @@
+{
+  "info": {
+    "_postman_id": "eefc953c-48f5-4d42-be46-3cb5ba4d7ea3",
+    "name": "Course Management System - Full APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "1. Lấy tất cả khóa học",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Lấy chi tiết khóa học theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Thêm mới khóa học",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lập trình Spring Boot nâng cao\",\n  \"description\": \"Khóa học Backend chuyên sâu với Hibernate DAO\",\n  \"duration\": 60,\n  \"price\": 2000000\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Thêm hàng loạt khóa học (Batch insert - createAll)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"title\": \"Lập trình Microservices với Spring Cloud\",\n    \"description\": \"Kiến trúc phân tán Microservices\",\n    \"duration\": 90,\n    \"price\": 3500000\n  },\n  {\n    \"title\": \"DevOps cho Backend Developer\",\n    \"description\": \"Docker, Kubernetes, CI/CD Pipeline\",\n    \"duration\": 45,\n    \"price\": 2800000\n  }\n]"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses/batch",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "batch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Cập nhật khóa học",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lập trình Spring Boot & ReactJS\",\n  \"description\": \"Khóa học Fullstack chuyên sâu\",\n  \"duration\": 75,\n  \"price\": 2500000\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Xóa khóa học theo ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Tìm kiếm theo tên (Like search qua findByHql)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/search?keyword=Spring",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "Spring"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Lọc theo học phí (qua findByHql)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/filter?minPrice=500000&maxPrice=2500000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "filter"
+              ],
+              "query": [
+                {
+                  "key": "minPrice",
+                  "value": "500000"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "2500000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. TEST DAO: Lấy khóa học theo tiêu đề chính xác (by-title)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/by-title?title=Lập trình Spring Boot nâng cao",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "by-title"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Lập trình Spring Boot nâng cao"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. TEST DAO: Lấy 1 bản ghi theo trường động (by-field)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/by-field?field=title&value=Lập trình Spring Boot nâng cao",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "by-field"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "title"
+                },
+                {
+                  "key": "value",
+                  "value": "Lập trình Spring Boot nâng cao"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11. TEST DAO: Lấy danh sách nhiều bản ghi theo trường động (by-field-list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/by-field-list?field=duration&value=60",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "by-field-list"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "duration"
+                },
+                {
+                  "key": "value",
+                  "value": "60"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12. TEST DAO: Phân trang & Sắp xếp theo trường động (by-field-paged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/by-field-paged?field=duration&value=60&page=0&size=5&sortBy=price&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "by-field-paged"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "duration"
+                },
+                {
+                  "key": "value",
+                  "value": "60"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "price"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13. TEST JPA SPECIFICATION: Tìm kiếm đa điều kiện (search=title:Spring,price>500000)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/spec-search?search=title:Spring,price>500000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "spec-search"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "title:Spring,price>500000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14. SẮP XẾP (Sorting): Lấy tất cả khóa học có sắp xếp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/sorted?sortBy=price&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "sorted"
+              ],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "price"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15. PHÂN TRANG (Pagination & Sorting): Lấy trang khóa học",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/paged?page=0&size=5&sortBy=title&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "paged"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "title"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16. NÂNG CAO: Specification Search kết hợp Sắp xếp (spec-search-sorted)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/spec-search-sorted?search=price>500000&sortBy=price&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "spec-search-sorted"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "price>500000"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "price"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "17. NÂNG CAO: Specification Search + Phân trang + Sắp xếp (spec-search-paged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/spec-search-paged?search=price>500000&page=0&size=5&sortBy=price&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "spec-search-paged"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "price>500000"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "price"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "18. Đếm số lượng khóa học",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/count",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "courses",
+                "count"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "1. Lấy tất cả sinh viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Lấy chi tiết sinh viên theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Thêm mới sinh viên",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"email\": \"nguyenvana@gmail.com\",\n  \"phone\": \"0987654321\",\n  \"address\": \"Hà Nội\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/students",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Thêm hàng loạt sinh viên (Batch insert - createAll)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"fullName\": \"Trần Thị B\",\n    \"email\": \"tranthib@gmail.com\",\n    \"phone\": \"0911223344\",\n    \"address\": \"Hồ Chí Minh\"\n  },\n  {\n    \"fullName\": \"Lê Văn C\",\n    \"email\": \"levanc@gmail.com\",\n    \"phone\": \"0933445566\",\n    \"address\": \"Hà Nội\"\n  }\n]"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/students/batch",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "batch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Cập nhật thông tin sinh viên",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn A (Updated)\",\n  \"email\": \"nguyenvana_new@gmail.com\",\n  \"phone\": \"0912345678\",\n  \"address\": \"Đà Nẵng\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Xóa sinh viên theo ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Tìm kiếm sinh viên theo từ khóa (qua findByHql)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/search?keyword=Nguyen",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "Nguyen"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. TEST DAO: Lấy sinh viên theo email chính xác (by-email)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/by-email?email=nguyenvana@gmail.com",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "by-email"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "nguyenvana@gmail.com"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. TEST DAO: Lấy 1 sinh viên theo trường động (by-field)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/by-field?field=phone&value=0987654321",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "by-field"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "phone"
+                },
+                {
+                  "key": "value",
+                  "value": "0987654321"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. TEST DAO: Lấy danh sách nhiều sinh viên theo trường động (by-field-list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/by-field-list?field=address&value=Hà Nội",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "by-field-list"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "address"
+                },
+                {
+                  "key": "value",
+                  "value": "Hà Nội"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11. TEST DAO: Phân trang & Sắp xếp sinh viên theo trường động (by-field-paged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/by-field-paged?field=address&value=Hà Nội&page=0&size=5&sortBy=fullName&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "by-field-paged"
+              ],
+              "query": [
+                {
+                  "key": "field",
+                  "value": "address"
+                },
+                {
+                  "key": "value",
+                  "value": "Hà Nội"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "fullName"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12. TEST JPA SPECIFICATION: Tìm kiếm đa điều kiện (search=fullName:Nguyen,address:Hà Nội)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/spec-search?search=fullName:Nguyen,address:Hà Nội",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "spec-search"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "fullName:Nguyen,address:Hà Nội"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13. SẮP XẾP (Sorting): Lấy tất cả sinh viên có sắp xếp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/sorted?sortBy=fullName&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "sorted"
+              ],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "fullName"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14. PHÂN TRANG (Pagination & Sorting): Lấy trang sinh viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/paged?page=0&size=5&sortBy=id&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "paged"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "id"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15. NÂNG CAO: Specification Search kết hợp Sắp xếp (spec-search-sorted)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/spec-search-sorted?search=email:gmail&sortBy=fullName&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "spec-search-sorted"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "email:gmail"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "fullName"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "16. NÂNG CAO: Specification Search + Phân trang + Sắp xếp (spec-search-paged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/spec-search-paged?search=email:gmail&page=0&size=5&sortBy=fullName&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "spec-search-paged"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "email:gmail"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "fullName"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "17. Đếm số lượng sinh viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/count",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students",
+                "count"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documents (MinIO Storage)",
+      "item": [
+        {
+          "name": "1. Tạo/Tải lên tài liệu kèm nghiệp vụ (Create Document by appId - POST /create)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "appId",
+                  "value": "APP_COURSE_JAVA_01",
+                  "type": "text",
+                  "description": "Mã nghiệp vụ / công việc cụ thể gắn vào foreign key APP_DETAIL_FK"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "description": "Chọn 1 hoặc nhiều file (PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/documents/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Tải về tài liệu theo Document ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/download/{{docId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "download",
+                "{{docId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Tải về tài liệu theo đường dẫn file MinIO (filePath)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/download?filePath=APP_COURSE_JAVA_01/sample.pdf",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "download"
+              ],
+              "query": [
+                {
+                  "key": "filePath",
+                  "value": "APP_COURSE_JAVA_01/sample.pdf"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Xóa mềm tài liệu qua JSON Body (delete - template Map ID)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"uuid-cua-tai-lieu\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/documents/delete",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "delete"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Xóa mềm tài liệu theo Path ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/{{docId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "{{docId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Lấy chi tiết tài liệu theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/{{docId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "{{docId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7. Lấy danh sách tài liệu theo mã nghiệp vụ (appId - APP_DETAIL_FK)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/app/APP_COURSE_JAVA_01",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "app",
+                "APP_COURSE_JAVA_01"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Lấy tất cả tài liệu đang hoạt động (active)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. Tìm kiếm & Phân trang tài liệu (getDoc: query, lowerLimit, upperLimit, orderBy, orderType, appId)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/search?query=tai_lieu&lowerLimit=0&upperLimit=10&orderBy=creationTime&orderType=desc&appId=APP_COURSE_JAVA_01",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "tai_lieu"
+                },
+                {
+                  "key": "lowerLimit",
+                  "value": "0"
+                },
+                {
+                  "key": "upperLimit",
+                  "value": "10"
+                },
+                {
+                  "key": "orderBy",
+                  "value": "creationTime"
+                },
+                {
+                  "key": "orderType",
+                  "value": "desc"
+                },
+                {
+                  "key": "appId",
+                  "value": "APP_COURSE_JAVA_01"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. Đếm số lượng tài liệu theo điều kiện (getDocCount: query, appId)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/count?query=tai_lieu&appId=APP_COURSE_JAVA_01",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "count"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "tai_lieu"
+                },
+                {
+                  "key": "appId",
+                  "value": "APP_COURSE_JAVA_01"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11. PHÂN TRANG (Pagination & Sorting): Lấy trang tài liệu (findAllPaged kế thừa HibernatePaginationSortingDao)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/paged?page=0&size=10&sortBy=creationTime&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "paged"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "creationTime"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12. SẮP XẾP (Sorting): Lấy tất cả tài liệu có sắp xếp (findAllSorted kế thừa HibernatePaginationSortingDao)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/sorted?sortBy=name&direction=asc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "sorted"
+              ],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "name"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13. PHÂN TRANG THEO APP_ID (findByFieldPaged kế thừa HibernatePaginationSortingDao)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/app/APP_COURSE_JAVA_01/paged?page=0&size=10&sortBy=creationTime&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "app",
+                "APP_COURSE_JAVA_01",
+                "paged"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "creationTime"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "14. NÂNG CAO: Specification Search + Phân trang + Sắp xếp (searchBySpecificationPaged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/documents/spec-search-paged?search=name:tai_lieu&page=0&size=10&sortBy=creationTime&direction=desc",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "documents",
+                "spec-search-paged"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "name:tai_lieu"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "creationTime"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

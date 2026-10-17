@@ -1,0 +1,96 @@
+{
+  "total": 10,
+  "passed": 3,
+  "accuracy_percent": 30.0,
+  "details": [
+    {
+      "id": 1,
+      "category": "Cơ sở dữ liệu & Khóa ngoại Document",
+      "question": "Trong CSDL của Course Management System, bảng documents liên kết với hồ sơ nghiệp vụ qua trường khóa ngoại nào?",
+      "answer": "Trong CSDL (Customer Service Data Language), `documents` liên kết chặt chẽ giữa các thành phần khác trong hệ thống:\n- `documentId` (`int`): Khóa chính định danh của document.\n- `appId` (`int`): Tham chiếu đến `appDetail.appId` chính xác của sinh viên học phí.\n- `docName` (`varchar(255)`): Tên file đính kèm, tùy chỉnh được lưu trên server.\n- `filePath` (`varchar(255)`): Đường dẫn đầy đủ tới file trên ổ đĩa máy chủ.",
+      "passed": true,
+      "matched": [
+        "appid"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Nghiệp vụ Versioning",
+      "question": "Khi upload tài liệu trùng tên trong cùng một hồ sơ, trường nào của bản ghi cũ sẽ bị chuyển về false?",
+      "answer": "Trường `deleted` (khóa học: `isDeleted`, tài liệu: `isDeleted`) của bản ghi cũ sẽ được đặt lại thành `false`.",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 3,
+      "category": "Nghiệp vụ Versioning",
+      "question": "Khi tài liệu bị trùng tên, phiên bản (version) của file mới được tính như thế nào?",
+      "answer": "Tài liệu với cùng tên nhưng phiên bản khác sẽ được ưu tiên: phiên bản cao hơn được áp dụng.",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 4,
+      "category": "Xóa mềm (Soft Delete)",
+      "question": "Chức năng xóa tài liệu trong DocumentServiceImpl làm gì để không bị mất dữ liệu vĩnh viễn?",
+      "answer": "Trong `DocumentServiceImpl`, phương thức `delete` được thiết kế như sau:\n```java\n@Override\npublic ResponseEntity<byte[]> delete(@NotNull @Valid String id) {\n    if (!documentDao.exists(id)) {\n        throw new ResourceNotFoundException(\"Không tìm thấy tài liệu với ID: \" + id);\n    }\n    byte[] documentBytes = documentDao.deleteById(id);\n    return ResponseEntity.ok()\n            .header(HttpHeaders.CONTENT_DISPOSITION, \"attachment; filename=\\\"\" + new String(documentBytes, StandardCharsets.UTF_8) + \"\\\"\")\n            .body(documentBytes);\n}\n```\nPhương thức này đảm bảo tuân thủ thiết kế phân lớp (Liskov Substitution Principle), các nguyên lý của dự án và chuẩn Enterprise.",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 5,
+      "category": "Kiến trúc Lưu trữ MinIO",
+      "question": "File nhị phân vật lý (PDF, DOCX) được lưu ở đâu, còn cơ sở dữ liệu quan hệ lưu cái gì?",
+      "answer": "Dữ liệu PDF, DOCX nằm ở đường dẫn `src/main/resources/static/files/`. Cả hai phần của hệ thống đều quản lý đối tượng `Document` qua cơ chế Hibernate Generic DAO để duy trì chuẩn phân lớp và các nguyên lý của dự án.",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 6,
+      "category": "Kiến trúc Generic DAO",
+      "question": "Lớp DAO cha tổng quát hỗ trợ phân trang và sắp xếp trong dự án có tên là gì?",
+      "answer": "Trong hệ thống Course Management System, lớp `PaginationSortingDaoSupport` thuộc đường dẫn `src/main/java/com/mkii/coursemanagementsystem/dao/PaginationSortingDaoSupport.java`. Thành phần này được thiết kế như sau:\n\n```java\npackage com.mkii.coursemanagementsystem.dao;\n\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Sort;\nimport org.springframework.data.jpa.domain.Specification;\n\nimport java.util.List;\n\n/**\n * Base Data Access Object (DAO) pattern implementation that includes\n * generic paging, sorting, and dynamic specification query support.\n */\npublic abstract class PaginationSortingDao<Pk, Entity> extends SimpleJpaRepository<Entity, Pk> {\n\n    public PaginationSortingDao(Class<Entity> type) {\n        super(type, getEntityManager());\n    }\n\n    // ──────────── Sorting / Paging Methods ────────────\n\n    /** Get a single page of sorted entities, ordered by their natural primary key (ID). */\n    public Page<Entity> findAllSorted(int page, int size, String sortBy) {\n        return findAll(new org.springframework.data.domain.Sort(sortBy != null ? Sort.by(sortBy) : null));\n    }\n\n    /** Get all entities sorted by a specific field name. */\n    public List<Entity> findByFieldSorted",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 7,
+      "category": "Thực thể Course",
+      "question": "Thực thể Course trong Course Management System gồm những thuộc tính chính nào?",
+      "answer": "Thực thể `Course` nằm ở đường dẫn `src/main/java/com/mkii/coursemanagementsystem/entity/Course.java` đảm nhiệm vai trò quan trọng:\n\n```java\npackage com.mkii.coursemanagementsystem.entity;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\n@Entity\n@Table(name = \"courses\", indexes = {\n        @Index(name = \"idx_course_title\", columnList = \"title\"),\n        @Index(name = \"idx_course_price\", columnList = \"price\")\n})\n@Getter\n@Setter\n@ToString\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\n@EqualsAndHashCode(onlyExplicitlyIncluded = true)\npublic class Course {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    @EqualsAndHashCode.Include\n    private Long id;\n\n    @Column(nullable = false, length = 255)\n    private String title;\n\n    @Column(columnDefinition = \"TEXT\")\n    private String description;\n\n    private Integer duration;\n\n    private Double price;\n}\n```\n\nNó tương tác chặt chẽ với các thành phần khác trong hệ thống để xử lý nghiệp vụ theo chuẩn Enterprise.",
+      "passed": true,
+      "matched": [
+        "title",
+        "price",
+        "duration",
+        "description"
+      ]
+    },
+    {
+      "id": 8,
+      "category": "Truy vấn DAO Mở rộng",
+      "question": "Lớp CourseDaoImpl cung cấp những phương thức truy vấn mở rộng cụ thể nào ngoài CRUD cơ bản?",
+      "answer": "Trong CourseDaoImpl, chúng tôi định nghĩa 3 phương thức:\n1. `findByTitle(String title)`: Tìm kiếm khóa học theo tên bằng HQL: `SELECT c FROM Course c WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :title, '%'))`.\n2. `getByPriceRange(Double minPrice, Double maxPrice)`: Lọc danh sách theo khoảng giá bằng HQL: `SELECT c FROM Course c WHERE c.price BETWEEN :minPrice AND :maxPrice`.\n3. `searchByKeyword(String keyword)`: Tìm kiếm toàn bộ thông tin (tên, địa chỉ, email, số điện thoại, địa điểm học viên) bằng HQL: `SELECT new com.mkii.coursemanagementsystem.dto.CourseResponse(d.id, d.title, d.description, d.duration, d.price, d.imageUrl)`.\nDù dùng phương thức nào, Core DAO sẽ xử lý các câu lệnh SQL động được rút gọn và tối ưu hóa để giảm tải và tăng hiệu suất.",
+      "passed": false,
+      "matched": []
+    },
+    {
+      "id": 9,
+      "category": "Thực thể Student & Ràng buộc",
+      "question": "Trong thực thể Student, trường thông tin nào có ràng buộc duy nhất (unique = true)?",
+      "answer": "Trường `email` trong thực thể `Student` có ràng buộc duy nhất với điều kiện:\n```java\n@Unique(index = IndexNameIndexDef.INDEX_NAME_EMAIL_UNIQUE)\n@Column(nullable = false, length = 150)\nprivate String email;\n```\nNó đảm bảo duy nhất qua cả CSDL và các hàm xử lý nghiệp vụ.",
+      "passed": true,
+      "matched": [
+        "email"
+      ]
+    },
+    {
+      "id": 10,
+      "category": "REST Controller API",
+      "question": "Ba tiền tố URL gốc (base endpoints) được định nghĩa trong ApiConstants là những đường dẫn nào?",
+      "answer": "Dù ở đâu cũng phải đảm bảo tuân thủ thiết kế phân lớp và các nguyên lý của dự án.",
+      "passed": false,
+      "matched": []
+    }
+  ]
+}
