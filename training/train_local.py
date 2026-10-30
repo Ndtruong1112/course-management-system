@@ -34,8 +34,10 @@ MODEL_MAP = {
 }
 
 model_id = MODEL_MAP[args.model]
-dataset_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset.jsonl")
-output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(script_dir) if os.path.basename(script_dir) == "training" else script_dir
+dataset_file = os.path.join(script_dir, "dataset.jsonl")
+output_dir = os.path.join(root_dir, "outputs")
 
 print("=" * 70)
 print(f"KHỞI ĐỘNG CHƯƠNG TRÌNH FINE-TUNING VỚI MÔ HÌNH: {model_id}")

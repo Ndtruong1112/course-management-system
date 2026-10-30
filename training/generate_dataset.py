@@ -5,7 +5,8 @@ import sys
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(script_dir) if os.path.basename(script_dir) == "training" else script_dir
 dataset = []
 
 def add_sample(system_prompt, instruction, output):
@@ -342,7 +343,7 @@ add_sample(
 # ==============================================================================
 # 4. XUẤT RA DATASET.JSONL MỚI
 # ==============================================================================
-output_file = os.path.join(base_dir, "dataset.jsonl")
+output_file = os.path.join(script_dir, "dataset.jsonl")
 with open(output_file, "w", encoding="utf-8") as f:
     for item in dataset:
         f.write(json.dumps(item, ensure_ascii=False) + "\n")

@@ -83,8 +83,24 @@ def main():
     parser.add_argument("--interactive", "-i", action="store_true", help="Chế độ chat tương tác trực tiếp với mô hình")
     args = parser.parse_args()
 
-    base_model_id = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-    lora_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs", "course-management-lora-adapter")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(script_dir) if os.path.basename(script_dir) == "training" else script_dir
+    lora_dir = os.path.join(root_dir, "outputs", "course-management-lora-adapter")
+    base_model_id = "Qwen/Qwen2.5-Coder-3B-Instruct"
+
+    # Tự động phát hiện base model từ adapter config
+    adapter_config = os.path.join(lora_dir, "adapter_config.json")
+    if os.path.exists(adapter_config):
+        try:
+            import json
+            with open(adapter_config, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                base_model_id = cfg.get("base_model_name_or_path", base_model_id)
+        except Exception:
+            pass
+
+    sharded_model_path = r"D:\models\Qwen2.5-Coder-3B-Instruct-sharded"
+    model_load_path = sharded_model_path if os.path.exists(sharded_model_path) else base_model_id
 
     print("=" * 70)
     print("KIỂM THỬ MÔ HÌNH SAU KHI FINE-TUNING (COURSE MANAGEMENT SYSTEM)")
@@ -108,14 +124,14 @@ def main():
             bnb_4bit_compute_dtype=torch.float16
         )
         base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_id,
+            model_load_path,
             quantization_config=bnb_config,
             device_map="auto"
         )
     else:
         print("[LƯU Ý]: Chạy trên CPU không hỗ trợ 4-bit BitsAndBytes, đang nạp ở chế độ float32...")
         base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_id,
+            model_load_path,
             torch_dtype=torch.float32,
             device_map="cpu"
         )

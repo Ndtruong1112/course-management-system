@@ -1,3 +1,8 @@
+# Env & Credentials
+.env
+*.env
+distillation/distilled_raw.json
+
 # Maven / Build
 target/
 *.class
@@ -21,6 +26,12 @@ venv/
 .vscode/
 *.iml
 
-# OS
+# OS & Installers
 .DS_Store
 Thumbs.db
+*.exe
+*.zip
+
+# Redundant Training Adapters (Keep main outputs/course-management-lora-adapter)
+outputs/*-3b/
+outputs/*-7b/
