@@ -25,7 +25,7 @@ public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> i
     @Override
     public Course save(Course course) {
         logger.info("Saving Course: {}", course.getTitle());
-        return create(course);
+        return super.save(course);
     }
 
     @Override

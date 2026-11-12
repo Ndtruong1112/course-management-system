@@ -20,7 +20,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_STUDENT_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class StudentRestImpl implements StudentRest {
 
     private static final Logger logger = LoggerFactory.getLogger(StudentRestImpl.class);
@@ -89,9 +88,9 @@ public class StudentRestImpl implements StudentRest {
     }
 
     @Override
-    public ResponseEntity<StudentResponseDTO> getStudentByEmail(String email, String queryEmail) {
+    public ResponseEntity<StudentResponseDTO> getStudentByEmail(String email, String queryEmail, String paramEmail) {
         try {
-            String searchEmail = email != null ? email : queryEmail;
+            String searchEmail = email != null ? email : (queryEmail != null ? queryEmail : paramEmail);
             logger.info("Getting Student by email: {}", searchEmail);
             StudentResponseDTO responseDTO = studentService.getByEmail(searchEmail);
             return ResponseEntity.ok(responseDTO);
@@ -151,10 +150,14 @@ public class StudentRestImpl implements StudentRest {
     }
 
     @Override
-    public ResponseEntity<List<StudentResponseDTO>> searchStudents(String keyword) {
+    public ResponseEntity<List<StudentResponseDTO>> searchStudents(String keyword, String name) {
+        String searchKey = (keyword != null && !keyword.isBlank()) ? keyword : name;
+        if (searchKey == null) {
+            searchKey = "";
+        }
         try {
-            logger.info("Searching Students by keyword: {}", keyword);
-            List<StudentResponseDTO> list = studentService.searchByKeyword(keyword);
+            logger.info("Searching Students by keyword: {}", searchKey);
+            List<StudentResponseDTO> list = studentService.searchByKeyword(searchKey);
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             logger.error("Error searching Students: ", e);

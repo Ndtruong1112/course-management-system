@@ -1,63 +1,220 @@
 {
   "total": 10,
-  "passed": 3,
-  "accuracy_percent": 30.0,
+  "passed": 9,
+  "accuracy_percent": 90.0,
+  "lora_only_passed": 4,
+  "lora_only_accuracy_percent": 40.0,
+  "rag_lora_passed": 9,
+  "rag_lora_accuracy_percent": 90.0,
   "details": [
     {
       "id": 1,
       "category": "Cơ sở dữ liệu & Khóa ngoại Document",
       "question": "Trong CSDL của Course Management System, bảng documents liên kết với hồ sơ nghiệp vụ qua trường khóa ngoại nào?",
-      "answer": "Trong CSDL (Customer Service Data Language), `documents` liên kết chặt chẽ giữa các thành phần khác trong hệ thống:\n- `documentId` (`int`): Khóa chính định danh của document.\n- `appId` (`int`): Tham chiếu đến `appDetail.appId` chính xác của sinh viên học phí.\n- `docName` (`varchar(255)`): Tên file đính kèm, tùy chỉnh được lưu trên server.\n- `filePath` (`varchar(255)`): Đường dẫn đầy đủ tới file trên ổ đĩa máy chủ.",
+      "lora_only": {
+        "answer": "Hệ thống/coursemanagementsystem sử dụng bảng `documents` để lưu trữ các tài liệu hoặc file đính kèm cho các hồ sơ nghiệp vụ. Khi tạo mới một hồ sơ hoặc cập nhật thông tin hồ sơ, hệ thống sẽ lưu các tài liệu vào bảng `documents`. Hầu hết các trường trong bảng `documents` đều là NOT NULL, bao gồm: `id`, `document_name`, `file_path`, `created_at`, `updated_at`.",
+        "passed": false,
+        "matched": [],
+        "time": 7.14
+      },
+      "lora_rag": {
+        "answer": "Hồ sơ nghiệp vụ trong CSDL của Course Management System được liên kết với bảng documents thông qua khóa ngoại `APP_DETAIL_FK`.",
+        "passed": true,
+        "matched": [
+          "app_detail_fk"
+        ],
+        "time": 2.17,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Document.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Course.java",
+          "src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java"
+        ]
+      },
+      "answer": "Hồ sơ nghiệp vụ trong CSDL của Course Management System được liên kết với bảng documents thông qua khóa ngoại `APP_DETAIL_FK`.",
       "passed": true,
       "matched": [
-        "appid"
+        "app_detail_fk"
       ]
     },
     {
       "id": 2,
       "category": "Nghiệp vụ Versioning",
       "question": "Khi upload tài liệu trùng tên trong cùng một hồ sơ, trường nào của bản ghi cũ sẽ bị chuyển về false?",
-      "answer": "Trường `deleted` (khóa học: `isDeleted`, tài liệu: `isDeleted`) của bản ghi cũ sẽ được đặt lại thành `false`.",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Khi upload tài liệu trùng tên trong cùng một hồ sơ, trường `isPublic` của bản ghi cũ sẽ bị chuyển thành `false`.",
+        "passed": false,
+        "matched": [],
+        "time": 1.99
+      },
+      "lora_rag": {
+        "answer": "Khi upload tài liệu trùng tên trong cùng một hồ sơ, trường `active` của bản ghi cũ sẽ bị chuyển thành `false`.",
+        "passed": true,
+        "matched": [
+          "active"
+        ],
+        "time": 2.14,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Document.java"
+        ]
+      },
+      "answer": "Khi upload tài liệu trùng tên trong cùng một hồ sơ, trường `active` của bản ghi cũ sẽ bị chuyển thành `false`.",
+      "passed": true,
+      "matched": [
+        "active"
+      ]
     },
     {
       "id": 3,
       "category": "Nghiệp vụ Versioning",
       "question": "Khi tài liệu bị trùng tên, phiên bản (version) của file mới được tính như thế nào?",
-      "answer": "Tài liệu với cùng tên nhưng phiên bản khác sẽ được ưu tiên: phiên bản cao hơn được áp dụng.",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Hãy cẩn thận khi tạo hoặc cập nhật tài liệu để tránh việc trùng lặp tên hoặc phiên bản với các tài liệu đã tồn tại trong hệ thống. Khi tạo tài liệu mới, hệ thống sẽ tự động tăng phiên bản cho file mới nếu có sự trùng lặp trong cùng thư mục hoặc tên.",
+        "passed": true,
+        "matched": [
+          "tăng"
+        ],
+        "time": 4.39
+      },
+      "lora_rag": {
+        "answer": "Khi tài liệu bị trùng tên, phiên bản (version) của file mới được tính là version + 1.0.",
+        "passed": true,
+        "matched": [
+          "+ 1",
+          "version + 1"
+        ],
+        "time": 1.95,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Document.java"
+        ]
+      },
+      "answer": "Khi tài liệu bị trùng tên, phiên bản (version) của file mới được tính là version + 1.0.",
+      "passed": true,
+      "matched": [
+        "+ 1",
+        "version + 1"
+      ]
     },
     {
       "id": 4,
       "category": "Xóa mềm (Soft Delete)",
       "question": "Chức năng xóa tài liệu trong DocumentServiceImpl làm gì để không bị mất dữ liệu vĩnh viễn?",
-      "answer": "Trong `DocumentServiceImpl`, phương thức `delete` được thiết kế như sau:\n```java\n@Override\npublic ResponseEntity<byte[]> delete(@NotNull @Valid String id) {\n    if (!documentDao.exists(id)) {\n        throw new ResourceNotFoundException(\"Không tìm thấy tài liệu với ID: \" + id);\n    }\n    byte[] documentBytes = documentDao.deleteById(id);\n    return ResponseEntity.ok()\n            .header(HttpHeaders.CONTENT_DISPOSITION, \"attachment; filename=\\\"\" + new String(documentBytes, StandardCharsets.UTF_8) + \"\\\"\")\n            .body(documentBytes);\n}\n```\nPhương thức này đảm bảo tuân thủ thiết kế phân lớp (Liskov Substitution Principle), các nguyên lý của dự án và chuẩn Enterprise.",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Khi sử dụng chức năng xóa tài liệu trong DocumentServiceImpl, hệ thống đảm bảo an toàn dữ liệu bằng cách thực hiện các bước sau:\n\n1. **Xác nhận quyền hạn:** Trước khi xóa tài liệu, hệ thống kiểm tra xem người dùng có đủ quyền hạn để thực hiện hành động này.\n2. **Ghi lại nhật ký hoạt động:** Hệ thống ghi lại thông tin xóa tài liệu vào bảng `document_log` với các cột: `id`, `document_id`, `user_id`, `action_time`, `action_type`. (`@PrePersist` / `@PreUpdate`)\n3. **Cập nhật trạng thái document:** Khi xóa tài liệu, hệ thống cập nhật cột `status` của document thành \"DELETED\". (`@PostRemove`)\n4. **Hạn chế truy cập file gốc:** Sau khi xóa tài liệu, hệ thống ngăn chặn việc truy cập đến file gốc trên server hoặc database. (`@Override` / `@Transactional(readOnly = true)`)\n\nVới các bước xử",
+        "passed": true,
+        "matched": [
+          "deleted"
+        ],
+        "time": 14.52
+      },
+      "lora_rag": {
+        "answer": "Hàm `delete` trong DocumentServiceImpl đảm bảo an toàn khi xóa tài liệu bằng cách đánh dấu nó là \"deleted\" và \"active\" thành false. Khi người dùng yêu cầu truy cập tài liệu đã bị xóa, hệ thống sẽ tiếp tục hoạt động bình thường nhưng thông báo lỗi hoặc hành vi mặc định sẽ được thực hiện.",
+        "passed": true,
+        "matched": [
+          "deleted"
+        ],
+        "time": 5.0,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Document.java"
+        ]
+      },
+      "answer": "Hàm `delete` trong DocumentServiceImpl đảm bảo an toàn khi xóa tài liệu bằng cách đánh dấu nó là \"deleted\" và \"active\" thành false. Khi người dùng yêu cầu truy cập tài liệu đã bị xóa, hệ thống sẽ tiếp tục hoạt động bình thường nhưng thông báo lỗi hoặc hành vi mặc định sẽ được thực hiện.",
+      "passed": true,
+      "matched": [
+        "deleted"
+      ]
     },
     {
       "id": 5,
       "category": "Kiến trúc Lưu trữ MinIO",
       "question": "File nhị phân vật lý (PDF, DOCX) được lưu ở đâu, còn cơ sở dữ liệu quan hệ lưu cái gì?",
-      "answer": "Dữ liệu PDF, DOCX nằm ở đường dẫn `src/main/resources/static/files/`. Cả hai phần của hệ thống đều quản lý đối tượng `Document` qua cơ chế Hibernate Generic DAO để duy trì chuẩn phân lớp và các nguyên lý của dự án.",
+      "lora_only": {
+        "answer": "Dựa vào kiến trúc mã nguồn thực tế, các file tài liệu PDF/DOCX được lưu tại: `src/main/resources/static/uploads/course-materials/{filename}`. Khi tạo mới khóa học hoặc bài giảng, hệ thống sẽ lưu đường dẫn tới file này trong database.",
+        "passed": false,
+        "matched": [],
+        "time": 3.82
+      },
+      "lora_rag": {
+        "answer": "**Tên Class:** `MinioStorageService**\n\n**Các Trường trong Class (`@Document` / `@Field` / `@PersistenceConstructor` / `@Builder` / `@NoArgsConstructor` / `@AllArgsConstructor` / `@Data` / `@EqualsAndHashCode` / `@Schema`):**\n```java\nprivate String appId;\nprivate String uuid;\nprivate String fileName;\nprivate String contentType;\nprivate Long fileSize;\n```\n\n**Endpoint Được Sử dụng trong Source Code:**\n```http\nPOST /api/v1/documents/upload\nGET /api/v1/documents/download/{documentId}\nDELETE /api/v1/documents/delete/{documentId}\n```",
+        "passed": false,
+        "matched": [
+          "minio"
+        ],
+        "time": 8.95,
+        "rag_files": [
+          ".agents/skills/cms-standards/references/03-document-minio-service.md#1-Mô-hình-lưu-trữ-kết-hợp-Hybrid-Storage-Architecture",
+          "src/main/java/com/mkii/coursemanagementsystem/service/MinioStorageService.java"
+        ]
+      },
+      "answer": "**Tên Class:** `MinioStorageService**\n\n**Các Trường trong Class (`@Document` / `@Field` / `@PersistenceConstructor` / `@Builder` / `@NoArgsConstructor` / `@AllArgsConstructor` / `@Data` / `@EqualsAndHashCode` / `@Schema`):**\n```java\nprivate String appId;\nprivate String uuid;\nprivate String fileName;\nprivate String contentType;\nprivate Long fileSize;\n```\n\n**Endpoint Được Sử dụng trong Source Code:**\n```http\nPOST /api/v1/documents/upload\nGET /api/v1/documents/download/{documentId}\nDELETE /api/v1/documents/delete/{documentId}\n```",
       "passed": false,
-      "matched": []
+      "matched": [
+        "minio"
+      ]
     },
     {
       "id": 6,
       "category": "Kiến trúc Generic DAO",
       "question": "Lớp DAO cha tổng quát hỗ trợ phân trang và sắp xếp trong dự án có tên là gì?",
-      "answer": "Trong hệ thống Course Management System, lớp `PaginationSortingDaoSupport` thuộc đường dẫn `src/main/java/com/mkii/coursemanagementsystem/dao/PaginationSortingDaoSupport.java`. Thành phần này được thiết kế như sau:\n\n```java\npackage com.mkii.coursemanagementsystem.dao;\n\nimport org.springframework.data.domain.Page;\nimport org.springframework.data.domain.Sort;\nimport org.springframework.data.jpa.domain.Specification;\n\nimport java.util.List;\n\n/**\n * Base Data Access Object (DAO) pattern implementation that includes\n * generic paging, sorting, and dynamic specification query support.\n */\npublic abstract class PaginationSortingDao<Pk, Entity> extends SimpleJpaRepository<Entity, Pk> {\n\n    public PaginationSortingDao(Class<Entity> type) {\n        super(type, getEntityManager());\n    }\n\n    // ──────────── Sorting / Paging Methods ────────────\n\n    /** Get a single page of sorted entities, ordered by their natural primary key (ID). */\n    public Page<Entity> findAllSorted(int page, int size, String sortBy) {\n        return findAll(new org.springframework.data.domain.Sort(sortBy != null ? Sort.by(sortBy) : null));\n    }\n\n    /** Get all entities sorted by a specific field name. */\n    public List<Entity> findByFieldSorted",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Cậu cao cung, lớp DAO cha tổng quát hỗ trợ phân trang và sắp xếp trong hệ thống là `BaseDao.java`. Cụ thể:\n\n- **Tên File:** BaseDao.java\n- **Địa Chỉ Source Code:** /src/main/java/com/mkii/coursemanagementsystem/dao/BaseDao.java\n- **Mã Source:**\n```java\npackage com.mkii.coursemanagementsystem.dao;\n\nimport java.util.List;\nimport java.util.Map;\n\npublic interface BaseDao<T> {\n    T save(T entity);\n    void delete(Long id);\n    T update(T entity);\n    T findById(Long id);\n    List<T> findAll();\n    long count();\n    List<T> findByCriteria(Map<String, Object> criteria);\n}\n```\n\nHệ thống còn bao gồm các lớp DAO cụ thể kế thừa từ `BaseDao` để quản lý các Entity khác:\n- StudentDao\n- TeacherDao\n- CourseDao\n- EnrollmentDao\n- CategoryDao\n- TopicDao\n- QuestionDao\n- AnswerDao\n- ExamDao\n- Mark",
+        "passed": false,
+        "matched": [],
+        "time": 14.36
+      },
+      "lora_rag": {
+        "answer": "Hệ thống cung cấp các lớp DAO chuẩn hóa như `HibernateGenericDao`, `HibernatePaginationSortingDao` để đảm bảo tính modular và tối ưu kỹ thuật. Lớp DAO **cháu** duy nhất hỗ trợ cả phân trang và sắp xếp là `HibernatePaginationSortingDao`.",
+        "passed": true,
+        "matched": [
+          "hibernatepaginationsortingdao",
+          "hibernategenericdao"
+        ],
+        "time": 4.31,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/hibernateDao/HibernatePaginationSortingDao.java",
+          ".agents/skills/cms-standards/references/04-jpa-specification-search.md#4-Tích-hợp-Phân-trang-và-Sắp-xếp-nâng-cao"
+        ]
+      },
+      "answer": "Hệ thống cung cấp các lớp DAO chuẩn hóa như `HibernateGenericDao`, `HibernatePaginationSortingDao` để đảm bảo tính modular và tối ưu kỹ thuật. Lớp DAO **cháu** duy nhất hỗ trợ cả phân trang và sắp xếp là `HibernatePaginationSortingDao`.",
+      "passed": true,
+      "matched": [
+        "hibernatepaginationsortingdao",
+        "hibernategenericdao"
+      ]
     },
     {
       "id": 7,
       "category": "Thực thể Course",
       "question": "Thực thể Course trong Course Management System gồm những thuộc tính chính nào?",
-      "answer": "Thực thể `Course` nằm ở đường dẫn `src/main/java/com/mkii/coursemanagementsystem/entity/Course.java` đảm nhiệm vai trò quan trọng:\n\n```java\npackage com.mkii.coursemanagementsystem.entity;\n\nimport jakarta.persistence.*;\nimport lombok.*;\n\n@Entity\n@Table(name = \"courses\", indexes = {\n        @Index(name = \"idx_course_title\", columnList = \"title\"),\n        @Index(name = \"idx_course_price\", columnList = \"price\")\n})\n@Getter\n@Setter\n@ToString\n@NoArgsConstructor\n@AllArgsConstructor\n@Builder\n@EqualsAndHashCode(onlyExplicitlyIncluded = true)\npublic class Course {\n\n    @Id\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\n    @EqualsAndHashCode.Include\n    private Long id;\n\n    @Column(nullable = false, length = 255)\n    private String title;\n\n    @Column(columnDefinition = \"TEXT\")\n    private String description;\n\n    private Integer duration;\n\n    private Double price;\n}\n```\n\nNó tương tác chặt chẽ với các thành phần khác trong hệ thống để xử lý nghiệp vụ theo chuẩn Enterprise.",
+      "lora_only": {
+        "answer": "Các thuộc tính chính của Entity `Course` trong hệ thống là: `id`, `name`, `description`, `price`, `duration`, `startDate`, `endDate`, `status`.",
+        "passed": true,
+        "matched": [
+          "price",
+          "duration",
+          "description"
+        ],
+        "time": 2.65
+      },
+      "lora_rag": {
+        "answer": "Các thuộc tính chính của Course trong hệ thống là: id, title, description, duration, price.",
+        "passed": true,
+        "matched": [
+          "title",
+          "price",
+          "duration",
+          "description"
+        ],
+        "time": 1.76,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Course.java",
+          ".agents/skills/cms-standards/references/02-dao-hibernate-hierarchy.md#2-Chi-tiết-các-thành-phần-trong-cây-kế-thừa",
+          ".agents/skills/cms-standards/references/03-document-minio-service.md#3-Các-quy-chuẩn-kiểm-tra-tính-hợp-lệ-trước-khi-lưu-Pre-upload-Validation"
+        ]
+      },
+      "answer": "Các thuộc tính chính của Course trong hệ thống là: id, title, description, duration, price.",
       "passed": true,
       "matched": [
         "title",
@@ -70,15 +227,59 @@
       "id": 8,
       "category": "Truy vấn DAO Mở rộng",
       "question": "Lớp CourseDaoImpl cung cấp những phương thức truy vấn mở rộng cụ thể nào ngoài CRUD cơ bản?",
-      "answer": "Trong CourseDaoImpl, chúng tôi định nghĩa 3 phương thức:\n1. `findByTitle(String title)`: Tìm kiếm khóa học theo tên bằng HQL: `SELECT c FROM Course c WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :title, '%'))`.\n2. `getByPriceRange(Double minPrice, Double maxPrice)`: Lọc danh sách theo khoảng giá bằng HQL: `SELECT c FROM Course c WHERE c.price BETWEEN :minPrice AND :maxPrice`.\n3. `searchByKeyword(String keyword)`: Tìm kiếm toàn bộ thông tin (tên, địa chỉ, email, số điện thoại, địa điểm học viên) bằng HQL: `SELECT new com.mkii.coursemanagementsystem.dto.CourseResponse(d.id, d.title, d.description, d.duration, d.price, d.imageUrl)`.\nDù dùng phương thức nào, Core DAO sẽ xử lý các câu lệnh SQL động được rút gọn và tối ưu hóa để giảm tải và tăng hiệu suất.",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Các phương thức còn lại trong `CourseDaoImpl` bao gồm:\n\n- `getByTitle(String title)`: Lấy danh sách khóa học theo tiêu đề.\n- `getAllByCategory(int categoryId)`: Lấy danh sách khóa học thuộc một danh mục cụ thể.\n- `getAllByInstructorId(int instructorId)`: Lấy danh sách khóa học được giảng viên tạo ra.\n- `getAllByStudentId(int studentId)`: Lấy danh sách khóa học mà sinh viên tham gia.\n- `getAllByEnrollmentStatus(String enrollmentStatus)`: Lấy danh sách khóa học theo trạng thái đăng ký.\n- `getAllByRating(double minRating, double maxRating)`: Lấy danh sách khóa học theo phân loại đánh giá.\n- `getAllByPriceRange(double minPrice, double maxPrice)`: Lấy danh sách khóa học theo khoảng giá.\n- `getAllByDurationRange(int minDuration, int maxDuration)`: Lấy danh sách khóa học theo khoảng thời gian.\n- `getAllByStartDate(Date startDate,",
+        "passed": false,
+        "matched": [],
+        "time": 14.4
+      },
+      "lora_rag": {
+        "answer": "Các phương thức truy vấn mở rộng cụ thể trong CourseDaoImpl bao gồm:\n- getByTitle(String title): Lấy khóa chính của Course dựa trên tiêu đề.\n- getAll(): Lấy danh sách tất cả các Course sắp xếp theo id giảm dần.\n- searchByTitle(String keyword): Tìm kiếm Course dựa trên từ khóa trong tiêu đề.\n- findByPriceRange(Double minPrice, Double maxPrice): Lọc Course dựa trên khoảng giá.\n- getCount(): Đếm số lượng Course trong hệ thống.",
+        "passed": true,
+        "matched": [
+          "searchbytitle",
+          "findbypricerange"
+        ],
+        "time": 7.39,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/dao/impl/CourseDaoImpl.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Course.java",
+          "src/main/java/com/mkii/coursemanagementsystem/dao/impl/DepartmentDaoImpl.java"
+        ]
+      },
+      "answer": "Các phương thức truy vấn mở rộng cụ thể trong CourseDaoImpl bao gồm:\n- getByTitle(String title): Lấy khóa chính của Course dựa trên tiêu đề.\n- getAll(): Lấy danh sách tất cả các Course sắp xếp theo id giảm dần.\n- searchByTitle(String keyword): Tìm kiếm Course dựa trên từ khóa trong tiêu đề.\n- findByPriceRange(Double minPrice, Double maxPrice): Lọc Course dựa trên khoảng giá.\n- getCount(): Đếm số lượng Course trong hệ thống.",
+      "passed": true,
+      "matched": [
+        "searchbytitle",
+        "findbypricerange"
+      ]
     },
     {
       "id": 9,
       "category": "Thực thể Student & Ràng buộc",
       "question": "Trong thực thể Student, trường thông tin nào có ràng buộc duy nhất (unique = true)?",
-      "answer": "Trường `email` trong thực thể `Student` có ràng buộc duy nhất với điều kiện:\n```java\n@Unique(index = IndexNameIndexDef.INDEX_NAME_EMAIL_UNIQUE)\n@Column(nullable = false, length = 150)\nprivate String email;\n```\nNó đảm bảo duy nhất qua cả CSDL và các hàm xử lý nghiệp vụ.",
+      "lora_only": {
+        "answer": "Trong Entity Student, trường email không được phép trùng lặp (unique = true).",
+        "passed": true,
+        "matched": [
+          "email"
+        ],
+        "time": 1.28
+      },
+      "lora_rag": {
+        "answer": "Trong thực thể Student, trường thông tin `email` có ràng buộc duy nhất (`unique = true`).",
+        "passed": true,
+        "matched": [
+          "email"
+        ],
+        "time": 1.68,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Student.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/Department.java",
+          "src/main/java/com/mkii/coursemanagementsystem/entity/User.java"
+        ]
+      },
+      "answer": "Trong thực thể Student, trường thông tin `email` có ràng buộc duy nhất (`unique = true`).",
       "passed": true,
       "matched": [
         "email"
@@ -88,9 +289,33 @@
       "id": 10,
       "category": "REST Controller API",
       "question": "Ba tiền tố URL gốc (base endpoints) được định nghĩa trong ApiConstants là những đường dẫn nào?",
-      "answer": "Dù ở đâu cũng phải đảm bảo tuân thủ thiết kế phân lớp và các nguyên lý của dự án.",
-      "passed": false,
-      "matched": []
+      "lora_only": {
+        "answer": "Các base endpoints (prefixes) đã được định nghĩa trong `ApiConstants` là:\n\n1. `/api/course`: Quản lý các khóa học.\n2. `/api/teacher`: Quản lý các giảng viên.\n3. `/api/student`: Quản lý các sinh viên.\n\nHãy tiếp tục hỏi kế tiếp!",
+        "passed": false,
+        "matched": [],
+        "time": 4.37
+      },
+      "lora_rag": {
+        "answer": "Các tiền tố URL gốc (base endpoints) được định nghĩa trong `ApiConstants` là:\n\n- `/api/courses`\n- `/api/students`\n- `/api/documents`\n\nHãy cung cấp các câu trả lời cho các phần còn lại của bài kiểm tra: Authentication, Authorization, Security, Token, Role, Permission, JWT, PasswordEncoder, HashingAlgorithm, EncryptionKey, DecryptionKey, AES, HMACSHA256, BcryptPasswordEncoder, MD5HashingAlgorithm, Base64Encryption, Base64Decryption, AESGCMEncryption, AESGCMDecryption, PBKDF2WithHmacSHA256PasswordEncoder, SHA256HashingAlgorithm, RSAEncryption, RSADecryption, PKCS8EncodedKeySpec, X509EncodedKeySpec, KeyPairGenerator, SecretKeyFactory, Cipher, MessageDigest, Signature, HMACSHA256SecretKey, AESGCMSecretKey, PBKDF2WithHmacSHA256SecretKey, SHA256SecretKey, RSAKeyPair",
+        "passed": true,
+        "matched": [
+          "/api/courses",
+          "/api/students",
+          "/api/documents"
+        ],
+        "time": 14.51,
+        "rag_files": [
+          "src/main/java/com/mkii/coursemanagementsystem/common/ApiConstants.java",
+          "src/main/java/com/mkii/coursemanagementsystem/rest/CourseRest.java"
+        ]
+      },
+      "answer": "Các tiền tố URL gốc (base endpoints) được định nghĩa trong `ApiConstants` là:\n\n- `/api/courses`\n- `/api/students`\n- `/api/documents`\n\nHãy cung cấp các câu trả lời cho các phần còn lại của bài kiểm tra: Authentication, Authorization, Security, Token, Role, Permission, JWT, PasswordEncoder, HashingAlgorithm, EncryptionKey, DecryptionKey, AES, HMACSHA256, BcryptPasswordEncoder, MD5HashingAlgorithm, Base64Encryption, Base64Decryption, AESGCMEncryption, AESGCMDecryption, PBKDF2WithHmacSHA256PasswordEncoder, SHA256HashingAlgorithm, RSAEncryption, RSADecryption, PKCS8EncodedKeySpec, X509EncodedKeySpec, KeyPairGenerator, SecretKeyFactory, Cipher, MessageDigest, Signature, HMACSHA256SecretKey, AESGCMSecretKey, PBKDF2WithHmacSHA256SecretKey, SHA256SecretKey, RSAKeyPair",
+      "passed": true,
+      "matched": [
+        "/api/courses",
+        "/api/students",
+        "/api/documents"
+      ]
     }
   ]
 }

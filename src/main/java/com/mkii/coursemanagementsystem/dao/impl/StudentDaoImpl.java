@@ -26,7 +26,7 @@ public class StudentDaoImpl extends HibernatePaginationSortingDao<Long, Student>
     @Override
     public Student save(Student student) {
         logger.info("Saving Student: {}", student.getFullName());
-        return create(student);
+        return super.save(student);
     }
 
     @Override

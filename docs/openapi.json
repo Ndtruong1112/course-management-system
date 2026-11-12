@@ -1,0 +1,589 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Course Management System API",
+    "description": "Production-grade RESTful API documentation for Course Management System with AES Encryption, MinIO Document Storage, and Dynamic Specification Search. Designed for easy Frontend integration (React, Vue, Angular, Mobile).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "MKII Engineering Team",
+      "email": "support@mkii.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local Development Server"
+    }
+  ],
+  "security": [
+    {
+      "basicAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Courses",
+      "description": "Course management endpoints (CRUD, Pagination, Sorting, Dynamic Specification Search)"
+    },
+    {
+      "name": "Students",
+      "description": "Student management endpoints (CRUD, Pagination, Sorting, Keyword and Specification Search)"
+    },
+    {
+      "name": "Documents",
+      "description": "MinIO Document storage & management endpoints (Upload, Download, Soft Delete, Filtering)"
+    },
+    {
+      "name": "Security",
+      "description": "AES Encryption & Decryption endpoints (Baeldung Standard, IV-prepended Base64)"
+    }
+  ],
+  "paths": {
+    "/api/v1/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get all courses",
+        "description": "Returns list of all courses. Allowed roles: STUDENT, LECTURER, ADMIN.",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CourseResponseDTO" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a new course",
+        "description": "Creates a course. Allowed roles: LECTURER, ADMIN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CourseRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Course created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Course" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/courses/{id}": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get course by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CourseResponseDTO" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Courses"],
+        "summary": "Update course by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CourseRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Course" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Courses"],
+        "summary": "Delete course by ID (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": { "description": "Course deleted" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/courses/batch": {
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Batch create courses (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/CourseRequestDTO" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Courses batch created" }
+        }
+      }
+    },
+    "/api/v1/courses/spec-search-paged": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Search courses by dynamic specification with pagination and sorting",
+        "parameters": [
+          { "name": "search", "in": "query", "description": "FIQL search query, e.g. price>=100,title:Java", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 0 } },
+          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string", "default": "id" } },
+          { "name": "direction", "in": "query", "schema": { "type": "string", "default": "asc" } }
+        ],
+        "responses": {
+          "200": { "description": "Paged list of matching courses" }
+        }
+      }
+    },
+    "/api/v1/students": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Get all students",
+        "responses": {
+          "200": {
+            "description": "List of students",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/StudentResponseDTO" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Students"],
+        "summary": "Create student (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StudentRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Student created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Student" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/students/{id}": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Get student by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Student details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StudentResponseDTO" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Students"],
+        "summary": "Update student",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StudentRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Student updated" }
+        }
+      },
+      "delete": {
+        "tags": ["Students"],
+        "summary": "Delete student (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": { "description": "Student deleted" }
+        }
+      }
+    },
+    "/api/v1/students/spec-search-paged": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Search students with pagination & sorting",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 0 } },
+          { "name": "size", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string", "default": "id" } },
+          { "name": "direction", "in": "query", "schema": { "type": "string", "default": "asc" } }
+        ],
+        "responses": {
+          "200": { "description": "Paged list of students" }
+        }
+      }
+    },
+    "/api/v1/documents": {
+      "post": {
+        "tags": ["Documents"],
+        "summary": "Upload documents to MinIO storage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  },
+                  "appId": { "type": "string" }
+                },
+                "required": ["files"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Documents uploaded" }
+        }
+      }
+    },
+    "/api/v1/documents/{id}": {
+      "get": {
+        "tags": ["Documents"],
+        "summary": "Get document metadata by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document metadata",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Document" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Documents"],
+        "summary": "Soft delete document by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Document soft deleted" }
+        }
+      }
+    },
+    "/api/v1/documents/download/{id}": {
+      "get": {
+        "tags": ["Documents"],
+        "summary": "Download document file by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary file download",
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/list": {
+      "get": {
+        "tags": ["Documents"],
+        "summary": "List all active non-deleted documents",
+        "responses": {
+          "200": {
+            "description": "List of active documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Document" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/security/encrypt": {
+      "post": {
+        "tags": ["Security"],
+        "summary": "Encrypt plaintext with AES",
+        "description": "Encrypts payload with AES-CBC/PKCS5Padding and prepends a random 16-byte IV. Allowed roles: LECTURER, ADMIN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EncryptRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Encryption successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EncryptResponseDTO" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/security/decrypt": {
+      "post": {
+        "tags": ["Security"],
+        "summary": "Decrypt ciphertext with AES",
+        "description": "Decrypts Base64 ciphertext with prepended IV back to original plaintext. Allowed roles: LECTURER, ADMIN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DecryptRequestDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decryption successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DecryptResponseDTO" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Basic authentication with username/password (admin:admin123, lecturer:lecturer123, student:student123)"
+      }
+    },
+    "schemas": {
+      "CourseRequestDTO": {
+        "type": "object",
+        "required": ["title", "duration", "price"],
+        "properties": {
+          "title": { "type": "string", "example": "Java Core Programming" },
+          "description": { "type": "string", "example": "Comprehensive Java guide" },
+          "duration": { "type": "integer", "example": 40 },
+          "price": { "type": "number", "format": "double", "example": 199.99 }
+        }
+      },
+      "CourseResponseDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 1 },
+          "title": { "type": "string", "example": "Java Core Programming" },
+          "description": { "type": "string", "example": "Comprehensive Java guide" },
+          "duration": { "type": "integer", "example": 40 },
+          "price": { "type": "number", "format": "double", "example": 199.99 }
+        }
+      },
+      "Course": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "duration": { "type": "integer" },
+          "price": { "type": "number", "format": "double" }
+        }
+      },
+      "StudentRequestDTO": {
+        "type": "object",
+        "required": ["fullName", "email"],
+        "properties": {
+          "fullName": { "type": "string", "example": "Nguyen Van A" },
+          "email": { "type": "string", "format": "email", "example": "vana@example.com" },
+          "phone": { "type": "string", "example": "0912345678" },
+          "address": { "type": "string", "example": "Hanoi, Vietnam" }
+        }
+      },
+      "StudentResponseDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "example": 1 },
+          "fullName": { "type": "string", "example": "Nguyen Van A" },
+          "email": { "type": "string", "example": "vana@example.com" },
+          "phone": { "type": "string", "example": "0912345678" },
+          "address": { "type": "string", "example": "Hanoi, Vietnam" }
+        }
+      },
+      "Student": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "fullName": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "address": { "type": "string" }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "550e8400-e29b-41d4-a716-446655440000" },
+          "name": { "type": "string", "example": "syllabus.pdf" },
+          "path": { "type": "string", "example": "documents/syllabus_2026.pdf" },
+          "appId": { "type": "string", "example": "COURSE-001" },
+          "deleted": { "type": "boolean", "example": false },
+          "active": { "type": "boolean", "example": true },
+          "creationTime": { "type": "string", "format": "date-time" },
+          "lastModificationTime": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "integer", "example": 404 },
+          "message": { "type": "string", "example": "Course not found with id: 999" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "path": { "type": "string", "example": "/api/v1/courses/999" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "EncryptRequestDTO": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": { "type": "string", "example": "SensitiveUserData123" }
+        }
+      },
+      "EncryptResponseDTO": {
+        "type": "object",
+        "properties": {
+          "encryptedData": { "type": "string" },
+          "algorithm": { "type": "string", "example": "AES/CBC/PKCS5Padding" }
+        }
+      },
+      "DecryptRequestDTO": {
+        "type": "object",
+        "required": ["encryptedData"],
+        "properties": {
+          "encryptedData": { "type": "string" }
+        }
+      },
+      "DecryptResponseDTO": {
+        "type": "object",
+        "properties": {
+          "decryptedData": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid input arguments",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication credentials missing or invalid"
+      },
+      "Forbidden": {
+        "description": "Access denied due to insufficient role permissions"
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    }
+  }
+}

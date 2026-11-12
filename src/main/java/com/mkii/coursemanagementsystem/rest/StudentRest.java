@@ -29,7 +29,8 @@ public interface StudentRest {
     @GetMapping(value = {"/email/{email}", "/by-email"})
     ResponseEntity<StudentResponseDTO> getStudentByEmail(
             @PathVariable(required = false) String email,
-            @RequestParam(required = false) String queryEmail);
+            @RequestParam(name = "queryEmail", required = false) String queryEmail,
+            @RequestParam(name = "email", required = false) String paramEmail);
 
     @PostMapping("/batch")
     ResponseEntity<List<StudentResponseDTO>> createStudentsBatch(@RequestBody List<StudentRequestDTO> requestDTOs);
@@ -54,7 +55,9 @@ public interface StudentRest {
             @RequestParam(defaultValue = "asc") String direction);
 
     @GetMapping("/search")
-    ResponseEntity<List<StudentResponseDTO>> searchStudents(@RequestParam String keyword);
+    ResponseEntity<List<StudentResponseDTO>> searchStudents(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "name", required = false) String name);
 
     @GetMapping("/spec-search")
     ResponseEntity<List<StudentResponseDTO>> searchStudentsBySpecification(@RequestParam String search);

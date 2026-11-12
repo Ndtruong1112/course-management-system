@@ -29,7 +29,8 @@ public interface CourseRest {
     @GetMapping(value = {"/title/{title}", "/by-title"})
     ResponseEntity<CourseResponseDTO> getCourseByTitle(
             @PathVariable(required = false) String title,
-            @RequestParam(required = false) String queryTitle);
+            @RequestParam(name = "queryTitle", required = false) String queryTitle,
+            @RequestParam(name = "title", required = false) String paramTitle);
 
     @PostMapping("/batch")
     ResponseEntity<List<CourseResponseDTO>> createCoursesBatch(@RequestBody List<CourseRequestDTO> requestDTOs);

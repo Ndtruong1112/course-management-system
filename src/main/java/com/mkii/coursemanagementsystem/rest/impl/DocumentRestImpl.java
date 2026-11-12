@@ -19,7 +19,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_DOCUMENT_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class DocumentRestImpl implements DocumentRest {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentRestImpl.class);
@@ -122,13 +121,15 @@ public class DocumentRestImpl implements DocumentRest {
     }
 
     @Override
-    public ResponseEntity<List<Document>> getAllActiveDocuments() {
+    public ResponseEntity<List<Document>> getAllActiveDocuments(String appId) {
         try {
-            logger.info("REST: Getting all active documents");
-            List<Document> documents = documentService.getAllActive();
+            logger.info("REST: Getting documents, appId={}", appId);
+            List<Document> documents = (appId != null && !appId.isBlank())
+                    ? documentService.getByAppId(appId.trim())
+                    : documentService.getAllActive();
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
-            logger.error("REST: Error getting all documents: ", e);
+            logger.error("REST: Error getting documents: ", e);
             throw e;
         }
     }

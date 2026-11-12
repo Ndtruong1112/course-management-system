@@ -2,12 +2,17 @@ import os
 import sys
 import time
 import json
+import requests
+import threading
+import webbrowser
 import torch
 
-os.environ["HF_HOME"] = r"D:\.cache\huggingface"
+# Cấu hình cache HuggingFace linh hoạt giữa Windows, Linux và Docker
+default_hf_home = r"D:\.cache\huggingface" if (os.name == 'nt' and os.path.exists(r"D:\.cache")) else os.path.expanduser("~/.cache/huggingface")
+os.environ["HF_HOME"] = os.environ.get("HF_HOME", default_hf_home)
 
-from flask import Flask, request, jsonify, render_template_string
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from flask import Flask, request, jsonify, render_template_string, Response, stream_with_context
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TextIteratorStreamer
 from peft import PeftModel
 
 if sys.stdout.encoding != 'utf-8':
@@ -15,12 +20,38 @@ if sys.stdout.encoding != 'utf-8':
 
 app = Flask(__name__)
 
-# Paths
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-lora_dir = os.path.join(root_dir, "outputs", "course-management-lora-adapter")
-base_model_id = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+# Paths & Config
+chatbot_dir = os.path.dirname(os.path.abspath(__file__))
+if chatbot_dir not in sys.path:
+    sys.path.insert(0, chatbot_dir)
 
-# Tự động đọc base model từ adapter config nếu có
+from rag_engine import CodebaseRAG, evaluate_architecture_compliance
+
+root_dir = os.path.dirname(chatbot_dir)
+lora_dir = os.path.join(root_dir, "outputs", "course-management-lora-adapter")
+env_path = os.path.join(root_dir, ".env")
+rag_engine = CodebaseRAG(root_dir)
+
+# Nạp API Keys từ .env
+gemini_api_key = ""
+openai_api_key = ""
+anthropic_api_key = ""
+if os.path.exists(env_path):
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("GEMINI_API_KEY="):
+                gemini_api_key = line.split("=", 1)[1].strip()
+            elif line.startswith("OPENAI_API_KEY="):
+                openai_api_key = line.split("=", 1)[1].strip()
+            elif line.startswith("ANTHROPIC_API_KEY="):
+                anthropic_api_key = line.split("=", 1)[1].strip()
+
+# Base model đọc từ adapter_config.json hoặc thư mục sharded
+base_model_id = "Qwen/Qwen2.5-Coder-3B-Instruct"
+default_sharded_path = r"D:\models\Qwen2.5-Coder-3B-Instruct-sharded" if (os.name == 'nt' and os.path.exists(r"D:\models")) else "/models/Qwen2.5-Coder-3B-Instruct-sharded"
+sharded_model_path = os.environ.get("LOCAL_MODEL_PATH", default_sharded_path)
+model_load_path = sharded_model_path if os.path.exists(sharded_model_path) else base_model_id
+
 adapter_config_path = os.path.join(lora_dir, "adapter_config.json")
 if os.path.exists(adapter_config_path):
     try:
@@ -31,217 +62,896 @@ if os.path.exists(adapter_config_path):
         pass
 
 print("=" * 70)
-print(f"KHỞI CHẠY DUAL-CHATBOT WEB UI (BASE: {base_model_id})")
+print(f"KHỞI CHẠY HỆ THỐNG TRỢ LÝ AI NỘI BỘ (LOCAL GPU & SO SÁNH STREAMING)")
+print(f"Base Model: {base_model_id} (Nguồn nạp: {model_load_path})")
+print(f"LoRA Adapter: {lora_dir}")
 print("=" * 70)
 
 has_cuda = torch.cuda.is_available()
 gpu_name = torch.cuda.get_device_name(0) if has_cuda else "CPU (Không có GPU)"
-print(f"Thiết bị: {gpu_name}")
+print(f"Thiết bị Local: {gpu_name}")
+print(f"Cloud Gemini Key: {'Đã cấu hình' if gemini_api_key else 'Chưa có'}")
 
-if not os.path.exists(lora_dir):
-    print(f"[CẢNH BÁO]: Không tìm thấy thư mục adapter tại: {lora_dir}")
-    print("Mô hình sẽ chỉ có thể chạy ở chế độ Base Model.")
+# Nạp Tokenizer
+tokenizer = None
+has_adapter = False
+try:
+    if os.path.exists(lora_dir):
+        tokenizer = AutoTokenizer.from_pretrained(lora_dir)
+        has_adapter = True
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+        has_adapter = False
+    print("-> Đã nạp Tokenizer thành công!")
+except Exception as e:
+    print(f"[CẢNH BÁO]: Chưa thể nạp Tokenizer: {e}")
 
-# Nạp Model
-print("Đang nạp mô hình Qwen2.5-Coder-1.5B (4-bit QLoRA)...")
-if has_cuda:
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-    base_model = AutoModelForCausalLM.from_pretrained(
-        base_model_id,
-        quantization_config=bnb_config,
-        device_map="auto"
-    )
-else:
-    base_model = AutoModelForCausalLM.from_pretrained(
-        base_model_id,
-        torch_dtype=torch.float32,
-        device_map="cpu"
-    )
+# Trạng thái nạp mô hình Local
+local_ready = False
+base_model = None
+model = None
 
-if os.path.exists(lora_dir):
-    tokenizer = AutoTokenizer.from_pretrained(lora_dir)
-    model = PeftModel.from_pretrained(base_model, lora_dir)
-    has_adapter = True
-else:
-    tokenizer = AutoTokenizer.from_pretrained(base_model_id)
-    model = base_model
-    has_adapter = False
+def init_local_model():
+    global local_ready, base_model, model, has_adapter
+    print(f"Đang nạp mô hình {base_model_id} lên GPU ({gpu_name})...")
+    try:
+        if has_cuda:
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True
+            )
+            base_model = AutoModelForCausalLM.from_pretrained(
+                model_load_path,
+                quantization_config=bnb_config,
+                device_map="auto"
+            )
+        else:
+            base_model = AutoModelForCausalLM.from_pretrained(
+                model_load_path,
+                torch_dtype=torch.float32,
+                device_map="cpu"
+            )
 
-model.eval()
-print("-> Đã nạp mô hình thành công vào bộ nhớ!\n")
+        if os.path.exists(lora_dir):
+            model = PeftModel.from_pretrained(base_model, lora_dir)
+            has_adapter = True
+        else:
+            model = base_model
+            has_adapter = False
 
-def generate_text(prompt, use_adapter=True):
-    inputs = tokenizer(prompt, return_tensors="pt")
+        model.eval()
+        local_ready = True
+        allocated_mb = round(torch.cuda.memory_allocated(0)/(1024**2), 1) if has_cuda else 0
+        print(f"-> [HOÀN TẤT 100% LOCAL]: Mô hình {base_model_id} + LoRA đã nạp xong vào GPU! (VRAM sử dụng: {allocated_mb} MB)\n")
+    except Exception as e:
+        print(f"[LỖI NẠP LOCAL GPU]: {e}")
+        import traceback
+        traceback.print_exc()
+
+# Khởi chạy nạp mô hình trong luồng nền
+threading.Thread(target=init_local_model, daemon=True).start()
+
+# Prompts
+SYSTEM_INSTRUCTION_PROJECT = (
+    "Bạn là Kiến trúc sư Phần mềm Cao cấp chuyên gia Spring Boot 3 và Java 21 cho dự án Course Management System.\n"
+    "Nhiệm vụ của bạn là viết mã nguồn Java tuân thủ 100% các chuẩn mực kiến trúc cốt lõi của dự án:\n"
+    "1. Entity JPA: Sử dụng Jakarta Persistence (@Entity, @Table, @Id, @GeneratedValue, @Index, Lombok @Getter, @Setter, @Builder...).\n"
+    "2. Tầng DAO: BẮT BUỘC phải kế thừa HibernatePaginationSortingDao<Pk, Entity> và implement interface IDao tương ứng.\n"
+    "   - Constructor nhận EntityManager: super(Entity.class, entityManager);\n"
+    "   - Gọi các phương thức dùng chung: super.create(), super.update(), deleteByPk(), get(), count(), findByHql().\n"
+    "   - Bắt buộc áp dụng kiến trúc Hibernate Generic DAO tùy biến kế thừa HibernatePaginationSortingDao thay cho Spring Data JpaRepository.\n"
+    "3. Tầng Service & Controller: Tách rõ Interface/Impl, sử dụng DTO Pattern (RequestDTO với Jakarta Validation, ResponseDTO).\n"
+    "4. Quy chuẩn Package: Bắt buộc đặt trong package com.mkii.coursemanagementsystem (entity, dao, dao.impl, dto, service.impl, rest).\n"
+    "5. Viết mã nguồn Java đầy đủ, chi tiết, kèm giải thích ngắn gọn, sẵn sàng copy vào dự án."
+)
+
+SYSTEM_INSTRUCTION_GENERAL = (
+    "You are a general Java software engineer on the internet answering a user question.\n"
+    "Write standard, conventional Spring Boot code using standard industry defaults: "
+    "Spring Data JPA with standard JpaRepository interfaces (e.g. `public interface XRepository extends JpaRepository<X, Long>`), "
+    "standard REST controllers, and standard general-purpose boilerplate without any custom enterprise architecture assumptions."
+)
+
+def retrieve_rag_for_query(user_message, top_k=3, max_chars=2600):
+    """Truy xuất ngữ cảnh mã nguồn thật từ dự án để chống hallucination."""
+    try:
+        return rag_engine.format_context_block(user_message, top_k=top_k, max_chars=max_chars)
+    except Exception:
+        return "", []
+
+
+def format_prompt(user_message, use_rag=True, rag_context=None):
+    if use_rag:
+        system_content = (
+            "Bạn là trợ lý AI kỹ sư phần mềm chuyên sâu về Java 21, Spring Boot 3 và kiến trúc Generic DAO của dự án Course Management System (`com.mkii.coursemanagementsystem`).\n"
+            "Quy chuẩn thiết kế bắt buộc:\n"
+            "1. Tầng Entity: Sử dụng Jakarta Persistence (`jakarta.persistence.*`) và Lombok (`@Getter`, `@Setter`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`).\n"
+            "2. Tầng DAO: BẮT BUỘC kế thừa `HibernatePaginationSortingDao<Pk, Entity>` kết hợp `EntityManager` (`super(Entity.class, entityManager);`) và HQL (`findByHql`). TUYỆT ĐỐI KHÔNG dùng `JpaRepository` hay `CrudRepository`.\n"
+            "3. Tầng Service & Controller: Tách rõ Interface/Impl, dùng DTO Pattern (`RequestDTO`, `ResponseDTO`).\n"
+            "4. Bám sát tên class, field, package trong ngữ cảnh codebase thật được cung cấp bên dưới. Không bịa tên class hoặc field không có."
+        )
+        if rag_context is None:
+            rag_context, _ = retrieve_rag_for_query(user_message, top_k=3, max_chars=1800)
+        final_user_content = (
+            f"[YÊU CẦU]:\n{user_message}\n\n{rag_context}"
+            if rag_context else user_message
+        )
+    else:
+        # Base model không fine-tune, không RAG (đánh giá công bằng nguyên bản)
+        system_content = (
+            "You are a helpful Java and Spring Boot software engineering assistant. "
+            "Answer the user's request cleanly and accurately in Vietnamese with complete Java code blocks."
+        )
+        final_user_content = user_message
+
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": final_user_content}
+    ]
+    try:
+        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    except Exception:
+        return f"<|im_start|>user\n{final_user_content}<|im_end|>\n<|im_start|>assistant\n"
+
+# ======================================================================
+# INFERENCE LOCAL GPU (ĐƯỢC TỐI ƯU HÓA VRAM & STREAMING)
+# ======================================================================
+def generate_local(user_message, use_adapter=True, max_tokens=1500, use_rag=None, rag_context=None):
+    """Sinh câu trả lời 100% CỤC BỘ TRÊN GPU (RTX 4050)"""
+    if use_rag is None:
+        use_rag = bool(use_adapter)
+    if not local_ready:
+        for _ in range(20):
+            if local_ready:
+                break
+            time.sleep(1)
+
+    if not local_ready or model is None:
+        return "⚠️ Mô hình Local đang được nạp vào VRAM GPU (khoảng 5-10 giây). Vui lòng thử lại sau giây lát!", 0.0
+
+    formatted = format_prompt(user_message, use_rag=use_rag, rag_context=rag_context)
+    inputs = tokenizer(formatted, return_tensors="pt")
     if has_cuda:
         inputs = inputs.to("cuda")
 
     start_time = time.time()
-    with torch.no_grad():
+    is_code_req = any(w in user_message.lower() for w in [
+        "viết", "tạo", "module", "entity", "dao", "dto", "hql", "sql", "class", 
+        "code", "service", "triển khai", "hướng dẫn", "instructor", "enrollment", 
+        "đăng ký", "thống kê", "specification", "bảo mật", "security", "xóa mềm", "audit"
+    ])
+    min_tokens = min(50, max_tokens) if is_code_req else min(5, max_tokens)
+    with torch.inference_mode():
         if has_adapter and not use_adapter:
             with model.disable_adapter():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=2048,
-                    temperature=0.7,
+                    max_new_tokens=max_tokens,
+                    min_new_tokens=min_tokens,
+                    temperature=0.25,
                     top_p=0.9,
-                    repetition_penalty=1.1
+                    repetition_penalty=1.08,
+                    do_sample=True,
+                    pad_token_id=tokenizer.eos_token_id
                 )
         else:
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=2048,
-                temperature=0.7,
+                max_new_tokens=max_tokens,
+                min_new_tokens=min_tokens,
+                temperature=0.25,
                 top_p=0.9,
-                repetition_penalty=1.1
+                repetition_penalty=1.08,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id
             )
     elapsed = time.time() - start_time
     response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+    
+    # Giải phóng VRAM rác sau mỗi phản hồi
+    if has_cuda:
+        torch.cuda.empty_cache()
+        
     return response, round(elapsed, 2)
 
-HTML_TEMPLATE = """
+def generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=None, rag_context=None):
+    """Sinh câu trả lời STREAMING 100% CỤC BỘ TRÊN GPU (RTX 4050)"""
+    if use_rag is None:
+        use_rag = bool(use_adapter)
+    if not local_ready or model is None:
+        for _ in range(12):
+            if local_ready and model is not None:
+                break
+            time.sleep(1)
+
+    if not local_ready or model is None:
+        yield "⚠️ Mô hình Local đang được nạp vào VRAM GPU... Vui lòng thử lại sau giây lát!"
+        return
+
+    formatted = format_prompt(user_message, use_rag=use_rag, rag_context=rag_context)
+    inputs = tokenizer(formatted, return_tensors="pt")
+    if has_cuda:
+        inputs = inputs.to("cuda")
+
+    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+    is_code_req = any(w in user_message.lower() for w in [
+        "viết", "tạo", "module", "entity", "dao", "dto", "hql", "sql", "class", 
+        "code", "service", "triển khai", "hướng dẫn", "instructor", "enrollment", 
+        "đăng ký", "thống kê", "specification", "bảo mật", "security", "xóa mềm", "audit"
+    ])
+    min_tokens = min(50, max_tokens) if is_code_req else min(5, max_tokens)
+    generation_kwargs = dict(
+        **inputs,
+        streamer=streamer,
+        max_new_tokens=max_tokens,
+        min_new_tokens=min_tokens,
+        temperature=0.25,
+        top_p=0.9,
+        repetition_penalty=1.08,
+        do_sample=True,
+        pad_token_id=tokenizer.eos_token_id
+    )
+
+    def run_generation():
+        with torch.inference_mode():
+            if has_adapter and not use_adapter:
+                with model.disable_adapter():
+                    model.generate(**generation_kwargs)
+            else:
+                model.generate(**generation_kwargs)
+
+    thread = threading.Thread(target=run_generation)
+    thread.start()
+
+    for text_chunk in streamer:
+        if text_chunk:
+            yield text_chunk
+
+    thread.join()
+    if has_cuda:
+        torch.cuda.empty_cache()
+
+# ======================================================================
+# CLOUD AI (GEMINI / CLAUDE ANTHROPIC) INFERENCE & STREAMING
+# ======================================================================
+CLOUD_MODELS = ['gemini-2.5-flash']
+CLAUDE_MODELS = ['claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-sonnet-4-20250514']
+
+
+def _build_cloud_project_prompt(user_message):
+    rag_block, _ = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
+    if rag_block:
+        return f"{SYSTEM_INSTRUCTION_PROJECT}\n\n{rag_block}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}"
+    return f"{SYSTEM_INSTRUCTION_PROJECT}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}"
+
+
+def call_cloud_gemini(user_message):
+    """Gọi Cloud AI (Gemini) với Ngữ cảnh Kiến trúc & RAG Codebase thật của dự án"""
+    if not gemini_api_key:
+        return "Lỗi: Chưa cấu hình GEMINI_API_KEY trong file .env", 0.0
+
+    prompt = _build_cloud_project_prompt(user_message)
+    start_time = time.time()
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.2}
+    }
+
+    for m in CLOUD_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_api_key}"
+        try:
+            res = requests.post(url, json=payload, timeout=30)
+            if res.status_code == 200:
+                text = res.json()['candidates'][0]['content']['parts'][0]['text']
+                elapsed = time.time() - start_time
+                return text, round(elapsed, 2)
+        except Exception:
+            continue
+
+    elapsed = time.time() - start_time
+    return "Không thể kết nối đến máy chủ Cloud AI. Vui lòng kiểm tra lại mạng hoặc thử lại sau.", round(elapsed, 2)
+
+def call_cloud_gemini_stream(user_message):
+    """Streaming từ Cloud Gemini với ngữ cảnh kiến trúc + RAG codebase dự án"""
+    if not gemini_api_key:
+        yield "Lỗi: Chưa cấu hình GEMINI_API_KEY trong file .env"
+        return
+
+    prompt = _build_cloud_project_prompt(user_message)
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.2}
+    }
+
+    success = False
+    for m in CLOUD_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:streamGenerateContent?alt=sse&key={gemini_api_key}"
+        try:
+            res = requests.post(url, json=payload, stream=True, timeout=30)
+            if res.status_code == 200:
+                for line in res.iter_lines():
+                    if line:
+                        line_str = line.decode('utf-8', errors='ignore')
+                        if line_str.startswith('data:'):
+                            try:
+                                obj = json.loads(line_str[5:].strip())
+                                text_part = obj['candidates'][0]['content']['parts'][0]['text']
+                                yield text_part
+                            except Exception:
+                                pass
+                success = True
+                break
+        except Exception:
+            continue
+
+    if not success:
+        text, _ = call_cloud_gemini(user_message)
+        yield text
+
+
+def call_claude_stream(user_message, api_key="", system_prompt=SYSTEM_INSTRUCTION_GENERAL):
+    """Streaming trực tiếp từ Anthropic Claude Messages API (Zero-Context nếu không nạp repo)."""
+    key = (api_key or anthropic_api_key or "").strip()
+    if not key:
+        return
+
+    headers = {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    for m in CLAUDE_MODELS:
+        payload = {
+            "model": m,
+            "max_tokens": 1800,
+            "temperature": 0.2,
+            "stream": True,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_message}],
+        }
+        try:
+            res = requests.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                json=payload,
+                stream=True,
+                timeout=35,
+            )
+            if res.status_code == 200:
+                for raw_line in res.iter_lines():
+                    if not raw_line:
+                        continue
+                    line_str = raw_line.decode("utf-8", errors="ignore")
+                    if line_str.startswith("data:"):
+                        data_str = line_str[5:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            evt = json.loads(data_str)
+                            if evt.get("type") == "content_block_delta":
+                                delta = evt.get("delta", {})
+                                if delta.get("type") == "text_delta" and delta.get("text"):
+                                    yield delta["text"]
+                        except Exception:
+                            pass
+                return
+        except Exception:
+            continue
+    yield "⚠️ Không thể kết nối Anthropic Claude API với API Key đã cung cấp."
+
+
+def call_cloud_general_ai(user_message):
+    """Mô phỏng AI tiêu chuẩn bên ngoài (Cloud AI - Zero Context Chưa Biết Dự Án)"""
+    if not gemini_api_key:
+        return "Lỗi: Chưa cấu hình API Key trong file .env", 0.0
+
+    prompt = f"{SYSTEM_INSTRUCTION_GENERAL}\n\n[USER QUESTION]:\n{user_message}"
+    start_time = time.time()
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {'maxOutputTokens': 1500, 'temperature': 0.2}
+    }
+
+    for m in CLOUD_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_api_key}"
+        try:
+            res = requests.post(url, json=payload, timeout=20)
+            if res.status_code == 200:
+                text = res.json()['candidates'][0]['content']['parts'][0]['text']
+                elapsed = time.time() - start_time
+                return text, round(elapsed, 2)
+        except Exception:
+            continue
+
+    elapsed = time.time() - start_time
+    return "Không thể kết nối đến máy chủ AI bên ngoài.", round(elapsed, 2)
+
+def call_cloud_general_ai_stream(user_message, claude_key=""):
+    """Streaming từ External Zero-Context AI (ưu tiên Claude API nếu có key, ngược lại dùng Gemini Zero-Context)"""
+    effective_claude_key = (claude_key or anthropic_api_key or "").strip()
+    if effective_claude_key:
+        for chunk in call_claude_stream(user_message, api_key=effective_claude_key, system_prompt=SYSTEM_INSTRUCTION_GENERAL):
+            yield chunk
+        return
+
+    if not gemini_api_key:
+        yield "Lỗi: Chưa cấu hình API Key trong file .env"
+        return
+
+    prompt = f"{SYSTEM_INSTRUCTION_GENERAL}\n\n[USER QUESTION]:\n{user_message}"
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {'maxOutputTokens': 1500, 'temperature': 0.2}
+    }
+
+    success = False
+    for m in CLOUD_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:streamGenerateContent?alt=sse&key={gemini_api_key}"
+        try:
+            res = requests.post(url, json=payload, stream=True, timeout=20)
+            if res.status_code == 200:
+                for line in res.iter_lines():
+                    if line:
+                        line_str = line.decode('utf-8', errors='ignore')
+                        if line_str.startswith('data:'):
+                            try:
+                                obj = json.loads(line_str[5:].strip())
+                                text_part = obj['candidates'][0]['content']['parts'][0]['text']
+                                yield text_part
+                            except Exception:
+                                pass
+                success = True
+                break
+        except Exception:
+            continue
+
+    if not success:
+        ans, _ = call_cloud_general_ai(user_message)
+        yield ans
+
+def is_heavy_task(user_message):
+    """Phân tích ý đồ: nếu là tạo cả dự án lớn nhiều file thì ủy quyền Cloud"""
+    msg_lower = user_message.lower()
+    heavy_keywords = [
+        "tạo cho tôi 1 project", "tạo project mới", "project mới", "dự án mới", 
+        "hệ thống mới", "viết toàn bộ", "toàn bộ hệ thống", "full project", 
+        "kiến trúc tổng thể", "toàn bộ module", "cả dự án", "generate project",
+        "create project", "tạo full source"
+    ]
+    return any(k in msg_lower for k in heavy_keywords)
+
+# ======================================================================
+# GIAO DIỆN WEB HIỆN ĐẠI (STREAMING, TOOLBAR, DIFF, CLIENT SESSIONS)
+# ======================================================================
+HTML_TEMPLATE = r"""
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Management System - Codebase AI Copilot</title>
+    <title>Course Management Studio - Bảng Điều Khiển Kỹ Thuật</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Highlight.js for Code -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <!-- Highlight.js for Code (Clean Light Theme) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        pre code { border-radius: 0.5rem; font-size: 0.875rem; }
-        .prose pre { padding: 0.75rem; background: #0f172a; margin: 0.5rem 0; overflow-x: auto; }
-        .prose code { background: #1e293b; padding: 0.15rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; }
-        .prose p { margin-bottom: 0.5rem; }
-        .prose ul, .prose ol { margin-left: 1.25rem; margin-bottom: 0.5rem; list-style-type: disc; }
-        .scroll-smooth { scroll-behavior: smooth; }
+        pre code { border-radius: 0.375rem; font-size: 0.815rem; line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .prose pre { padding: 0.85rem; background: #f8fafc; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #e2e8f0; color: #1e293b; border-radius: 0.5rem; }
+        .prose code { background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; color: #0f172a; font-weight: 500; }
+        .prose p { margin-bottom: 0.65rem; color: #334155; line-height: 1.6; }
+        .prose ul, .prose ol { margin-left: 1.25rem; margin-bottom: 0.65rem; list-style-type: disc; color: #334155; }
+        .prose h1, .prose h2, .prose h3, .prose h4 { font-weight: 700; color: #0f172a; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #4f46e5; margin-left: 2px; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .hidden { display: none !important; }
+        .btn-mode-active {
+            background-color: #eef2ff !important;
+            color: #4338ca !important;
+            border-left: 3px solid #4f46e5 !important;
+            font-weight: 600 !important;
+        }
+        .btn-mode-inactive {
+            color: #475569 !important;
+            border-left: 3px solid transparent !important;
+        }
+        .btn-mode-inactive:hover {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        .quick-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .quick-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 9999px;
+        }
+        .quick-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .quick-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .quick-btn {
+            cursor: pointer !important;
+            user-select: none;
+            transition: all 0.15s ease;
+        }
+        .quick-btn:hover {
+            border-color: #6366f1 !important;
+            background-color: #f5f3ff !important;
+            color: #4338ca !important;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex antialiased">
 
-    <!-- Header -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-cyan-500/20">
-                ⚡
-            </div>
-            <div>
-                <h1 class="font-bold text-lg text-white flex items-center gap-2">
-                    Course Management System <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">AI Copilot</span>
-                </h1>
-                <p class="text-xs text-slate-400">So sánh đối chứng trực tiếp: <span class="text-slate-300 font-semibold">Base Model (Chưa train)</span> vs <span class="text-emerald-400 font-semibold">Fine-tuned (QLoRA)</span></p>
-            </div>
+    <!-- Toast Notification -->
+    <div id="toast-box" class="fixed top-5 right-5 z-50 pointer-events-none transition-all duration-300 opacity-0 transform -translate-y-2" style="display: none;">
+        <div id="toast-msg" class="bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 border border-slate-800">
+            <span>✓</span> <span>Đã chọn chế độ</span>
         </div>
+    </div>
 
-        <!-- Mode Selector -->
-        <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <button onclick="setMode('compare')" id="btn-compare" class="px-3 py-1.5 rounded-lg text-xs font-medium transition bg-cyan-600 text-white shadow">
-                ⚡ So sánh Song song (A/B)
-            </button>
-            <button onclick="setMode('finetuned')" id="btn-finetuned" class="px-3 py-1.5 rounded-lg text-xs font-medium transition text-slate-300 hover:text-white">
-                🚀 Chỉ Fine-tuned
-            </button>
-            <button onclick="setMode('base')" id="btn-base" class="px-3 py-1.5 rounded-lg text-xs font-medium transition text-slate-300 hover:text-white">
-                🌐 Chỉ Base Model
-            </button>
-        </div>
-
-        <!-- Hardware Badge -->
-        <div class="text-xs flex items-center gap-2 text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>GPU: {{ gpu_name }} (4-bit QLoRA)</span>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
-
-        <!-- Quick Prompts (Gợi ý câu hỏi nhanh) -->
-        <div class="mb-4">
-            <p class="text-xs text-slate-400 mb-2 font-medium">💡 Gợi ý câu hỏi thử nghiệm để thấy rõ sự khác biệt:</p>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="sendQuickPrompt('Lớp SearchCriteria trong package specification giữ vai trò gì và gồm những trường nào?')" 
-                        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700/70 transition">
-                    📌 Hỏi về SearchCriteria
-                </button>
-                <button onclick="sendQuickPrompt('Viết cấu trúc lớp CategoryDaoImpl kế thừa HibernatePaginationSortingDao theo chuẩn của dự án.')" 
-                        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700/70 transition">
-                    💻 Sinh code DAO mới
-                </button>
-                <button onclick="sendQuickPrompt('Giải thích cơ chế nâng version khi người dùng upload tài liệu trùng tên trong DocumentServiceImpl.')" 
-                        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700/70 transition">
-                    📂 Nghiệp vụ Versioning tài liệu
-                </button>
-                <button onclick="sendQuickPrompt('Dự án Course Management System gồm những module và package chính nào?')" 
-                        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700/70 transition">
-                    🏗️ Cấu trúc Package dự án
-                </button>
-            </div>
-        </div>
-
-        <!-- Chat Messages Container -->
-        <div id="chat-box" class="flex-1 overflow-y-auto space-y-6 pb-6">
-            <!-- Tin nhắn mẫu chào mừng -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 text-sm text-slate-300 leading-relaxed shadow-lg">
-                <h3 class="text-base font-semibold text-white mb-2 flex items-center gap-2">
-                    👋 Chào mừng bạn đến với Bộ điều khiển AI Chatbot của dự án!
-                </h3>
-                <p>Hệ thống cho phép bạn gửi câu hỏi và nhận câu trả lời phân luồng từ hai nguồn:</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">🌐 Base Model (Chưa train)</span>
-                        <p class="text-xs text-slate-400">Mô hình Qwen2.5-Coder gốc, chỉ có kiến thức lập trình tổng quát ngoài Internet, chưa biết cấu trúc dự án của bạn.</p>
-                    </div>
-                    <div class="bg-slate-950/60 p-3 rounded-xl border border-emerald-900/50">
-                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">🚀 Fine-tuned Model (Đã train)</span>
-                        <p class="text-xs text-slate-400">Đã nạp LoRA Adapter, am hiểu 100% kiến trúc Generic DAO, các Entity, MinIO Storage và quy tắc nghiệp vụ dự án.</p>
-                    </div>
+    <!-- ================================================================= -->
+    <!-- TASKBAR / SIDEBAR CỐ ĐỊNH BÊN CẠNH (LEFT TASKBAR)                -->
+    <!-- ================================================================= -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col h-screen flex-shrink-0 select-none shadow-[1px_0_4px_rgba(0,0,0,0.02)] z-20">
+        
+        <!-- Brand Header -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+                    CMS
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm text-slate-900 leading-tight">Course Studio</h1>
+                    <p class="text-[11px] text-slate-500 font-medium">Bảng Điều Khiển Kỹ Thuật</p>
                 </div>
             </div>
         </div>
 
-        <!-- Input Box -->
-        <div class="mt-auto pt-3 border-t border-slate-800 sticky bottom-0 bg-slate-950">
+        <!-- Taskbar Menu Navigation -->
+        <div class="p-3 overflow-y-auto flex-1 space-y-5">
+            
+            <!-- Nhóm 1: Chế Độ Xử Lý -->
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Chế Độ Xử Lý</p>
+                <div class="space-y-0.5">
+                    <button type="button" onclick="setMode('hybrid')" id="btn-hybrid"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-active cursor-pointer">
+                        <span class="text-sm">⚡</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-900">Trợ Lý Kỹ Thuật (Hybrid)</div>
+                            <div class="text-[10px] text-slate-500 truncate">Tự động Local & Cloud</div>
+                        </div>
+                    </button>
+                    <button type="button" onclick="setMode('local')" id="btn-local"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">💻</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">100% Local GPU</div>
+                            <div class="text-[10px] text-slate-500 truncate">RTX 4050 Offline</div>
+                        </div>
+                    </button>
+                    <button type="button" onclick="setMode('cloud')" id="btn-cloud"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">☁️</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">Cloud Gemini (1M Context)</div>
+                            <div class="text-[10px] text-slate-500 truncate">Sinh dự án quy mô lớn</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nhóm 2: Đối Chiếu & Đánh Giá -->
+            <div>
+                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Đối Chiếu & Đánh Giá</p>
+                <div class="space-y-0.5">
+                    <button type="button" onclick="setMode('compare_models')" id="btn-compare_models"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">⚖️</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">So Sánh Mô Hình</div>
+                            <div class="text-[10px] text-slate-500 truncate">Base vs Fine-tuned GPU</div>
+                        </div>
+                    </button>
+                    <button type="button" onclick="setMode('compare_system')" id="btn-compare_system"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">📋</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">So Sánh Hệ Thống</div>
+                            <div class="text-[10px] text-slate-500 truncate">Dự án vs AI Tiêu chuẩn</div>
+                        </div>
+                    </button>
+                    <button type="button" onclick="setMode('compare_arena')" id="btn-compare_arena"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">📊</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">Đấu Trường 3 Chiều</div>
+                            <div class="text-[10px] text-slate-500 truncate">Đối chiếu 3 luồng song song</div>
+                        </div>
+                    </button>
+                    <button type="button" onclick="setMode('compare_claude')" id="btn-compare_claude"
+                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
+                        <span class="text-sm">🤖</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800">So Sánh Với Claude</div>
+                            <div class="text-[10px] text-slate-500 truncate">Chấm điểm kiến trúc trực tiếp</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nhóm 3: Lịch Sử Phiên Hỏi Đáp -->
+            <div>
+                <div class="px-2 flex items-center justify-between mb-1.5">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lịch Sử Phiên</p>
+                    <div class="flex items-center gap-1">
+                        <button onclick="createNewSession()" title="Tạo phiên mới" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium px-1.5 py-0.5 rounded hover:bg-indigo-50 transition cursor-pointer">
+                            + Mới
+                        </button>
+                        <button onclick="clearAllHistory()" title="Xóa lịch sử" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5 rounded hover:bg-rose-50 transition cursor-pointer">
+                            Xóa
+                        </button>
+                    </div>
+                </div>
+                <div id="history-list" class="space-y-1 text-xs max-h-56 overflow-y-auto pr-1">
+                    <!-- Sessions rendered here -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar Footer Status -->
+        <div class="p-3 border-t border-slate-200 bg-slate-50/70 text-xs space-y-2">
+            <div class="flex items-center justify-between text-[11px] text-slate-600">
+                <span class="flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>GPU RTX 4050 (Qwen-3B)</span>
+                </span>
+                <span class="text-slate-400">Offline</span>
+            </div>
+            <div class="flex items-center gap-2 pt-1 border-t border-slate-200/80 text-[11px]">
+                <a href="http://localhost:8080" target="_blank" class="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 font-medium">
+                    <span>Web Quản Lý ↗</span>
+                </a>
+                <span class="text-slate-300">•</span>
+                <a href="/benchmark-report" target="_blank" class="text-slate-600 hover:text-slate-900 hover:underline">
+                    Báo Cáo Nghiệm Thu
+                </a>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- ================================================================= -->
+    <!-- KHÔNG GIAN LÀM VIỆC CHÍNH (MAIN WORKSPACE AREA)                   -->
+    <!-- ================================================================= -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
+
+        <!-- Top Header Navigation Bar -->
+        <header class="h-14 border-b border-slate-200 bg-white px-6 flex items-center justify-between flex-shrink-0 z-10">
+            <div class="flex items-center gap-2">
+                <span id="header-mode-icon" class="text-base text-indigo-600 font-bold">⚡</span>
+                <h2 id="header-mode-title" class="font-bold text-sm text-slate-900">Trợ Lý Kỹ Thuật (Hybrid)</h2>
+                <span class="text-slate-300">|</span>
+                <span class="text-xs text-slate-500 font-medium">Course Management System</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+                <button type="button" onclick="clearChat()" class="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition border border-slate-200 cursor-pointer">
+                    Làm mới màn hình
+                </button>
+                <a href="http://localhost:8080/swagger-ui/index.html" target="_blank" class="px-2.5 py-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition border border-indigo-200 font-medium">
+                    Swagger API Docs ↗
+                </a>
+            </div>
+        </header>
+
+        <!-- Sub-header: Mode Description & Quick Prompts -->
+        <div class="px-6 pt-3 pb-1 border-b border-slate-200/60 bg-white/70">
+            <!-- Mode Banner -->
+            <div id="mode-banner" class="mb-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm">💡</span>
+                    <span id="mode-desc">Chế độ <strong>Trợ Lý Kỹ Thuật (Hybrid)</strong>: Local AI Qwen làm chủ, tự động điều phối Cloud AI khi cần sinh cả dự án lớn.</span>
+                </div>
+            </div>
+
+            <!-- Quick Prompts Scrollbar -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 text-xs quick-scroll">
+                <span class="text-slate-400 font-semibold whitespace-nowrap text-[11px] flex items-center gap-1">
+                    Gợi ý:
+                </span>
+                <button type="button" onclick="fillPrompt('Viết mã nguồn Java đầy đủ gồm Entity Instructor và InstructorDaoImpl kế thừa HibernatePaginationSortingDao sử dụng EntityManager')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Module Giảng Viên
+                </button>
+                <button type="button" onclick="fillPrompt('Viết CourseDaoImpl tìm kiếm Khóa học nâng cao bằng Dynamic HQL và EntityManager kế thừa HibernatePaginationSortingDao')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Dynamic HQL DAO
+                </button>
+                <button type="button" onclick="fillPrompt('Viết CourseRequestDTO và CourseResponseDTO chuẩn Jakarta Validation (@NotBlank, @NotNull, @Min) và Lombok')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    DTO &amp; Validation
+                </button>
+                <button type="button" onclick="fillPrompt('Viết Document Entity lưu trữ file MinIO đa tầng tbl_document và DocumentDaoImpl kế thừa HibernatePaginationSortingDao')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Lưu trữ MinIO
+                </button>
+                <button type="button" onclick="fillPrompt('Viết Module Đăng ký Khóa học gồm Enrollment Entity liên kết Student-Course và EnrollmentDaoImpl kế thừa HibernatePaginationSortingDao')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Đăng Ký Khóa Học
+                </button>
+                <button type="button" onclick="fillPrompt('Viết GenericSpecification và GenericSpecificationsBuilder tìm kiếm Sinh viên theo tên, email, khoảng ngày sinh linh hoạt')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Lọc Đa Tiêu Chí
+                </button>
+                <button type="button" onclick="fillPrompt('Viết cấu hình phân quyền Spring Security và JWT, bảo vệ API với @PreAuthorize cho vai trò ADMIN')"
+                        class="quick-btn bg-white hover:bg-indigo-50 text-slate-700 px-3 py-1 rounded-md border border-slate-200 transition whitespace-nowrap text-xs shadow-2xs">
+                    Bảo Mật &amp; Phân Quyền
+                </button>
+                <button type="button" onclick="fillPrompt('Tạo cho tôi 1 project Quản lý Khách sạn gồm đầy đủ Entity, DAO, Service')"
+                        class="quick-btn bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md border border-indigo-200 transition whitespace-nowrap text-xs font-medium shadow-2xs">
+                    Scaffold Dự Án Mới
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Output Scroll Box -->
+        <div id="chat-box" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            
+            <!-- Welcome Card -->
+            <div id="welcome-card" class="bg-white border border-slate-200 rounded-xl p-6 text-center max-w-2xl mx-auto my-auto shadow-sm">
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg mx-auto mb-3 border border-indigo-100">
+                    CMS
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-1.5">
+                    Course Management Studio
+                </h3>
+                <p class="text-xs text-slate-500 mb-4 max-w-md mx-auto">
+                    Môi trường lập trình chuyên biệt hỗ trợ sinh mã nguồn chuẩn Java 21, Spring Boot 3, Hibernate Generic DAO và đối chiếu đa mô hình.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-left">
+                    <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                        <span class="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                            💻 Xử Lý Cục Bộ Offline (RTX 4050)
+                        </span>
+                        <p class="text-slate-500 text-[11px] leading-relaxed">Chạy trực tiếp trên GPU máy trạm với Qwen-3B + LoRA. Bảo mật mã nguồn 100%.</p>
+                    </div>
+                    <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                        <span class="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                            ⚖️ Đối Chiếu Đa Chiều Trực Quan
+                        </span>
+                        <p class="text-slate-500 text-[11px] leading-relaxed">So sánh trực tiếp chất lượng mã nguồn giữa Mô Hình Gốc, Mô Hình Fine-tuned và AI Tiêu Chuẩn.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sticky Bottom Input Box -->
+        <div class="px-6 py-3 border-t border-slate-200 bg-white flex-shrink-0">
             <form id="chat-form" onsubmit="handleSend(event)" class="relative flex items-center">
-                <textarea id="user-input" rows="1" placeholder="Nhập câu hỏi về dự án Course Management System... (Shift+Enter để xuống dòng)"
-                          class="w-full bg-slate-900 text-slate-100 placeholder-slate-500 rounded-xl pl-4 pr-24 py-3.5 border border-slate-800 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm resize-none"
+                <textarea id="user-input" rows="1" placeholder="Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng)"
+                          class="w-full bg-slate-50 hover:bg-white focus:bg-white text-slate-800 placeholder-slate-400 rounded-xl pl-4 pr-24 py-3 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm resize-none transition"
                           onkeydown="handleKeyDown(event)"></textarea>
                 <button type="submit" id="send-btn"
-                        class="absolute right-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-lg text-sm font-medium transition shadow-md flex items-center gap-1.5 disabled:opacity-50">
+                        class="absolute right-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
                     <span>Gửi</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </button>
             </form>
-            <div class="flex justify-between items-center text-[11px] text-slate-500 px-1 mt-1.5">
+            <div class="flex justify-between items-center text-[11px] text-slate-400 px-1 mt-1.5">
                 <span>Nhấn <strong>Enter</strong> để gửi, <strong>Shift + Enter</strong> để xuống dòng.</span>
-                <button onclick="clearChat()" class="hover:text-slate-400 transition underline">Xóa lịch sử chat</button>
+                <span>Tự động tối ưu hóa kiến trúc</span>
             </div>
         </div>
 
     </main>
 
+    <!-- ================================================================= -->
+    <!-- JAVASCRIPT LOGIC PIPELINE                                         -->
+    <!-- ================================================================= -->
     <script>
-        let currentMode = 'compare';
+        let currentMode = 'hybrid';
+        const defaultWelcomeHtml = document.getElementById('chat-box').innerHTML;
+
+        const SERVER_HAS_CLAUDE_KEY = {{ 'true' if has_claude_key else 'false' }};
+        const modeDescriptions = {
+            'hybrid': 'Chế độ <strong>Hybrid Auto</strong>: Tác vụ chuyên sâu chạy Local GPU + RAG Codebase; tác vụ kiến trúc lớn tự động chuyển Cloud 1M Context.',
+            'local': 'Chế độ <strong>100% Local GPU</strong>: Chạy hoàn toàn Offline trên GPU RTX 4050 kết hợp QLoRA Adapter và truy xuất mã nguồn thật (RAG).',
+            'cloud': 'Chế độ <strong>Google Gemini Cloud (1M Tokens Context)</strong>: Sử dụng Cloud Gemini với ngữ cảnh codebase thật của dự án.',
+            'compare_models': 'Chế độ <strong>So Sánh Mô Hình (Gốc vs Fine-tuned + RAG)</strong>: Cả 2 mô hình chạy CỤC BỘ trên GPU RTX 4050 và chấm điểm kiến trúc tự động.',
+            'compare_system': 'Chế độ <strong>So Sánh Hệ Thống</strong>: Đối chiếu Hệ Thống Dự Án (LoRA + RAG) với AI Tiêu Chuẩn Bên Ngoài (Zero Context).',
+            'compare_arena': 'Chế độ <strong>Đấu Trường 3 Chiều</strong>: So sánh đồng thời 3 luồng (AI Tiêu Chuẩn Zero-Context, Base Model GPU, Fine-tuned + RAG GPU).',
+            'compare_claude': 'Chế độ <strong>So Sánh Với Claude</strong>: Đối chiếu trực tiếp Dự Án (LoRA + RAG) với Claude (qua Anthropic API hoặc paste câu trả lời từ claude.ai để chấm điểm 5 tiêu chí kiến trúc).'
+        };
+
+        const modeTitles = {
+            'hybrid': 'Trợ Lý Kỹ Thuật (Hybrid Auto)',
+            'local': '100% Local GPU (Offline RTX 4050)',
+            'cloud': 'Cloud Gemini (1M Context)',
+            'compare_models': 'So Sánh Mô Hình (Gốc vs Fine-tuned)',
+            'compare_system': 'So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)',
+            'compare_arena': 'Đấu Trường 3 Chiều',
+            'compare_claude': 'So Sánh Trực Tiếp Với Claude'
+        };
+
+        const modeIcons = {
+            'hybrid': '⚡',
+            'local': '💻',
+            'cloud': '☁️',
+            'compare_models': '⚖️',
+            'compare_system': '📋',
+            'compare_arena': '📊',
+            'compare_claude': '🤖'
+        };
+
+        const modePlaceholders = {
+            'hybrid': 'Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng)',
+            'local': '[100% Local GPU] Nhập yêu cầu viết Entity, Generic DAO, HQL động...',
+            'cloud': '[Cloud Gemini] Nhập yêu cầu thiết kế toàn bộ hệ thống lớn nhiều module...',
+            'compare_models': '[So Sánh Mô Hình] Nhập bài toán để đối chiếu Model Gốc vs Fine-tuned + RAG...',
+            'compare_system': '[So Sánh Hệ Thống] Nhập bài toán để so sánh Hệ Thống Dự Án vs AI Tiêu Chuẩn...',
+            'compare_arena': '[Đấu Trường 3 Chiều] Nhập yêu cầu để 3 AI cùng sinh mã nguồn song song...',
+            'compare_claude': '[Đối Chiếu Claude] Nhập câu hỏi về Course Management System để so tài với Claude...'
+        };
+
+        function showToast(msg, icon = "✓") {
+            const box = document.getElementById('toast-box');
+            const txt = document.getElementById('toast-msg');
+            if (!box || !txt) return;
+            txt.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+            box.style.display = 'block';
+            setTimeout(() => {
+                box.classList.remove('opacity-0', '-translate-y-2');
+                box.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => {
+                box.classList.remove('opacity-100', 'translate-y-0');
+                box.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => { box.style.display = 'none'; }, 300);
+            }, 2500);
+        }
 
         function setMode(mode) {
             currentMode = mode;
-            ['compare', 'finetuned', 'base'].forEach(m => {
+            ['hybrid', 'local', 'cloud', 'compare_models', 'compare_system', 'compare_arena', 'compare_claude'].forEach(m => {
                 const btn = document.getElementById(`btn-${m}`);
-                if (m === mode) {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition bg-cyan-600 text-white shadow";
-                } else {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition text-slate-300 hover:text-white";
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-active cursor-pointer";
+                    } else {
+                        btn.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer";
+                    }
                 }
             });
+
+            const headerTitle = document.getElementById('header-mode-title');
+            if (headerTitle) headerTitle.textContent = modeTitles[mode] || mode;
+
+            const headerIcon = document.getElementById('header-mode-icon');
+            if (headerIcon) headerIcon.textContent = modeIcons[mode] || '⚡';
+
+            const descEl = document.getElementById('mode-desc');
+            if (descEl) descEl.innerHTML = modeDescriptions[mode] || '';
+
+            const inputEl = document.getElementById('user-input');
+            if (inputEl && modePlaceholders[mode]) {
+                inputEl.placeholder = modePlaceholders[mode];
+            }
+
+            showToast(`Chế độ: ${modeTitles[mode] || mode}`, "✓");
         }
 
         function handleKeyDown(e) {
@@ -251,17 +961,206 @@ HTML_TEMPLATE = """
             }
         }
 
-        function sendQuickPrompt(text) {
-            document.getElementById('user-input').value = text;
-            handleSend(new Event('submit'));
+        function fillPrompt(text) {
+            const el = document.getElementById('user-input');
+            if (!el) return;
+            el.value = text;
+            el.focus();
+            showToast(`Đã chọn gợi ý`, "✓");
+            handleSend();
         }
 
         function clearChat() {
-            document.getElementById('chat-box').innerHTML = `
-                <div class="text-center text-xs text-slate-500 py-6">Đã làm mới cuộc hội thoại. Hãy bắt đầu hỏi một câu mới!</div>
-            `;
+            document.getElementById('chat-box').innerHTML = defaultWelcomeHtml;
         }
 
+        // ======================================================================
+        // CLIENT-SIDE CHAT HISTORY (localStorage)
+        // ======================================================================
+        function getSessions() {
+            try {
+                return JSON.parse(localStorage.getItem('cms_ai_sessions') || localStorage.getItem('cms_copilot_sessions') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveSession(promptText, mode, htmlContent) {
+            const sessions = getSessions();
+            const id = 'sess_' + Date.now();
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + now.toLocaleDateString('vi-VN');
+            sessions.unshift({
+                id: id,
+                prompt: promptText,
+                mode: mode,
+                time: timeStr,
+                html: htmlContent
+            });
+            if (sessions.length > 30) sessions.pop();
+            localStorage.setItem('cms_ai_sessions', JSON.stringify(sessions));
+            renderHistorySidebar();
+        }
+
+        function renderHistorySidebar() {
+            const list = document.getElementById('history-list');
+            if (!list) return;
+            const sessions = getSessions();
+            if (sessions.length === 0) {
+                list.innerHTML = '<div class="text-slate-400 text-center py-4 text-[11px]">Chưa có phiên lưu trữ.</div>';
+                return;
+            }
+            list.innerHTML = sessions.map(s => `
+                <div onclick="restoreSession('${s.id}')" class="p-2 rounded-lg bg-slate-50 hover:bg-indigo-50/60 border border-slate-200/80 hover:border-indigo-200 cursor-pointer transition group">
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                        <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-mono">${escapeHtml(s.mode)}</span>
+                        <span>${escapeHtml(s.time.split(' ')[0])}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-700 line-clamp-1 font-medium group-hover:text-indigo-900">
+                        ${escapeHtml(s.prompt)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function restoreSession(id) {
+            const sessions = getSessions();
+            const sess = sessions.find(s => s.id === id);
+            if (!sess) return;
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = sess.html;
+            enhanceCodeBlocks(chatBox);
+            showToast("Đã khôi phục phiên hỏi đáp", "✓");
+        }
+
+        function clearAllHistory() {
+            if (confirm('Bạn có chắc muốn xóa toàn bộ lịch sử hỏi đáp?')) {
+                localStorage.removeItem('cms_ai_sessions');
+                localStorage.removeItem('cms_copilot_sessions');
+                renderHistorySidebar();
+                showToast("Đã xóa toàn bộ lịch sử", "✓");
+            }
+        }
+
+        function createNewSession() {
+            clearChat();
+            showToast("Đã tạo phiên hỏi đáp mới", "✓");
+        }
+
+        // ======================================================================
+        // CODE TOOLBAR & ARCHITECTURAL HIGHLIGHTER
+        // ======================================================================
+        function enhanceCodeBlocks(container) {
+            if (!container) container = document;
+            container.querySelectorAll('pre code').forEach((block) => {
+                if (block.closest('.code-toolbar-wrapper')) return;
+
+                hljs.highlightElement(block);
+
+                const pre = block.parentElement;
+                const codeText = block.innerText;
+
+                let lang = 'Java';
+                block.classList.forEach(cls => {
+                    if (cls.startsWith('language-')) lang = cls.replace('language-', '').toUpperCase();
+                });
+
+                // Kiểm tra kiến trúc
+                let archBadge = '';
+                const hasJpaRepo = /JpaRepository|CrudRepository/i.test(codeText);
+                const hasGenericDao = /HibernatePaginationSortingDao|IPaginationSortingDao/i.test(codeText);
+
+                if (hasJpaRepo && !hasGenericDao) {
+                    archBadge = `
+                        <div class="px-3 py-1.5 bg-rose-50 border-b border-rose-200 text-[11px] text-rose-800 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5 font-medium">
+                                <span>⚠️</span> <span><strong>Cảnh báo:</strong> Sử dụng <code>JpaRepository</code> (Không kế thừa Generic DAO chuẩn)</span>
+                            </span>
+                            <span class="text-rose-600 font-mono text-[10px] font-semibold">Sai chuẩn</span>
+                        </div>
+                    `;
+                } else if (hasGenericDao) {
+                    archBadge = `
+                        <div class="px-3 py-1.5 bg-emerald-50 border-b border-emerald-200 text-[11px] text-emerald-800 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5 font-medium">
+                                <span>✓</span> <span><strong>Chuẩn Kiến Trúc:</strong> Kế thừa <code>HibernatePaginationSortingDao</code> &amp; <code>EntityManager</code></span>
+                            </span>
+                            <span class="text-emerald-700 font-mono text-[10px] font-semibold">Tương thích 100%</span>
+                        </div>
+                    `;
+                }
+
+                // Bọc Toolbar
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-toolbar-wrapper my-3 rounded-lg border border-slate-200 bg-white overflow-hidden shadow-2xs';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-600';
+                header.innerHTML = `
+                    <span class="font-mono text-[11px] text-slate-700 font-semibold flex items-center gap-1.5">
+                        <span>☕</span> ${lang}
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="copyCodeSnippet(this)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 text-[11px] transition flex items-center gap-1 border border-slate-200 cursor-pointer shadow-2xs">
+                            Sao chép
+                        </button>
+                        <button onclick="downloadCodeSnippet(this)" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] transition flex items-center gap-1 border border-indigo-200 cursor-pointer font-medium">
+                            Tải .java
+                        </button>
+                    </div>
+                `;
+
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(header);
+                if (archBadge) {
+                    wrapper.insertAdjacentHTML('beforeend', archBadge);
+                }
+                wrapper.appendChild(pre);
+                pre.className = 'p-3 text-xs overflow-x-auto m-0 bg-slate-50/50 text-slate-800';
+            });
+        }
+
+        function copyCodeSnippet(btn) {
+            const wrapper = btn.closest('.code-toolbar-wrapper');
+            const code = wrapper ? wrapper.querySelector('code') : null;
+            if (!code) return;
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '✓ Đã chép!';
+                btn.classList.add('text-emerald-600');
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.classList.remove('text-emerald-600');
+                }, 2000);
+            });
+        }
+
+        function downloadCodeSnippet(btn) {
+            const wrapper = btn.closest('.code-toolbar-wrapper');
+            const code = wrapper ? wrapper.querySelector('code') : null;
+            if (!code) return;
+            const text = code.innerText;
+
+            let filename = 'CourseManagementCode.java';
+            const match = text.match(/(?:public\s+)?(?:class|interface|enum|record)\s+([A-Za-z0-9_]+)/);
+            if (match && match[1]) {
+                filename = match[1] + '.java';
+            }
+
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ======================================================================
+        // STREAMING SEND & RENDER PIPELINE
+        // ======================================================================
         async function handleSend(e) {
             if (e) e.preventDefault();
             const inputEl = document.getElementById('user-input');
@@ -273,153 +1172,92 @@ HTML_TEMPLATE = """
             sendBtn.disabled = true;
 
             const chatBox = document.getElementById('chat-box');
-
-            // Render tin nhắn của User
-            const userMsgHtml = `
-                <div class="flex justify-end mb-4">
-                    <div class="bg-indigo-600 text-white text-sm px-4 py-3 rounded-2xl rounded-tr-none max-w-2xl shadow-md">
-                        <strong>Bạn:</strong> ${escapeHtml(query)}
-                    </div>
-                </div>
-            `;
-            chatBox.insertAdjacentHTML('beforeend', userMsgHtml);
-
-            // Render khung phản hồi đang tải (Loading card)
-            const loadingId = 'loading-' + Date.now();
-            let loadingHtml = '';
-
-            if (currentMode === 'compare') {
-                loadingHtml = `
-                    <div id="${loadingId}" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl animate-pulse">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-bold text-slate-400">🌐 BASE MODEL (Chưa train)</span>
-                                <span class="text-xs text-slate-500">Đang sinh câu trả lời...</span>
-                            </div>
-                            <div class="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
-                            <div class="h-4 bg-slate-800 rounded w-1/2"></div>
-                        </div>
-                        <div class="bg-slate-900 border border-emerald-900/50 p-4 rounded-2xl animate-pulse">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs font-bold text-emerald-400">🚀 FINE-TUNED MODEL (QLoRA)</span>
-                                <span class="text-xs text-emerald-500">Đang suy nghĩ kiến trúc...</span>
-                            </div>
-                            <div class="h-4 bg-slate-800 rounded w-4/5 mb-2"></div>
-                            <div class="h-4 bg-slate-800 rounded w-2/3"></div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                const title = currentMode === 'finetuned' ? '🚀 FINE-TUNED MODEL' : '🌐 BASE MODEL';
-                const borderColor = currentMode === 'finetuned' ? 'border-emerald-900/50' : 'border-slate-800';
-                loadingHtml = `
-                    <div id="${loadingId}" class="bg-slate-900 border ${borderColor} p-4 rounded-2xl mb-4 animate-pulse">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs font-bold text-cyan-400">${title}</span>
-                            <span class="text-xs text-slate-500">Đang sinh câu trả lời...</span>
-                        </div>
-                        <div class="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
-                        <div class="h-4 bg-slate-800 rounded w-1/2"></div>
-                    </div>
-                `;
+            if (document.getElementById('welcome-card')) {
+                document.getElementById('welcome-card').remove();
             }
 
-            chatBox.insertAdjacentHTML('beforeend', loadingHtml);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            // User Message Card
+            chatBox.insertAdjacentHTML('beforeend', `
+                <div class="flex justify-end mb-4">
+                    <div class="bg-slate-900 text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-2xl shadow-sm">
+                        <span class="text-xs text-slate-400 block mb-0.5">Yêu cầu của bạn:</span>
+                        ${escapeHtml(query)}
+                    </div>
+                </div>
+            `);
+
+            const targetMode = currentMode;
+            const containerId = 'resp-' + Date.now();
+            const customClaudeKey = localStorage.getItem('cms_anthropic_key') || '';
 
             try {
-                const res = await fetch('/api/chat', {
+                const response = await fetch('/api/chat_stream', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ message: query, mode: currentMode })
+                    body: JSON.stringify({
+                        message: query,
+                        mode: targetMode,
+                        anthropic_api_key: customClaudeKey
+                    })
                 });
-                const data = await res.json();
-                document.getElementById(loadingId).remove();
 
-                if (currentMode === 'compare') {
-                    const baseMarkdown = marked.parse(data.base || 'Không có phản hồi');
-                    const ftMarkdown = marked.parse(data.finetuned || 'Không có phản hồi');
-
-                    const responseHtml = `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <!-- Cột Base Model -->
-                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col shadow-lg">
-                                <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-                                        <span class="font-bold text-slate-300">Base Model (Chưa train)</span>
-                                    </div>
-                                    <span class="text-slate-500 font-mono">${data.time_base}s</span>
-                                </div>
-                                <div class="prose text-xs text-slate-300 leading-relaxed overflow-x-auto flex-1">
-                                    ${baseMarkdown}
-                                </div>
-                            </div>
-
-                            <!-- Cột Fine-tuned Model -->
-                            <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 flex flex-col shadow-lg shadow-emerald-950/20">
-                                <div class="flex items-center justify-between pb-3 mb-3 border-b border-emerald-900/40 text-xs">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                        <span class="font-bold text-emerald-400">Fine-tuned Model (QLoRA)</span>
-                                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">Am hiểu Codebase</span>
-                                    </div>
-                                    <span class="text-emerald-500 font-mono">${data.time_finetuned}s</span>
-                                </div>
-                                <div class="prose text-xs text-slate-200 leading-relaxed overflow-x-auto flex-1">
-                                    ${ftMarkdown}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    chatBox.insertAdjacentHTML('beforeend', responseHtml);
-                } else if (currentMode === 'finetuned') {
-                    const ftMarkdown = marked.parse(data.finetuned || '');
-                    const responseHtml = `
-                        <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 mb-6 shadow-lg">
-                            <div class="flex items-center justify-between pb-3 mb-3 border-b border-emerald-900/40 text-xs">
-                                <span class="font-bold text-emerald-400 flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Fine-tuned Model (QLoRA)
-                                </span>
-                                <span class="text-emerald-500 font-mono">${data.time_finetuned}s</span>
-                            </div>
-                            <div class="prose text-sm text-slate-200 leading-relaxed">
-                                ${ftMarkdown}
-                            </div>
-                        </div>
-                    `;
-                    chatBox.insertAdjacentHTML('beforeend', responseHtml);
-                } else {
-                    const baseMarkdown = marked.parse(data.base || '');
-                    const responseHtml = `
-                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 shadow-lg">
-                            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs">
-                                <span class="font-bold text-slate-300 flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Base Model (Chưa train)
-                                </span>
-                                <span class="text-slate-500 font-mono">${data.time_base}s</span>
-                            </div>
-                            <div class="prose text-sm text-slate-300 leading-relaxed">
-                                ${baseMarkdown}
-                            </div>
-                        </div>
-                    `;
-                    chatBox.insertAdjacentHTML('beforeend', responseHtml);
+                if (!response.ok) {
+                    throw new Error('Lỗi máy chủ HTTP: ' + response.status);
                 }
 
-                // Highlight code blocks
-                document.querySelectorAll('pre code').forEach((el) => {
-                    hljs.highlightElement(el);
-                });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                let streamState = {
+                    mode: targetMode,
+                    prompt: query,
+                    singleText: '',
+                    cols: {
+                        base: { text: '', elapsed: 0, eval: null, ragFiles: [] },
+                        finetuned: { text: '', elapsed: 0, eval: null, ragFiles: [] },
+                        general: { text: '', elapsed: 0, eval: null, ragFiles: [] },
+                        project: { text: '', elapsed: 0, eval: null, ragFiles: [] },
+                        claude: { text: '', elapsed: 0, eval: null, ragFiles: [] }
+                    }
+                };
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed.startsWith('data:')) continue;
+                        const jsonStr = trimmed.substring(5).trim();
+                        if (!jsonStr) continue;
+
+                        try {
+                            const evt = JSON.parse(jsonStr);
+                            processStreamEvent(evt, containerId, streamState, chatBox);
+                        } catch (err) {
+                            console.error("Lỗi parse SSE:", err, jsonStr);
+                        }
+                    }
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                // Kết thúc: Nâng cấp Code blocks và lưu session
+                const containerEl = document.getElementById(containerId);
+                if (containerEl) {
+                    enhanceCodeBlocks(containerEl);
+                }
+                saveSession(query, targetMode, chatBox.innerHTML);
 
             } catch (err) {
                 console.error(err);
-                if (document.getElementById(loadingId)) {
-                    document.getElementById(loadingId).remove();
-                }
                 chatBox.insertAdjacentHTML('beforeend', `
-                    <div class="bg-red-950/60 border border-red-800 text-red-200 text-xs p-4 rounded-xl mb-4">
-                        <strong>Lỗi:</strong> Không thể kết nối với server sinh câu trả lời: ${err.message}
+                    <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-4 rounded-xl mb-4">
+                        <strong>Lỗi:</strong> ${err.message}
                     </div>
                 `);
             } finally {
@@ -428,68 +1266,684 @@ HTML_TEMPLATE = """
             }
         }
 
-        function escapeHtml(text) {
-            return text
+        function processStreamEvent(evt, containerId, state, chatBox) {
+            let container = document.getElementById(containerId);
+
+            // ==========================================
+            // CHẾ ĐỘ ĐƠN LẺ (LOCAL / CLOUD / HYBRID)
+            // ==========================================
+            if (evt.type === 'single_start') {
+                const isCloud = evt.source === 'cloud_delegated';
+                const badgeClass = isCloud 
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                const ragTags = (evt.rag_files && evt.rag_files.length)
+                    ? `<div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                           <span class="font-semibold text-slate-600">📂 Nguồn RAG:</span>
+                           ${evt.rag_files.map(f => `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px]">${escapeHtml(f)}</span>`).join('')}
+                       </div>`
+                    : '';
+
+                chatBox.insertAdjacentHTML('beforeend', `
+                    <div id="${containerId}" class="bg-white border border-slate-200 rounded-xl p-5 mb-5 shadow-sm">
+                        <div class="pb-3 mb-3 border-b border-slate-100 text-xs">
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full ${isCloud ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}"></span>
+                                    <span class="text-xs px-2.5 py-0.5 rounded-full border ${badgeClass} font-semibold">
+                                        ${escapeHtml(evt.badge)}
+                                    </span>
+                                </div>
+                                <span id="${containerId}-timer" class="text-slate-400 font-mono text-[11px] animate-pulse">Đang xử lý...</span>
+                            </div>
+                            ${ragTags}
+                        </div>
+                        <div id="${containerId}-content" class="prose text-sm text-slate-800 leading-relaxed overflow-x-auto typing-cursor"></div>
+                        <div id="${containerId}-eval" class="mt-3"></div>
+                    </div>
+                `);
+                return;
+            }
+
+            if (evt.type === 'single_chunk') {
+                state.singleText += evt.chunk;
+                const contentEl = document.getElementById(`${containerId}-content`);
+                if (contentEl) {
+                    contentEl.innerHTML = marked.parse(state.singleText);
+                }
+                return;
+            }
+
+            if (evt.type === 'single_done') {
+                const timerEl = document.getElementById(`${containerId}-timer`);
+                const contentEl = document.getElementById(`${containerId}-content`);
+                if (timerEl) {
+                    timerEl.classList.remove('animate-pulse');
+                    timerEl.textContent = `${evt.elapsed}s`;
+                }
+                if (contentEl) {
+                    contentEl.classList.remove('typing-cursor');
+                    contentEl.innerHTML = marked.parse(state.singleText);
+                }
+                if (evt.eval) {
+                    const evalEl = document.getElementById(`${containerId}-eval`);
+                    if (evalEl) evalEl.innerHTML = renderEvalScorecard(evt.eval);
+                }
+                return;
+            }
+
+            // ==========================================
+            // CHẾ ĐỘ SO SÁNH (COMPARE MODELS / SYSTEM / ARENA / CLAUDE)
+            // ==========================================
+            if (evt.type === 'init_compare') {
+                let columnsHtml = '';
+                if (evt.mode === 'compare_models') {
+                    columnsHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white border border-amber-200 rounded-xl p-4 flex flex-col shadow-sm">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-amber-100 text-xs">
+                                    <span class="font-bold text-amber-800 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Base Model (Chưa Fine-tune)
+                                    </span>
+                                    <span id="${containerId}-base-time" class="text-amber-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-base-eval" class="mt-3"></div>
+                            </div>
+                            <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-emerald-100 text-xs">
+                                    <span class="font-bold text-emerald-800 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Fine-tuned + RAG (LoRA GPU)
+                                    </span>
+                                    <span id="${containerId}-finetuned-time" class="text-emerald-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-finetuned-rag" class="mb-2"></div>
+                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-finetuned-eval" class="mt-3"></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (evt.mode === 'compare_system') {
+                    columnsHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
+                                    <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-slate-400"></span> AI Tiêu Chuẩn (Zero Context)
+                                    </span>
+                                    <span id="${containerId}-general-time" class="text-slate-600 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-general-eval" class="mt-3"></div>
+                            </div>
+                            <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-emerald-100 text-xs">
+                                    <span class="font-bold text-emerald-800 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Hệ Thống Dự Án (LoRA + RAG)
+                                    </span>
+                                    <span id="${containerId}-project-time" class="text-emerald-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-project-rag" class="mb-2"></div>
+                                <div id="${containerId}-project-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-project-eval" class="mt-3"></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (evt.mode === 'compare_arena') {
+                    columnsHtml = `
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
+                                    <span class="font-bold text-slate-800 flex items-center gap-1">🌐 AI Tiêu Chuẩn (Zero Context)</span>
+                                    <span id="${containerId}-general-time" class="text-slate-600 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-general-eval" class="mt-3"></div>
+                            </div>
+                            <div class="bg-white border border-amber-200 rounded-xl p-4 flex flex-col shadow-sm">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-amber-100 text-xs">
+                                    <span class="font-bold text-amber-800 flex items-center gap-1">💻 Base Model (GPU)</span>
+                                    <span id="${containerId}-base-time" class="text-amber-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-base-eval" class="mt-3"></div>
+                            </div>
+                            <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-emerald-100 text-xs">
+                                    <span class="font-bold text-emerald-800 flex items-center gap-1">🏆 Fine-tuned + RAG (GPU)</span>
+                                    <span id="${containerId}-finetuned-time" class="text-emerald-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-finetuned-rag" class="mb-2"></div>
+                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-finetuned-eval" class="mt-3"></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (evt.mode === 'compare_claude') {
+                    const autoClaude = Boolean(evt.has_claude_api);
+                    const claudePanelHtml = autoClaude
+                        ? `<div id="${containerId}-claude-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                           <div id="${containerId}-claude-eval" class="mt-3"></div>`
+                        : `<div class="space-y-2.5 flex-1 flex flex-col">
+                               <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 leading-relaxed">
+                                   Chưa cấu hình <code>ANTHROPIC_API_KEY</code>. Hãy bấm <strong>Copy Prompt</strong> dán sang <strong>claude.ai</strong>, rồi dán câu trả lời của Claude vào ô dưới để chấm điểm 5 tiêu chí kiến trúc:
+                               </div>
+                               <div class="flex items-center gap-2">
+                                   <button type="button" onclick="copyClaudePrompt('${containerId}')"
+                                           class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-medium text-slate-700 cursor-pointer">
+                                       📋 Copy Prompt Gửi Claude.ai
+                                   </button>
+                                   <button type="button" onclick="scorePastedClaude('${containerId}')"
+                                           class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[11px] font-medium text-white cursor-pointer">
+                                       ⚖️ Chấm Điểm Đối Chiếu
+                                   </button>
+                               </div>
+                               <textarea id="${containerId}-claude-paste" rows="8"
+                                         placeholder="Dán nguyên văn câu trả lời (hoặc code Java) từ Claude.ai vào đây..."
+                                         class="w-full flex-1 bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                               <div id="${containerId}-claude-eval"></div>
+                               <details class="text-[11px] text-slate-500 pt-1">
+                                   <summary class="cursor-pointer hover:text-slate-700 font-medium">Tùy chọn: Nhập Anthropic API Key để gọi trực tiếp</summary>
+                                   <div class="mt-2 flex gap-1.5">
+                                       <input id="${containerId}-claude-key-input" type="password" placeholder="sk-ant-..."
+                                              class="flex-1 border border-slate-300 rounded px-2 py-1 text-xs">
+                                       <button type="button" onclick="saveClaudeSessionKey('${containerId}')"
+                                               class="px-2.5 py-1 bg-indigo-600 text-white rounded text-xs cursor-pointer">Lưu</button>
+                                   </div>
+                               </details>
+                           </div>`;
+
+                    columnsHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" data-prompt="${escapeHtml(state.prompt)}">
+                            <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-emerald-100 text-xs">
+                                    <span class="font-bold text-emerald-800 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Hệ Thống Dự Án (LoRA + RAG)
+                                    </span>
+                                    <span id="${containerId}-project-time" class="text-emerald-700 font-mono">Đang chờ...</span>
+                                </div>
+                                <div id="${containerId}-project-rag" class="mb-2"></div>
+                                <div id="${containerId}-project-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-project-eval" class="mt-3"></div>
+                            </div>
+                            <div class="bg-white border border-violet-200 rounded-xl p-4 flex flex-col shadow-sm">
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-violet-100 text-xs">
+                                    <span class="font-bold text-violet-900 flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-violet-500"></span> Claude (Zero-Context Baseline)
+                                    </span>
+                                    <span id="${containerId}-claude-time" class="text-violet-700 font-mono">${autoClaude ? 'Đang chờ...' : 'Chờ paste câu trả lời'}</span>
+                                </div>
+                                ${claudePanelHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                chatBox.insertAdjacentHTML('beforeend', `
+                    <div id="${containerId}" class="mb-5">
+                        <div class="bg-slate-100 border border-slate-200 rounded-lg p-2.5 mb-3 text-xs text-slate-700 flex items-center justify-between">
+                            <span class="font-bold">${escapeHtml(evt.title)}</span>
+                            <span id="${containerId}-status" class="text-indigo-600 animate-pulse font-medium">Đang truyền phát mã nguồn song song...</span>
+                        </div>
+                        ${columnsHtml}
+                        <div id="${containerId}-summary" class="mt-3"></div>
+                    </div>
+                `);
+                window[`__state_${containerId}`] = state;
+                return;
+            }
+
+            if (evt.type === 'col_start') {
+                if (evt.rag_files && evt.rag_files.length) {
+                    const ragBox = document.getElementById(`${containerId}-${evt.col}-rag`);
+                    if (ragBox) {
+                        ragBox.innerHTML = `<div class="flex flex-wrap items-center gap-1 text-[10px] text-slate-500 bg-slate-50 border border-slate-200/80 rounded-lg px-2 py-1">
+                            <span class="font-semibold text-slate-600">📂 RAG:</span>
+                            ${evt.rag_files.map(f => `<span class="px-1.5 py-0.2 rounded bg-white border border-slate-200 text-slate-700 font-mono">${escapeHtml(f)}</span>`).join('')}
+                        </div>`;
+                    }
+                }
+                return;
+            }
+
+            if (evt.type === 'col_chunk') {
+                if (state.cols[evt.col]) {
+                    state.cols[evt.col].text += evt.chunk;
+                    const el = document.getElementById(`${containerId}-${evt.col}-body`);
+                    if (el) {
+                        el.innerHTML = marked.parse(state.cols[evt.col].text);
+                    }
+                }
+                return;
+            }
+
+            if (evt.type === 'col_done') {
+                if (state.cols[evt.col]) {
+                    state.cols[evt.col].elapsed = evt.elapsed;
+                    state.cols[evt.col].eval = evt.eval || null;
+                    const timer = document.getElementById(`${containerId}-${evt.col}-time`);
+                    if (timer) {
+                        timer.textContent = `${evt.elapsed}s`;
+                    }
+                    if (evt.eval) {
+                        const evalEl = document.getElementById(`${containerId}-${evt.col}-eval`);
+                        if (evalEl) {
+                            evalEl.innerHTML = renderEvalScorecard(evt.eval);
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (evt.type === 'all_done') {
+                const status = document.getElementById(`${containerId}-status`);
+                if (status) {
+                    status.classList.remove('animate-pulse');
+                    status.classList.add('text-slate-600');
+                    status.textContent = `Hoàn tất (${evt.total_elapsed}s)`;
+                }
+                renderComparisonSummary(containerId, state);
+                return;
+            }
+        }
+
+        function renderEvalScorecard(ev) {
+            if (!ev) return '';
+            const score = ev.score || 0;
+            const tone = score >= 80
+                ? { box: 'bg-emerald-50 border-emerald-200', badge: 'bg-emerald-600 text-white', text: 'text-emerald-900' }
+                : (score >= 50
+                    ? { box: 'bg-amber-50 border-amber-200', badge: 'bg-amber-600 text-white', text: 'text-amber-900' }
+                    : { box: 'bg-rose-50 border-rose-200', badge: 'bg-rose-600 text-white', text: 'text-rose-900' });
+
+            const chips = (ev.criteria || []).map(c => {
+                const cls = c.passed
+                    ? 'bg-white border-emerald-300 text-emerald-800'
+                    : 'bg-white/70 border-slate-200 text-slate-400 line-through';
+                return `<span class="px-1.5 py-0.5 rounded border text-[10px] font-medium ${cls}">${c.passed ? '✓' : '✗'} ${escapeHtml(c.name)}</span>`;
+            }).join('');
+
+            return `
+                <div class="rounded-lg border p-2.5 ${tone.box}">
+                    <div class="flex items-center justify-between text-[11px] font-semibold ${tone.text} mb-1">
+                        <span>🎯 Điểm Tuân Thủ Kiến Trúc CMS</span>
+                        <span class="px-2 py-0.5 rounded font-mono text-[11px] ${tone.badge}">${score}/100 (${ev.passed_count}/${ev.total})</span>
+                    </div>
+                    ${ev.task_label ? `<div class="text-[10px] opacity-80 mb-1.5 font-medium">${escapeHtml(ev.task_label)}</div>` : ''}
+                    <div class="flex flex-wrap gap-1">${chips}</div>
+                </div>
+            `;
+        }
+
+        function renderComparisonSummary(containerId, state) {
+            const summaryEl = document.getElementById(`${containerId}-summary`);
+            if (!summaryEl) return;
+            const labels = {
+                general: 'AI Tiêu Chuẩn (Zero-Context)',
+                base: 'Base Model (GPU)',
+                finetuned: 'Fine-tuned + RAG (LoRA GPU)',
+                project: 'Hệ Thống Dự Án (LoRA + RAG)',
+                claude: 'Claude'
+            };
+            const entries = Object.entries(state.cols)
+                .filter(([, v]) => v && v.eval)
+                .map(([k, v]) => ({ key: k, label: labels[k] || k, score: v.eval.score, elapsed: v.elapsed }));
+            if (entries.length < 2) return;
+
+            const best = [...entries].sort((a, b) => b.score - a.score || a.elapsed - b.elapsed)[0];
+            summaryEl.innerHTML = `
+                <div class="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+                    <span class="font-semibold text-slate-800">🏆 Kết Luận Đối Chiếu: <span class="text-emerald-700">${escapeHtml(best.label)}</span> dẫn đầu với <strong>${best.score}/100 điểm</strong> (${best.elapsed}s)</span>
+                    <span class="text-[11px] text-slate-500">${entries.map(e => `${escapeHtml(e.label)}: ${e.score}%`).join(' • ')}</span>
+                </div>
+            `;
+        }
+
+        function copyClaudePrompt(containerId) {
+            const st = window[`__state_${containerId}`];
+            const promptText = st ? st.prompt : '';
+            if (!promptText) return;
+            navigator.clipboard.writeText(promptText).then(() => {
+                showToast("Đã copy prompt — hãy dán vào Claude.ai!", "✓");
+            });
+        }
+
+        function saveClaudeSessionKey(containerId) {
+            const inp = document.getElementById(`${containerId}-claude-key-input`);
+            if (!inp) return;
+            const val = inp.value.trim();
+            if (val) {
+                localStorage.setItem('cms_anthropic_key', val);
+                showToast("Đã lưu Anthropic API Key cho trình duyệt này", "✓");
+            } else {
+                localStorage.removeItem('cms_anthropic_key');
+                showToast("Đã xóa API Key khỏi trình duyệt", "✓");
+            }
+        }
+
+        async function scorePastedClaude(containerId) {
+            const ta = document.getElementById(`${containerId}-claude-paste`);
+            const evalEl = document.getElementById(`${containerId}-claude-eval`);
+            if (!ta || !evalEl) return;
+            const text = ta.value.trim();
+            if (!text) {
+                showToast("Vui lòng dán câu trả lời của Claude vào trước", "⚠️");
+                return;
+            }
+            const st = window[`__state_${containerId}`];
+            const res = await fetch('/api/score_response', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ text, prompt: st ? st.prompt : '' })
+            });
+            const data = await res.json();
+            if (data.eval) {
+                evalEl.innerHTML = renderEvalScorecard(data.eval);
+                const st = window[`__state_${containerId}`];
+                if (st) {
+                    st.cols.claude.text = text;
+                    st.cols.claude.eval = data.eval;
+                    renderComparisonSummary(containerId, st);
+                }
+                showToast(`Đã chấm điểm Claude: ${data.eval.score}/100`, "⚖️");
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistorySidebar();
+        });
     </script>
 </body>
 </html>
 """
 
+
 @app.route("/")
 def index():
-    return render_template_string(HTML_TEMPLATE, gpu_name=gpu_name)
+    return render_template_string(HTML_TEMPLATE, has_claude_key=bool(anthropic_api_key))
 
-@app.route("/api/chat", methods=["POST"])
-def api_chat():
-    data = request.get_json() or {}
+
+@app.route("/api/rag/refresh", methods=["POST"])
+def refresh_rag():
+    count = rag_engine.refresh()
+    return jsonify({"status": "ok", "indexed_files": count})
+
+
+@app.route("/api/score_response", methods=["POST"])
+def score_response():
+    data = request.json or {}
+    text = data.get("text", "")
+    prompt_text = data.get("prompt", "")
+    return jsonify({"eval": evaluate_architecture_compliance(text, prompt_text)})
+
+
+@app.route("/benchmark-report")
+def benchmark_report():
+    report_path = os.path.join(root_dir, "benchmark", "bao_cao_truc_quan.html")
+    if not os.path.exists(report_path):
+        report_path = os.path.join(root_dir, "bao_cao_truc_quan.html")
+    if os.path.exists(report_path):
+        with open(report_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "Chưa tìm thấy file bao_cao_truc_quan.html. Vui lòng chạy benchmark_comparison.py trước!", 404
+
+# ======================================================================
+# API CHAT STREAMING (SERVER-SENT EVENTS - SSE)
+# ======================================================================
+@app.route("/api/chat_stream", methods=["POST"])
+def chat_stream():
+    data = request.json or {}
     user_message = data.get("message", "").strip()
-    mode = data.get("mode", "compare")
+    mode = data.get("mode", "hybrid")
+    req_claude_key = (data.get("anthropic_api_key") or "").strip()
 
     if not user_message:
-        return jsonify({"error": "Empty message"}), 400
+        def err_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Vui lòng nhập câu hỏi'})}\n\n"
+        return Response(stream_with_context(err_stream()), mimetype="text/event-stream")
 
-    system_prompt = "Bạn là trợ lý AI chuyên gia, nắm vững 100% kiến trúc, mã nguồn và nghiệp vụ của dự án Course Management System (Hệ thống Quản lý Khóa học, Học viên & Tài liệu MinIO)."
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message}
-    ]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    def sse_generator():
+        start_time = time.time()
+        rag_block, rag_files = retrieve_rag_for_query(user_message, top_k=3, max_chars=1800)
+        effective_claude_key = req_claude_key or anthropic_api_key
 
-    result = {}
+        try:
+            # 1. Chế độ SO SÁNH MODEL: Base Model vs Fine-tuned + RAG (Local GPU)
+            if mode == "compare_models":
+                yield f"data: {json.dumps({'type': 'init_compare', 'mode': 'compare_models', 'title': '⚖️ SO SÁNH TRỰC DIỆN MODEL TRÊN GPU (RTX 4050)'})}\n\n"
 
-    if mode == "compare":
-        # Sinh câu trả lời từ Base Model (Tắt adapter)
-        base_resp, base_time = generate_text(prompt, use_adapter=False)
-        result["base"] = base_resp
-        result["time_base"] = base_time
+                # Cột 1: Base Model (không LoRA, không RAG -> đánh giá công bằng nguyên bản)
+                col1_start = time.time()
+                buf_base = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'base', 'title': f'Mô hình Gốc ({base_model_id} GPU)'})}\n\n"
+                for chunk in generate_local_stream(user_message, use_adapter=False, max_tokens=1000, use_rag=False):
+                    buf_base.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'base', 'chunk': chunk})}\n\n"
+                t_base = round(time.time() - col1_start, 2)
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'base', 'elapsed': t_base, 'eval': evaluate_architecture_compliance(''.join(buf_base), user_message)})}\n\n"
 
-        # Sinh câu trả lời từ Fine-tuned Model (Bật adapter)
-        ft_resp, ft_time = generate_text(prompt, use_adapter=True)
-        result["finetuned"] = ft_resp
-        result["time_finetuned"] = ft_time
+                # Cột 2: Fine-tuned Model + RAG
+                col2_start = time.time()
+                buf_ft = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'finetuned', 'title': 'Mô hình Fine-tuned + RAG (LoRA GPU)', 'rag_files': rag_files})}\n\n"
+                for chunk in generate_local_stream(user_message, use_adapter=True, max_tokens=1200, use_rag=True, rag_context=rag_block):
+                    buf_ft.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'finetuned', 'chunk': chunk})}\n\n"
+                t_ft = round(time.time() - col2_start, 2)
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'finetuned', 'elapsed': t_ft, 'eval': evaluate_architecture_compliance(''.join(buf_ft), user_message)})}\n\n"
 
-    elif mode == "finetuned":
-        ft_resp, ft_time = generate_text(prompt, use_adapter=True)
-        result["finetuned"] = ft_resp
-        result["time_finetuned"] = ft_time
+                yield f"data: {json.dumps({'type': 'all_done', 'total_elapsed': round(time.time() - start_time, 2)})}\n\n"
+                return
 
-    elif mode == "base":
-        base_resp, base_time = generate_text(prompt, use_adapter=False)
-        result["base"] = base_resp
-        result["time_base"] = base_time
+            # 2. Chế độ SO SÁNH HỆ THỐNG: Dự Án vs AI Tiêu Chuẩn (Zero Context)
+            if mode == "compare_system":
+                yield f"data: {json.dumps({'type': 'init_compare', 'mode': 'compare_system', 'title': '🏆 ĐỐI ĐẦU HỆ THỐNG: DỰ ÁN VS AI TIÊU CHUẨN'})}\n\n"
 
-    return jsonify(result)
+                c1_start = time.time()
+                buf_gen = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'general', 'title': 'AI Tiêu Chuẩn Bên Ngoài (Zero Context)'})}\n\n"
+                for chunk in call_cloud_general_ai_stream(user_message, claude_key=effective_claude_key):
+                    buf_gen.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'general', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'general', 'elapsed': round(time.time() - c1_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_gen), user_message)})}\n\n"
+
+                c2_start = time.time()
+                buf_proj = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'project', 'title': 'Hệ Thống AI Của Dự Án (LoRA + RAG)', 'rag_files': rag_files})}\n\n"
+                streamer = generate_local_stream(user_message, use_adapter=True, max_tokens=1200, use_rag=True, rag_context=rag_block) if local_ready else call_cloud_gemini_stream(user_message)
+                for chunk in streamer:
+                    buf_proj.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'project', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'project', 'elapsed': round(time.time() - c2_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_proj), user_message)})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'all_done', 'total_elapsed': round(time.time() - start_time, 2)})}\n\n"
+                return
+
+            # 3. Chế độ ĐẤU TRƯỜNG 3 CHIỀU
+            if mode == "compare_arena":
+                yield f"data: {json.dumps({'type': 'init_compare', 'mode': 'compare_arena', 'title': '📊 ĐẤU TRƯỜNG 3 CHIỀU'})}\n\n"
+
+                c1_start = time.time()
+                buf_gen = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'general', 'title': 'AI Tiêu Chuẩn (Zero Context)'})}\n\n"
+                for chunk in call_cloud_general_ai_stream(user_message, claude_key=effective_claude_key):
+                    buf_gen.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'general', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'general', 'elapsed': round(time.time() - c1_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_gen), user_message)})}\n\n"
+
+                c2_start = time.time()
+                buf_base = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'base', 'title': f'Base Model ({base_model_id} GPU)'})}\n\n"
+                for chunk in generate_local_stream(user_message, use_adapter=False, max_tokens=1000, use_rag=False):
+                    buf_base.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'base', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'base', 'elapsed': round(time.time() - c2_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_base), user_message)})}\n\n"
+
+                c3_start = time.time()
+                buf_ft = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'finetuned', 'title': 'Fine-tuned + RAG (Local GPU)', 'rag_files': rag_files})}\n\n"
+                for chunk in generate_local_stream(user_message, use_adapter=True, max_tokens=1200, use_rag=True, rag_context=rag_block):
+                    buf_ft.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'finetuned', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'finetuned', 'elapsed': round(time.time() - c3_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_ft), user_message)})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'all_done', 'total_elapsed': round(time.time() - start_time, 2)})}\n\n"
+                return
+
+            # 4. Chế độ SO SÁNH VỚI CLAUDE
+            if mode == "compare_claude":
+                has_key = bool(effective_claude_key)
+                yield f"data: {json.dumps({'type': 'init_compare', 'mode': 'compare_claude', 'title': '🤖 ĐỐI CHIẾU TRỰC TIẾP VỚI CLAUDE', 'has_claude_api': has_key})}\n\n"
+
+                c_proj_start = time.time()
+                buf_proj = []
+                yield f"data: {json.dumps({'type': 'col_start', 'col': 'project', 'title': 'Hệ Thống Dự Án (LoRA + RAG)', 'rag_files': rag_files})}\n\n"
+                streamer = generate_local_stream(user_message, use_adapter=True, max_tokens=1200, use_rag=True, rag_context=rag_block) if local_ready else call_cloud_gemini_stream(user_message)
+                for chunk in streamer:
+                    buf_proj.append(chunk)
+                    yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'project', 'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'col_done', 'col': 'project', 'elapsed': round(time.time() - c_proj_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_proj), user_message)})}\n\n"
+
+                if has_key:
+                    c_claude_start = time.time()
+                    buf_claude = []
+                    yield f"data: {json.dumps({'type': 'col_start', 'col': 'claude', 'title': 'Claude (Anthropic API)'})}\n\n"
+                    for chunk in call_claude_stream(user_message, api_key=effective_claude_key, system_prompt=SYSTEM_INSTRUCTION_GENERAL):
+                        buf_claude.append(chunk)
+                        yield f"data: {json.dumps({'type': 'col_chunk', 'col': 'claude', 'chunk': chunk})}\n\n"
+                    yield f"data: {json.dumps({'type': 'col_done', 'col': 'claude', 'elapsed': round(time.time() - c_claude_start, 2), 'eval': evaluate_architecture_compliance(''.join(buf_claude), user_message)})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'all_done', 'total_elapsed': round(time.time() - start_time, 2)})}\n\n"
+                return
+
+            # 5. CHẾ ĐỘ ĐƠN LẺ: LOCAL, CLOUD, HOẶC HYBRID
+            is_heavy = is_heavy_task(user_message)
+            use_cloud = (mode == "cloud") or (mode == "hybrid" and (is_heavy or not local_ready))
+            buf_single = []
+
+            if use_cloud:
+                _, cloud_rag_files = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
+                badge = "🌐 Google Gemini Cloud (Ngữ Cảnh Codebase RAG • 1M Context)" if mode == "cloud" else \
+                       ("🌐 Local AI đã phân tích & Ủy quyền cho Cloud AI sinh toàn bộ dự án lớn" if is_heavy else "🌐 Cloud AI phục vụ với Ngữ cảnh Codebase Chuẩn")
+                source = "cloud_delegated"
+                yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': cloud_rag_files})}\n\n"
+                for chunk in call_cloud_gemini_stream(user_message):
+                    buf_single.append(chunk)
+                    yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
+            else:
+                badge = f"⚡ Xử lý 100% Cục bộ trên GPU RTX 4050 ({base_model_id} + LoRA + RAG)"
+                source = "local_direct"
+                yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': rag_files})}\n\n"
+                for chunk in generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=True, rag_context=rag_block):
+                    buf_single.append(chunk)
+                    yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
+
+            elapsed = round(time.time() - start_time, 2)
+            yield f"data: {json.dumps({'type': 'single_done', 'elapsed': elapsed, 'eval': evaluate_architecture_compliance(''.join(buf_single), user_message)})}\n\n"
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            if has_cuda:
+                torch.cuda.empty_cache()
+
+    return Response(stream_with_context(sse_generator()), mimetype="text/event-stream")
+
+# ======================================================================
+# API CHAT TRUYỀN THỐNG (FALLBACK ĐỒNG BỘ)
+# ======================================================================
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.json or {}
+    user_message = data.get("message", "").strip()
+    mode = data.get("mode", "hybrid")
+
+    if not user_message:
+        return jsonify({"answer": "Vui lòng nhập câu hỏi hoặc yêu cầu chức năng.", "elapsed": 0.0, "source": "system"}), 400
+
+    try:
+        if mode == "compare_models":
+            ans_base, time_base = generate_local(user_message, use_adapter=False, max_tokens=250)
+            ans_ft, time_ft = generate_local(user_message, use_adapter=True, max_tokens=250)
+            return jsonify({
+                "mode": "compare_models",
+                "base": {"title": f"Mô hình Gốc ({base_model_id} GPU)", "answer": ans_base, "elapsed": time_base},
+                "finetuned": {"title": f"Mô hình Fine-tuned (LoRA GPU)", "answer": ans_ft, "elapsed": time_ft}
+            })
+
+        if mode == "local":
+            ans, elapsed = generate_local(user_message, use_adapter=True, max_tokens=1500)
+            return jsonify({
+                "answer": ans,
+                "elapsed": elapsed,
+                "source": "local_direct",
+                "badge": f"⚡ Xử lý 100% Cục bộ trên GPU RTX 4050 ({base_model_id} + LoRA)"
+            })
+
+        if mode == "cloud":
+            ans, elapsed = call_cloud_gemini(user_message)
+            return jsonify({
+                "answer": ans,
+                "elapsed": elapsed,
+                "source": "cloud_delegated",
+                "badge": "🌐 Google Gemini Cloud (Ngữ Cảnh Kiến Trúc Codebase • 1M Context)"
+            })
+
+        if mode == "compare_system":
+            ans_gen, time_gen = call_cloud_general_ai(user_message)
+            ans_proj, time_proj = generate_local(user_message, use_adapter=True, max_tokens=600)
+            if not local_ready:
+                ans_proj, time_proj = call_cloud_gemini(user_message)
+            return jsonify({
+                "mode": "compare_system",
+                "general": {"title": "AI Tiêu Chuẩn Bên Ngoài (Zero Context)", "answer": ans_gen, "elapsed": time_gen},
+                "project": {"title": "Hệ Thống AI Của Dự Án (GPU RTX 4050)", "answer": ans_proj, "elapsed": time_proj}
+            })
+
+        if mode == "compare_arena":
+            ans_gen, time_gen = call_cloud_general_ai(user_message)
+            ans_base, time_base = generate_local(user_message, use_adapter=False, max_tokens=800)
+            ans_ft, time_ft = generate_local(user_message, use_adapter=True, max_tokens=800)
+            return jsonify({
+                "mode": "compare_arena",
+                "general": {"title": "AI Tiêu Chuẩn (Zero-Context)", "answer": ans_gen, "elapsed": time_gen},
+                "base": {"title": f"Base Model ({base_model_id} GPU)", "answer": ans_base, "elapsed": time_base},
+                "finetuned": {"title": "Fine-tuned Model (Local GPU)", "answer": ans_ft, "elapsed": time_ft}
+            })
+
+        is_heavy = is_heavy_task(user_message)
+        if is_heavy or not local_ready:
+            ans, elapsed = call_cloud_gemini(user_message)
+            badge_title = "🌐 Local AI đã phân tích & Ủy quyền cho Cloud AI sinh toàn bộ dự án lớn" if is_heavy else "🌐 Cloud AI phục vụ với Ngữ cảnh Codebase Chuẩn"
+            return jsonify({"answer": ans, "elapsed": elapsed, "source": "cloud_delegated", "badge": badge_title})
+        else:
+            ans, elapsed = generate_local(user_message, use_adapter=True, max_tokens=1500)
+            return jsonify({"answer": ans, "elapsed": elapsed, "source": "local_direct", "badge": f"⚡ Tự xử lý trực tiếp bởi Local AI ({base_model_id} trên GPU RTX 4050)"})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"answer": f"Đã xảy ra lỗi: {str(e)}", "elapsed": 0.0, "source": "error", "badge": "⚠️ Lỗi xử lý"}), 200
 
 if __name__ == "__main__":
     port = 7860
     print(f"\n=======================================================")
-    print(f"WEB CHATBOT ĐÃ SẴN SÀNG TẠI: http://localhost:{port}")
-    print(f"Mở trình duyệt web của bạn và truy cập link trên!")
+    print(f"WEB CHATBOT HYBRID & SO SÁNH STREAMING ĐÃ SẴN SÀNG TẠI: http://localhost:{port}")
+    print(f"Trình duyệt web sẽ tự động mở trong giây lát...")
     print(f"=======================================================\n")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    host = os.environ.get("FLASK_HOST", "0.0.0.0")
+    if os.environ.get("AUTO_OPEN_BROWSER", "true").lower() == "true" and os.name == "nt":
+        threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{port}")).start()
+    app.run(host=host, port=port, debug=False)

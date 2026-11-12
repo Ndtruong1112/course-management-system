@@ -181,14 +181,19 @@ public class HibernatePaginationSortingDao<Pk, Entity> extends HibernateGenericD
     }
 
     protected String buildOrderClause(Sort sort) {
+        return buildOrderClause("e", sort);
+    }
+
+    protected String buildOrderClause(String alias, Sort sort) {
         if (sort == null || sort.isUnsorted()) {
             return "";
         }
+        String prefix = (alias != null && !alias.isBlank()) ? alias + "." : "";
         StringBuilder sb = new StringBuilder(" ORDER BY ");
         boolean hasOrder = false;
         for (Sort.Order order : sort) {
             if (isValidIdentifier(order.getProperty())) {
-                sb.append("e.")
+                sb.append(prefix)
                         .append(order.getProperty())
                         .append(" ")
                         .append(order.getDirection().name())

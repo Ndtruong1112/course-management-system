@@ -55,47 +55,71 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         List<Document> documentList = new ArrayList<>();
+        List<String> uploadedStoragePaths = new ArrayList<>();
 
-        for (MultipartFile file : files) {
-            if (file != null && !file.isEmpty() && file.getOriginalFilename() != null && !file.getOriginalFilename().trim().isEmpty()) {
-                String originalFilename = FilenameUtils.getName(file.getOriginalFilename());
+        try {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty() && file.getOriginalFilename() != null && !file.getOriginalFilename().trim().isEmpty()) {
+                    String originalFilename = FilenameUtils.getName(file.getOriginalFilename());
 
-                // 1. Kiểm tra ký tự đặc biệt trong tên file
-                if (!checkFileNameSpecialChar(originalFilename)) {
-                    throw new BadRequestException("Tên file không được chứa ký tự đặc biệt: " + originalFilename);
-                }
+                    // 1. Kiểm tra ký tự đặc biệt trong tên file
+                    if (!checkFileNameSpecialChar(originalFilename)) {
+                        throw new BadRequestException("Tên file không được chứa ký tự đặc biệt: " + originalFilename);
+                    }
 
-                // 2. Kiểm tra độ dài tên file (phần trước dấu chấm <= 50 ký tự)
-                String baseName = FilenameUtils.getBaseName(originalFilename);
-                if (baseName.length() > 50) {
-                    throw new BadRequestException("Tên file vượt quá độ dài tối đa 50 ký tự: " + baseName);
-                }
+                    // 2. Kiểm tra độ dài tên file (phần trước dấu chấm <= 50 ký tự)
+                    String baseName = FilenameUtils.getBaseName(originalFilename);
+                    if (baseName.length() > 50) {
+                        throw new BadRequestException("Tên file vượt quá độ dài tối đa 50 ký tự: " + baseName);
+                    }
 
-                // 3. Kiểm tra định dạng đuôi file
-                InputStream inputStream = validateFileExtension(file);
+                    // 3. Kiểm tra định dạng đuôi file
+                    String extension = FilenameUtils.getExtension(originalFilename);
+                    String storagePath = appId + "/" + UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
 
-                String extension = FilenameUtils.getExtension(originalFilename);
-                String storagePath = appId + "/" + UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+                    try (InputStream inputStream = validateFileExtension(file)) {
+                        // 4. Lưu trữ file lên MinIO
+                        minioStorageService.upload(storagePath, inputStream, file.getContentType(), file.getSize());
+                        uploadedStoragePaths.add(storagePath);
+                    }
 
-                // 4. Lưu trữ file lên MinIO
-                minioStorageService.upload(storagePath, inputStream, file.getContentType(), file.getSize());
-
-                // 5. Kiểm tra tài liệu cùng tên đã tồn tại cho appId này chưa (Versioning logic)
-                Document documentDetail = documentDao.getDocumentName(originalFilename, appId);
-                if (documentDetail == null) {
-                    Document docData = createDocument(originalFilename, appId, storagePath);
-                    documentList.add(docData);
+                    // 5. Kiểm tra tài liệu cùng tên đã tồn tại cho appId này chưa (Versioning logic)
+                    Document documentDetail = documentDao.getDocumentName(originalFilename, appId);
+                    if (documentDetail == null) {
+                        Document docData = createDocument(originalFilename, appId, storagePath);
+                        documentList.add(docData);
+                    } else {
+                        logger.info("Tài liệu '{}' đã tồn tại, tạo phiên bản mới", documentDetail.getName());
+                        Document docDataWithNewVersion = createDocumentWithNewVersion(originalFilename, appId, storagePath, documentDetail);
+                        documentList.add(docDataWithNewVersion);
+                    }
                 } else {
-                    logger.info("Tài liệu '{}' đã tồn tại, tạo phiên bản mới", documentDetail.getName());
-                    Document docDataWithNewVersion = createDocumentWithNewVersion(originalFilename, appId, storagePath, documentDetail);
-                    documentList.add(docDataWithNewVersion);
+                    throw new BadRequestException("File tải lên không được để trống.");
                 }
-            } else {
-                throw new BadRequestException("File tải lên không được để trống.");
             }
+            return documentList;
+        } catch (RuntimeException ex) {
+            // Rollback bù trừ (Compensating action): xóa các file đã tải lên MinIO nếu giao dịch thất bại (A6)
+            for (String path : uploadedStoragePaths) {
+                try {
+                    logger.warn("MinIO compensating rollback: xóa object mồ côi {}", path);
+                    minioStorageService.delete(path);
+                } catch (Exception cleanupEx) {
+                    logger.error("Lỗi dọn dẹp file MinIO mồ côi {}: {}", path, cleanupEx.getMessage());
+                }
+            }
+            throw ex;
+        } catch (Exception ex) {
+            for (String path : uploadedStoragePaths) {
+                try {
+                    logger.warn("MinIO compensating rollback: xóa object mồ côi {}", path);
+                    minioStorageService.delete(path);
+                } catch (Exception cleanupEx) {
+                    logger.error("Lỗi dọn dẹp file MinIO mồ côi {}: {}", path, cleanupEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Lỗi trong quá trình upload tài liệu: " + ex.getMessage(), ex);
         }
-
-        return documentList;
     }
 
     @Override

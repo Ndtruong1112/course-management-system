@@ -33,4 +33,11 @@ public class Student {
 
     @Column(length = 255)
     private String address;
+
+    @Column(name = "dob")
+    private java.time.LocalDate dob;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
 }

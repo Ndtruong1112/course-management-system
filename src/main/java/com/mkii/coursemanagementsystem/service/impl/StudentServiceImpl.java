@@ -27,6 +27,9 @@ public class StudentServiceImpl implements StudentService {
     @Autowired
     private IStudentDao studentDao;
 
+    @Autowired
+    private com.mkii.coursemanagementsystem.dao.IDepartmentDao departmentDao;
+
     @Override
     public Student create(StudentRequestDTO requestDTO) {
         logger.info("Creating Student: {}", requestDTO.getFullName());
@@ -210,15 +213,36 @@ public class StudentServiceImpl implements StudentService {
         if (requestDTO.getAddress() != null) {
             student.setAddress(requestDTO.getAddress());
         }
+        if (requestDTO.getDob() != null) {
+            student.setDob(requestDTO.getDob());
+        }
+        if (requestDTO.getDepartmentId() != null) {
+            com.mkii.coursemanagementsystem.entity.Department dept = departmentDao.getById(requestDTO.getDepartmentId());
+            if (dept == null) {
+                throw new ResourceNotFoundException("Khoa không tồn tại với ID: " + requestDTO.getDepartmentId());
+            }
+            student.setDepartment(dept);
+        }
     }
 
     private StudentResponseDTO mapToDTO(Student student) {
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getFullName(),
-                student.getEmail(),
-                student.getPhone(),
-                student.getAddress()
-        );
+        com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO deptDTO = null;
+        if (student.getDepartment() != null) {
+            deptDTO = com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO.builder()
+                    .departmentId(student.getDepartment().getDepartmentId())
+                    .departmentCode(student.getDepartment().getDepartmentCode())
+                    .departmentName(student.getDepartment().getDepartmentName())
+                    .description(student.getDepartment().getDescription())
+                    .build();
+        }
+        return StudentResponseDTO.builder()
+                .id(student.getId())
+                .fullName(student.getFullName())
+                .email(student.getEmail())
+                .phone(student.getPhone())
+                .address(student.getAddress())
+                .dob(student.getDob())
+                .department(deptDTO)
+                .build();
     }
 }

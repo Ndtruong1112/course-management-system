@@ -38,6 +38,7 @@ public final class ApiConstants {
     public static final String BASE_COURSE_URL = "/api/courses";
     public static final String BASE_STUDENT_URL = "/api/students";
     public static final String BASE_DOCUMENT_URL = "/api/documents";
+    public static final String BASE_SECURITY_URL = "/api/security";
 }
 ```
 
@@ -64,11 +65,135 @@ public final class MessageConstants {
 
     // Business Exception Messages
     public static final String COURSE_NOT_FOUND = "Không tìm thấy khóa học với ID: %d";
+    public static final String COURSE_NOT_FOUND_TITLE = "Không tìm thấy khóa học với tiêu đề: %s";
+    public static final String COURSE_NOT_FOUND_FIELD = "Không tìm thấy khóa học với %s: %s";
     public static final String STUDENT_NOT_FOUND = "Không tìm thấy sinh viên với ID: %d";
+    public static final String STUDENT_NOT_FOUND_EMAIL = "Không tìm thấy sinh viên với email: %s";
+    public static final String STUDENT_NOT_FOUND_FIELD = "Không tìm thấy sinh viên với %s: %s";
     public static final String DOCUMENT_NOT_FOUND = "Không tìm thấy tài liệu với ID: %s";
     public static final String FILE_EXTENSION_NOT_SUPPORTED = "Định dạng file không được hỗ trợ. Chỉ chấp nhận: PDF, XLSX, XLS, DOC, DOCX, JPG, JPEG, PNG";
     public static final String INVALID_DOCUMENT = "Tài liệu không tồn tại hoặc không hợp lệ.";
     public static final String SUCCESS_JSON = "{\"status\": \"SUCCESS\", \"message\": \"Thao tác thành công\"}";
+
+    // Standard Success Messages
+    public static final String STATUS = "status";
+    public static final String SUCCESS = "SUCCESS";
+    public static final String MESSAGE = "message";
+    public static final String COUNT = "count";
+    public static final String TOTAL_INSERTED = "totalInserted";
+    public static final String REJECTED = "REJECTED";
+    public static final String ACTIVE = "ACTIVE";
+    public static final String INACTIVE = "INACTIVE";
+    public static final String APP_ID = "appId";
+    public static final String USER_APP_ID = "userAppId";
+    public static final String ID_FIELD_CANNOT_BE_EMPTY = "ID field cannot be empty.";
+    public static final String NO_RECORD_WITH_SUCH_ID = "No record found with ID: %s";
+    public static final String COURSE_DELETED_SUCCESS = "Course deleted successfully";
+    public static final String COURSE_UPDATED_SUCCESS = "Course updated successfully";
+    public static final String STUDENT_DELETED_SUCCESS = "Student deleted successfully";
+    public static final String STUDENT_UPDATED_SUCCESS = "Student updated successfully";
+    public static final String DOCUMENT_DELETED_SUCCESS = "Deleted successfully";
+    public static final String DOCUMENT_RESTORED_SUCCESS = "Khôi phục tài liệu thành công: %s";
+    public static final String BATCH_CREATED_SUCCESS = "Batch created successfully";
+    public static final String OPERATION_SUCCESS = "Thao tác thành công";
+
+    // Document Validation Messages
+    public static final String APP_ID_CANNOT_BE_BLANK = "appId (mã công việc/nghiệp vụ) không được để trống.";
+    public static final String FILE_LIST_CANNOT_BE_EMPTY = "Danh sách file tải lên không hợp lệ hoặc để trống.";
+    public static final String FILE_CANNOT_BE_EMPTY = "File tải lên không được để trống.";
+    public static final String FILE_NAME_SPECIAL_CHAR = "Tên file không được chứa ký tự đặc biệt: %s";
+    public static final String FILE_NAME_MAX_LENGTH = "Tên file vượt quá độ dài tối đa 50 ký tự: %s";
+    public static final String FILE_PATH_CANNOT_BE_BLANK = "Đường dẫn file không được để trống.";
+    public static final String DOCUMENT_NOT_RESTOREABLE = "Tài liệu chưa bị xóa mềm hoặc không tồn tại để khôi phục.";
+    public static final String CANNOT_READ_FILE_DATA = "Không thể đọc dữ liệu file: %s";
+
+    // Student Validation Messages
+    public static final String EMAIL_ALREADY_EXISTS = "Email '%s' đã được sử dụng bởi sinh viên khác.";
+
+    // Security & Data Processing Messages
+    public static final String DATA_TO_ENCRYPT_CANNOT_BE_EMPTY = "Dữ liệu mã hóa không được để trống.";
+    public static final String DATA_TO_DECRYPT_CANNOT_BE_EMPTY = "Dữ liệu giải mã không được để trống.";
+    public static final String ENCRYPTION_FAILED = "Lỗi khi thực hiện mã hóa dữ liệu: %s";
+    public static final String DECRYPTION_FAILED = "Lỗi khi thực hiện giải mã dữ liệu: %s";
+    public static final String ACCESS_DENIED = "Truy cập bị từ chối. Bạn không có quyền thực hiện thao tác này.";
+    public static final String AUTHENTICATION_REQUIRED = "Yêu cầu xác thực tài khoản để truy cập.";
+    public static final String INTERNAL_SERVER_ERROR = "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
+    public static final String BAD_REQUEST = "Yêu cầu không hợp lệ.";
+    public static final String METHOD_NOT_SUPPORTED = "Phương thức HTTP không được hỗ trợ.";
+    public static final String MALFORMED_JSON_REQUEST = "Dữ liệu gửi lên không đúng định dạng JSON.";
+    public static final String DATA_INTEGRITY_VIOLATION = "Dữ liệu vi phạm ràng buộc cơ sở dữ liệu (ví dụ: email đã tồn tại).";
+    public static final String PARAM_TYPE_MISMATCH = "Tham số '%s' có giá trị '%s' không đúng kiểu dữ liệu yêu cầu";
+
+    // Storage (MinIO) Messages
+    public static final String MINIO_CONNECT_FAILED = "Could not connect to MinIO storage: %s";
+    public static final String MINIO_UPLOAD_FAILED = "Failed to upload file to MinIO: %s";
+    public static final String MINIO_DOWNLOAD_FAILED = "Failed to download file from MinIO: %s";
+    public static final String MINIO_DELETE_FAILED = "Failed to delete file from MinIO: %s";
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/common/converter/AesEncryptConverter.java`
+
+```java
+package com.mkii.coursemanagementsystem.common.converter;
+
+import com.mkii.coursemanagementsystem.util.AESUtil;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.SecretKey;
+
+/**
+ * JPA AttributeConverter that automatically encrypts sensitive Entity fields using AES
+ * before writing to the database, and transparently decrypts them back upon retrieval.
+ */
+@Converter
+public class AesEncryptConverter implements AttributeConverter<String, String> {
+
+    private static final Logger logger = LoggerFactory.getLogger(AesEncryptConverter.class);
+    private static final SecretKey SECRET_KEY;
+
+    static {
+        try {
+            String key = System.getenv("CMS_AES_KEY") != null
+                    ? System.getenv("CMS_AES_KEY") : "CourseManagementSystemSecretKey2026";
+            String salt = System.getenv("CMS_AES_SALT") != null
+                    ? System.getenv("CMS_AES_SALT") : "cms-salt-2026-v1";
+            SECRET_KEY = AESUtil.getKeyFromPassword(key, salt);
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError("Could not initialize AES SecretKey: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String convertToDatabaseColumn(String attribute) {
+        if (attribute == null || attribute.trim().isEmpty()) {
+            return attribute;
+        }
+        try {
+            return AESUtil.encryptStringWithIv(attribute, SECRET_KEY);
+        } catch (Exception e) {
+            logger.error("Error encrypting entity attribute: {}", e.getMessage());
+            return attribute;
+        }
+    }
+
+    @Override
+    public String convertToEntityAttribute(String dbData) {
+        if (dbData == null || dbData.trim().isEmpty()) {
+            return dbData;
+        }
+        try {
+            return AESUtil.decryptStringWithIv(dbData, SECRET_KEY);
+        } catch (Exception e) {
+            // Graceful fallback for unencrypted legacy / mock data
+            return dbData;
+        }
+    }
 }
 ```
 
@@ -133,10 +258,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -209,10 +338,62 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
                 .error(HttpStatus.CONFLICT.getReasonPhrase())
-                .message("Dữ liệu vi phạm ràng buộc cơ sở dữ liệu (ví dụ: email đã tồn tại).")
+                .message("Dữ liệu vi phạm ràng buộc toàn vẹn cơ sở dữ liệu (dữ liệu đang được tham chiếu hoặc giá trị duy nhất đã tồn tại).")
                 .path(request.getRequestURI())
                 .build();
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParams(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        logger.warn("Missing parameter: {}", ex.getParameterName());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(String.format("Thiếu tham số bắt buộc '%s' của kiểu %s", ex.getParameterName(), ex.getParameterType()))
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        logger.warn("Max upload size exceeded: {}", ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Dung lượng file tải lên vượt quá giới hạn tối đa cho phép.")
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        logger.warn("Method not supported: {}", ex.getMethod());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.METHOD_NOT_ALLOWED.value())
+                .error(HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase())
+                .message(String.format("Phương thức HTTP '%s' không được hỗ trợ cho endpoint này.", ex.getMethod()))
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        logger.warn("Static resource not found: {}", ex.getResourcePath());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message("Tài nguyên không tồn tại: " + ex.getResourcePath())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
@@ -228,6 +409,32 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex, HttpServletRequest request) {
+        logger.warn("Access denied: {}", ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message("Truy cập bị từ chối. Bạn không có quyền thực hiện thao tác này.")
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex, HttpServletRequest request) {
+        logger.warn("Authentication failed: {}", ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                .message("Yêu cầu xác thực tài khoản để truy cập.")
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         logger.error("Internal server error: ", ex);
@@ -235,7 +442,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message(ex.getMessage() != null ? ex.getMessage() : "Đã xảy ra lỗi hệ thống.")
+                .message("Đã xảy ra lỗi hệ thống nội bộ. Vui lòng liên hệ quản trị viên.")
                 .path(request.getRequestURI())
                 .build();
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -258,6 +465,183 @@ public class ResourceNotFoundException extends RuntimeException {
 
     public ResourceNotFoundException(String message, Throwable cause) {
         super(message, cause);
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/common/exception/ValidationException.java`
+
+```java
+package com.mkii.coursemanagementsystem.common.exception;
+
+/**
+ * Custom runtime exception thrown when business or data validation fails.
+ * Handled globally by {@link GlobalExceptionHandler} to return HTTP 400 (Bad Request).
+ */
+public class ValidationException extends RuntimeException {
+
+    public ValidationException(String message) {
+        super(message);
+    }
+
+    public ValidationException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/config/DataInitializer.java`
+
+```java
+package com.mkii.coursemanagementsystem.config;
+
+import com.mkii.coursemanagementsystem.dao.ICourseDao;
+import com.mkii.coursemanagementsystem.dao.IDepartmentDao;
+import com.mkii.coursemanagementsystem.dao.IStudentDao;
+import com.mkii.coursemanagementsystem.dao.IUserDao;
+import com.mkii.coursemanagementsystem.entity.Course;
+import com.mkii.coursemanagementsystem.entity.Department;
+import com.mkii.coursemanagementsystem.entity.Student;
+import com.mkii.coursemanagementsystem.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+
+@Component
+public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
+
+    private final IDepartmentDao departmentDao;
+    private final IUserDao userDao;
+    private final ICourseDao courseDao;
+    private final IStudentDao studentDao;
+    private final PasswordEncoder passwordEncoder;
+
+    public DataInitializer(IDepartmentDao departmentDao,
+                           IUserDao userDao,
+                           ICourseDao courseDao,
+                           IStudentDao studentDao,
+                           PasswordEncoder passwordEncoder) {
+        this.departmentDao = departmentDao;
+        this.userDao = userDao;
+        this.courseDao = courseDao;
+        this.studentDao = studentDao;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    @Transactional
+    public void run(String... args) {
+        logger.info("======================================================================");
+        logger.info("   KIỂM TRA & KHỞI TẠO DỮ LIỆU MẪU HỆ THỐNG (DATA INITIALIZER)");
+        logger.info("======================================================================");
+
+        // 1. Khởi tạo Khoa / Ngành (Departments)
+        Department cntt = initDepartment("CNTT", "Công nghệ thông tin", "Khoa Công nghệ thông tin & Truyền thông");
+        Department khmt = initDepartment("KHMT", "Khoa học máy tính", "Khoa Khoa học máy tính & Trí tuệ nhân tạo");
+        Department qtkd = initDepartment("QTKD", "Quản trị kinh doanh", "Khoa Quản trị kinh doanh & Kinh tế số");
+
+        // 2. Khởi tạo Tài khoản mẫu (Users)
+        initUser("admin", "123456", "admin@school.edu.vn", "Quản Trị Viên Hệ Thống", "ADMIN");
+        initUser("gv_nam", "123456", "nam@school.edu.vn", "ThS. Nguyễn Văn Nam", "TEACHER");
+        initUser("student_a", "123456", "student_a@school.edu.vn", "Nguyễn Văn A", "USER");
+
+        // 3. Khởi tạo Khóa học mẫu (Courses)
+        if (courseDao.getCount() == 0) {
+            courseDao.save(Course.builder()
+                    .title("Lập trình Spring Boot 3 & Hibernate DAO Chuyên Sâu")
+                    .description("Khóa học thực chiến từ kiến trúc Generic DAO đến REST API và MinIO")
+                    .duration(60)
+                    .price(499.0)
+                    .build());
+
+            courseDao.save(Course.builder()
+                    .title("Xây dựng Trợ lý AI Chuyên Biệt với PyTorch & QLoRA")
+                    .description("Tự động tinh chỉnh mô hình mã nguồn mở Qwen trên GPU cục bộ")
+                    .duration(45)
+                    .price(699.0)
+                    .build());
+
+            courseDao.save(Course.builder()
+                    .title("Kiến trúc Hệ thống Phân tán & Lưu trữ Đám mây MinIO")
+                    .description("Lưu trữ phi cấu trúc, xử lý tệp đa luồng và bảo mật dữ liệu")
+                    .duration(30)
+                    .price(350.0)
+                    .build());
+            logger.info("-> Đã khởi tạo 3 khóa học mẫu thành công.");
+        }
+
+        // 4. Khởi tạo Sinh viên mẫu (Students)
+        if (studentDao.getCount() == 0) {
+            studentDao.save(Student.builder()
+                    .fullName("Nguyễn Văn A")
+                    .email("vana@gmail.com")
+                    .phone("0912345678")
+                    .address("Hà Nội")
+                    .dob(LocalDate.of(2003, 5, 15))
+                    .department(cntt)
+                    .build());
+
+            studentDao.save(Student.builder()
+                    .fullName("Trần Thị B")
+                    .email("thib@gmail.com")
+                    .phone("0987654321")
+                    .address("Đà Nẵng")
+                    .dob(LocalDate.of(2004, 8, 20))
+                    .department(khmt)
+                    .build());
+
+            studentDao.save(Student.builder()
+                    .fullName("Lê Văn C")
+                    .email("vanc@gmail.com")
+                    .phone("0905123456")
+                    .address("TP. Hồ Chí Minh")
+                    .dob(LocalDate.of(2002, 11, 10))
+                    .department(qtkd)
+                    .build());
+            logger.info("-> Đã khởi tạo 3 sinh viên mẫu có gắn Khoa thành công.");
+        }
+
+        logger.info("======================================================================");
+        logger.info("   HOÀN TẤT KHỞI TẠO DỮ LIỆU! TÀI KHOẢN MẶC ĐỊNH: admin / 123456");
+        logger.info("======================================================================");
+    }
+
+    private Department initDepartment(String code, String name, String desc) {
+        return departmentDao.findByDepartmentCode(code).orElseGet(() -> {
+            Department dept = Department.builder()
+                    .departmentCode(code)
+                    .departmentName(name)
+                    .description(desc)
+                    .build();
+            Department saved = departmentDao.save(dept);
+            logger.info("-> Đã tạo Khoa: {} ({})", name, code);
+            return saved;
+        });
+    }
+
+    private void initUser(String username, String rawPassword, String email, String fullName, String role) {
+        if (!userDao.existsByUsername(username)) {
+            User user = User.builder()
+                    .username(username)
+                    .password(passwordEncoder.encode(rawPassword))
+                    .email(email)
+                    .fullName(fullName)
+                    .role(role)
+                    .build();
+            userDao.save(user);
+            logger.info("-> Đã tạo User: {} | Role: {}", username, role);
+        }
     }
 }
 ```
@@ -298,6 +682,186 @@ public class MinioConfig {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/config/OpenApiConfig.java`
+
+```java
+package com.mkii.coursemanagementsystem.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+
+    public static final String BEARER_AUTH = "bearerAuth";
+    public static final String BASIC_AUTH = "basicAuth";
+    public static final String SECURITY_SCHEME_NAME = BASIC_AUTH;
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Course Management System API")
+                        .version("1.0.0")
+                        .description("REST API documentation for Course Management System with Spring Security, JWT, AES Encryption, Generic DAO and MinIO Storage")
+                        .contact(new Contact().name("MKII Development Team").email("support@mkii.com"))
+                        .license(new License().name("Apache 2.0").url("https://www.apache.org/licenses/LICENSE-2.0.html")))
+                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))
+                .components(new Components()
+                        .addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
+                                .name(BEARER_AUTH)
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")
+                                .description("JWT Token Authorization: Bearer <token>"))
+                        .addSecuritySchemes(BASIC_AUTH, new SecurityScheme()
+                                .name(BASIC_AUTH)
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("basic")
+                                .description("HTTP Basic Authentication")));
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/config/SecurityConfig.java`
+
+```java
+package com.mkii.coursemanagementsystem.config;
+
+import com.mkii.coursemanagementsystem.security.jwt.JwtAccessDeniedHandler;
+import com.mkii.coursemanagementsystem.security.jwt.JwtAuthenticationEntryPoint;
+import com.mkii.coursemanagementsystem.security.jwt.JwtAuthenticationFilter;
+import com.mkii.coursemanagementsystem.security.jwt.JwtTokenProvider;
+import com.mkii.coursemanagementsystem.security.service.UserDetailsServiceImpl;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+public class SecurityConfig {
+
+    private final UserDetailsServiceImpl userDetailsService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public SecurityConfig(@Lazy UserDetailsServiceImpl userDetailsService,
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                          JwtAccessDeniedHandler jwtAccessDeniedHandler,
+                          JwtTokenProvider jwtTokenProvider) {
+        this.userDetailsService = userDetailsService;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(jwtAccessDeniedHandler)
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .authorizeHttpRequests(auth -> auth
+                // Public giao diện Web tĩnh (Frontend)
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/*.html", "/*.css", "/*.js", "/static/**", "/error").permitAll()
+                // Public tài liệu Swagger / OpenAPI
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-resources/**", "/webjars/**").permitAll()
+                // Public các API xác thực (Đăng nhập, Đăng ký)
+                .requestMatchers("/api/auth/**").permitAll()
+                // Cho phép xem thông tin khóa học và khoa công khai không cần token (A3)
+                .requestMatchers(HttpMethod.GET, "/api/courses/**", "/api/departments/**").permitAll()
+                // Cho phép CORS preflight
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Quyền ghi đối với khóa học và khoa (ADMIN, TEACHER, LECTURER) (A4)
+                .requestMatchers(HttpMethod.POST, "/api/courses/**", "/api/departments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.PUT, "/api/courses/**", "/api/departments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.DELETE, "/api/courses/**", "/api/departments/**").hasRole("ADMIN")
+                // Quyền ghi đối với sinh viên
+                .requestMatchers(HttpMethod.POST, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.PUT, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.DELETE, "/api/students/**").hasRole("ADMIN")
+                // Mọi thao tác khác (kể cả GET sinh viên PII, GET/POST tài liệu nội bộ) bắt buộc phải đăng nhập (A3, A4)
+                .anyRequest().authenticated()
+            );
+
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
+        http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/dao/ICourseDao.java`
 
 ```java
@@ -324,6 +888,38 @@ public interface ICourseDao extends IPaginationSortingDao<Long, Course> {
     List<Course> searchByTitle(String keyword);
 
     List<Course> findByPriceRange(Double minPrice, Double maxPrice);
+
+    Integer getCount();
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dao/IDepartmentDao.java`
+
+```java
+package com.mkii.coursemanagementsystem.dao;
+
+import com.mkii.coursemanagementsystem.entity.Department;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface IDepartmentDao extends IPaginationSortingDao<Long, Department> {
+
+    Department save(Department department);
+
+    Department update(Department department);
+
+    void delete(Long id);
+
+    Department getById(Long id);
+
+    Optional<Department> findByDepartmentCode(String departmentCode);
+
+    List<Department> getAll();
+
+    List<Department> searchByName(String keyword);
 
     Integer getCount();
 }
@@ -528,6 +1124,42 @@ public interface IStudentDao extends IPaginationSortingDao<Long, Student> {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/dao/IUserDao.java`
+
+```java
+package com.mkii.coursemanagementsystem.dao;
+
+import com.mkii.coursemanagementsystem.entity.User;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface IUserDao extends IPaginationSortingDao<Long, User> {
+
+    User save(User user);
+
+    User update(User user);
+
+    void delete(Long id);
+
+    User getById(Long id);
+
+    Optional<User> findByUsername(String username);
+
+    Optional<User> findByEmail(String email);
+
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
+
+    List<User> getAll();
+
+    Integer getCount();
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/dao/impl/CourseDaoImpl.java`
 
 ```java
@@ -558,7 +1190,7 @@ public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> i
     @Override
     public Course save(Course course) {
         logger.info("Saving Course: {}", course.getTitle());
-        return create(course);
+        return super.save(course);
     }
 
     @Override
@@ -619,6 +1251,99 @@ public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> i
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/dao/impl/DepartmentDaoImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.dao.impl;
+
+import com.mkii.coursemanagementsystem.dao.IDepartmentDao;
+import com.mkii.coursemanagementsystem.entity.Department;
+import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Repository;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public class DepartmentDaoImpl extends HibernatePaginationSortingDao<Long, Department> implements IDepartmentDao {
+
+    private static final Logger logger = LoggerFactory.getLogger(DepartmentDaoImpl.class);
+
+    public DepartmentDaoImpl(EntityManager entityManager) {
+        super(Department.class, entityManager);
+    }
+
+    @Override
+    public Department save(Department department) {
+        logger.info("Saving Department: {}", department.getDepartmentCode());
+        return super.save(department);
+    }
+
+    @Override
+    public Department update(Department department) {
+        logger.info("Updating Department: {}", department.getDepartmentId());
+        return super.update(department);
+    }
+
+    @Override
+    public void delete(Long id) {
+        logger.info("Deleting Department: {}", id);
+        deleteByPk(id);
+    }
+
+    @Override
+    public Department getById(Long id) {
+        logger.info("Getting Department by ID: {}", id);
+        return get(id);
+    }
+
+    @Override
+    public Optional<Department> findByDepartmentCode(String departmentCode) {
+        logger.info("Finding Department by code: {}", departmentCode);
+        String hql = "SELECT d FROM Department d WHERE d.departmentCode = :code";
+        TypedQuery<Department> query = entityManager.createQuery(hql, Department.class);
+        query.setParameter("code", departmentCode);
+        try {
+            return Optional.of(query.getSingleResult());
+        } catch (NoResultException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<Department> getAll() {
+        logger.info("Fetching all departments");
+        return findAll();
+    }
+
+    @Override
+    public List<Department> searchByName(String keyword) {
+        logger.info("Searching departments by keyword: {}", keyword);
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        String hql = "SELECT d FROM Department d WHERE LOWER(d.departmentName) LIKE LOWER(:keyword) OR LOWER(d.departmentCode) LIKE LOWER(:keyword)";
+        TypedQuery<Department> query = entityManager.createQuery(hql, Department.class);
+        query.setParameter("keyword", "%" + keyword.trim() + "%");
+        return query.getResultList();
+    }
+
+    @Override
+    public Integer getCount() {
+        logger.info("Getting total departments count");
+        return (int) count();
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/dao/impl/DocumentDaoImpl.java`
 
 ```java
@@ -632,6 +1357,9 @@ import jakarta.persistence.TypedQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -652,7 +1380,7 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
     @Override
     public Document save(Document document) {
         logger.info("Saving Document: name={}, appId={}", document.getName(), document.getAppId());
-        return create(document);
+        return super.save(document);
     }
 
     @Override
@@ -747,7 +1475,7 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
         }
 
         Sort sort = buildSort(sortField, direction);
-        jpql.append(buildOrderClause(sort));
+        jpql.append(buildOrderClause("d", sort));
 
         TypedQuery<Document> typedQuery = getEntityManager().createQuery(jpql.toString(), Document.class);
         params.forEach(typedQuery::setParameter);
@@ -782,9 +1510,51 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
     }
 
     @Override
+    public Page<Document> findAllPaged(int page, int size, String sortBy, String direction) {
+        Sort sort = buildSort(sortBy, direction);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String countJpql = "SELECT COUNT(d) FROM Document d WHERE d.deleted = false";
+        Long total = getEntityManager().createQuery(countJpql, Long.class).getSingleResult();
+        if (total == null || total == 0) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.deleted = false" + orderClause;
+        List<Document> content = getEntityManager().createQuery(jpql, Document.class)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    @Override
+    public List<Document> findAllSorted(String sortBy, String direction) {
+        Sort sort = buildSort(sortBy, direction);
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.deleted = false" + orderClause;
+        return getEntityManager().createQuery(jpql, Document.class).getResultList();
+    }
+
+    @Override
     public Page<Document> findByAppIdPaged(String appId, int page, int size, String sortBy, String direction) {
         logger.info("findByAppIdPaged: appId={}, page={}, size={}, sort={} {}", appId, page, size, sortBy, direction);
-        return findByFieldPaged("appId", appId, page, size, sortBy, direction);
+        Sort sort = buildSort(sortBy, direction);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String countJpql = "SELECT COUNT(d) FROM Document d WHERE d.appId = :appId AND d.deleted = false";
+        Long total = getEntityManager().createQuery(countJpql, Long.class)
+                .setParameter("appId", appId)
+                .getSingleResult();
+        if (total == null || total == 0) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.appId = :appId AND d.deleted = false" + orderClause;
+        List<Document> content = getEntityManager().createQuery(jpql, Document.class)
+                .setParameter("appId", appId)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(content, pageable, total);
     }
 }
 ```
@@ -822,7 +1592,7 @@ public class StudentDaoImpl extends HibernatePaginationSortingDao<Long, Student>
     @Override
     public Student save(Student student) {
         logger.info("Saving Student: {}", student.getFullName());
-        return create(student);
+        return super.save(student);
     }
 
     @Override
@@ -873,6 +1643,115 @@ public class StudentDaoImpl extends HibernatePaginationSortingDao<Long, Student>
     @Override
     public Integer getCount() {
         logger.info("Getting Student count");
+        return (int) count();
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dao/impl/UserDaoImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.dao.impl;
+
+import com.mkii.coursemanagementsystem.dao.IUserDao;
+import com.mkii.coursemanagementsystem.entity.User;
+import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.TypedQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public class UserDaoImpl extends HibernatePaginationSortingDao<Long, User> implements IUserDao {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserDaoImpl.class);
+
+    public UserDaoImpl(EntityManager entityManager) {
+        super(User.class, entityManager);
+    }
+
+    @Override
+    public User save(User user) {
+        logger.info("Saving User: {}", user.getUsername());
+        return super.save(user);
+    }
+
+    @Override
+    public User update(User user) {
+        logger.info("Updating User: {}", user.getUserId());
+        return super.update(user);
+    }
+
+    @Override
+    public void delete(Long id) {
+        logger.info("Deleting User: {}", id);
+        deleteByPk(id);
+    }
+
+    @Override
+    public User getById(Long id) {
+        logger.info("Getting User by ID: {}", id);
+        return get(id);
+    }
+
+    @Override
+    public Optional<User> findByUsername(String username) {
+        logger.info("Finding User by username: {}", username);
+        String hql = "SELECT u FROM User u WHERE u.username = :username";
+        TypedQuery<User> query = entityManager.createQuery(hql, User.class);
+        query.setParameter("username", username);
+        try {
+            return Optional.of(query.getSingleResult());
+        } catch (NoResultException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        logger.info("Finding User by email: {}", email);
+        String hql = "SELECT u FROM User u WHERE u.email = :email";
+        TypedQuery<User> query = entityManager.createQuery(hql, User.class);
+        query.setParameter("email", email);
+        try {
+            return Optional.of(query.getSingleResult());
+        } catch (NoResultException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        String hql = "SELECT COUNT(u) FROM User u WHERE u.username = :username";
+        TypedQuery<Long> query = entityManager.createQuery(hql, Long.class);
+        query.setParameter("username", username);
+        return query.getSingleResult() > 0;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        String hql = "SELECT COUNT(u) FROM User u WHERE u.email = :email";
+        TypedQuery<Long> query = entityManager.createQuery(hql, Long.class);
+        query.setParameter("email", email);
+        return query.getSingleResult() > 0;
+    }
+
+    @Override
+    public List<User> getAll() {
+        logger.info("Fetching all users");
+        return findAll();
+    }
+
+    @Override
+    public Integer getCount() {
+        logger.info("Getting total users count");
         return (int) count();
     }
 }
@@ -943,6 +1822,172 @@ public class CourseResponseDTO {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/DecryptRequestDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ApiModel(description = "Request DTO for data decryption")
+public class DecryptRequestDTO {
+
+    @NotBlank(message = "Encrypted data to decrypt cannot be blank")
+    @ApiModelProperty(value = "Base64 encoded encrypted ciphertext with prepended IV", required = true)
+    private String encryptedData;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/DecryptResponseDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ApiModel(description = "Response DTO for data decryption")
+public class DecryptResponseDTO {
+
+    @ApiModelProperty(value = "Decrypted original plaintext string")
+    private String decryptedData;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/DepartmentRequestDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class DepartmentRequestDTO {
+
+    @NotBlank(message = "Department code is mandatory")
+    @Size(max = 20, message = "Department code must not exceed 20 characters")
+    private String departmentCode;
+
+    @NotBlank(message = "Department name is mandatory")
+    @Size(max = 100, message = "Department name must not exceed 100 characters")
+    private String departmentName;
+
+    @Size(max = 255, message = "Description must not exceed 255 characters")
+    private String description;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/DepartmentResponseDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class DepartmentResponseDTO {
+
+    private Long departmentId;
+    private String departmentCode;
+    private String departmentName;
+    private String description;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/EncryptRequestDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ApiModel(description = "Request DTO for data encryption")
+public class EncryptRequestDTO {
+
+    @NotBlank(message = "Data to encrypt cannot be blank")
+    @ApiModelProperty(value = "Plaintext string data to encrypt", required = true, example = "SensitiveStudentData123")
+    private String data;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/EncryptResponseDTO.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ApiModel(description = "Response DTO for data encryption")
+public class EncryptResponseDTO {
+
+    @ApiModelProperty(value = "Base64 encoded encrypted ciphertext with prepended IV")
+    private String encryptedData;
+
+    @ApiModelProperty(value = "Encryption algorithm used", example = "AES/CBC/PKCS5Padding")
+    private String algorithm;
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/dto/StudentRequestDTO.java`
 
 ```java
@@ -977,6 +2022,10 @@ public class StudentRequestDTO {
 
     @Size(max = 255, message = "Địa chỉ không được vượt quá 255 ký tự")
     private String address;
+
+    private java.time.LocalDate dob;
+
+    private Long departmentId;
 }
 ```
 
@@ -1002,6 +2051,113 @@ public class StudentResponseDTO {
     private String email;
     private String phone;
     private String address;
+    private java.time.LocalDate dob;
+    private DepartmentResponseDTO department;
+
+    public StudentResponseDTO(Long id, String fullName, String email, String phone, String address) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+    }
+
+    public StudentResponseDTO(Long id, String fullName, String email, String phone, String address, java.time.LocalDate dob) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+        this.dob = dob;
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/auth/AuthResponse.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto.auth;
+
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class AuthResponse {
+
+    private String token;
+    @Builder.Default
+    private String type = "Bearer";
+    private Long userId;
+    private String username;
+    private String email;
+    private String fullName;
+    private String role;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/auth/LoginRequest.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto.auth;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class LoginRequest {
+
+    @NotBlank(message = "Username không được để trống")
+    private String username;
+
+    @NotBlank(message = "Password không được để trống")
+    private String password;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/dto/auth/RegisterRequest.java`
+
+```java
+package com.mkii.coursemanagementsystem.dto.auth;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RegisterRequest {
+
+    @NotBlank(message = "Username không được để trống")
+    @Size(min = 3, max = 50, message = "Username phải từ 3 đến 50 ký tự")
+    private String username;
+
+    @NotBlank(message = "Password không được để trống")
+    @Size(min = 6, message = "Password phải từ 6 ký tự trở lên")
+    private String password;
+
+    @Email(message = "Email không đúng định dạng")
+    private String email;
+
+    private String fullName;
+
+    private String role; // "USER", "TEACHER", "ADMIN"
 }
 ```
 
@@ -1043,6 +2199,62 @@ public class Course {
     private Integer duration;
 
     private Double price;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/entity/Department.java`
+
+```java
+package com.mkii.coursemanagementsystem.entity;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "departments", indexes = {
+        @Index(name = "idx_department_code", columnList = "department_code"),
+        @Index(name = "idx_department_name", columnList = "department_name")
+})
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class Department {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
+    @Column(name = "department_id")
+    private Long departmentId;
+
+    @Column(name = "department_code", length = 20, unique = true, nullable = false)
+    private String departmentCode;
+
+    @Column(name = "department_name", length = 100, nullable = false)
+    private String departmentName;
+
+    @Column(name = "description", length = 255)
+    private String description;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
 }
 ```
 
@@ -1184,6 +2396,76 @@ public class Student {
 
     @Column(length = 255)
     private String address;
+
+    @Column(name = "dob")
+    private java.time.LocalDate dob;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/entity/User.java`
+
+```java
+package com.mkii.coursemanagementsystem.entity;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "users", indexes = {
+        @Index(name = "idx_user_username", columnList = "username"),
+        @Index(name = "idx_user_email", columnList = "email")
+})
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "username", unique = true, nullable = false, length = 50)
+    private String username;
+
+    @Column(name = "password", nullable = false, length = 100)
+    private String password;
+
+    @Column(name = "email", length = 100)
+    private String email;
+
+    @Column(name = "full_name", length = 100)
+    private String fullName;
+
+    @Column(name = "role", length = 20)
+    @Builder.Default
+    private String role = "USER"; // "ADMIN", "TEACHER", "USER"
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
 }
 ```
 
@@ -1219,8 +2501,8 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
 
     private static final Logger logger = LoggerFactory.getLogger(HibernateGenericDao.class);
 
-    private Class<Entity> type;
-    private EntityManager entityManager;
+    protected Class<Entity> type;
+    protected EntityManager entityManager;
 
     public HibernateGenericDao(Class<Entity> type, EntityManager entityManager) {
         super(type, entityManager);
@@ -1253,7 +2535,7 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
             logger.warn(MessageConstants.ENTITY_CANNOT_BE_NULL);
             throw new IllegalArgumentException(String.format(MessageConstants.CANNOT_CREATE_NULL_ENTITY, getType().getName()));
         }
-        return save(anEntity);
+        return super.save(anEntity);
     }
 
     @Override
@@ -1273,7 +2555,7 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
             logger.warn(MessageConstants.ENTITY_CANNOT_BE_NULL);
             throw new IllegalArgumentException(String.format(MessageConstants.CANNOT_SAVE_OR_UPDATE_NULL_ENTITY, getType().getName()));
         }
-        return save(anEntity);
+        return super.save(anEntity);
     }
 
     @Override
@@ -1620,14 +2902,19 @@ public class HibernatePaginationSortingDao<Pk, Entity> extends HibernateGenericD
     }
 
     protected String buildOrderClause(Sort sort) {
+        return buildOrderClause("e", sort);
+    }
+
+    protected String buildOrderClause(String alias, Sort sort) {
         if (sort == null || sort.isUnsorted()) {
             return "";
         }
+        String prefix = (alias != null && !alias.isBlank()) ? alias + "." : "";
         StringBuilder sb = new StringBuilder(" ORDER BY ");
         boolean hasOrder = false;
         for (Sort.Order order : sort) {
             if (isValidIdentifier(order.getProperty())) {
-                sb.append("e.")
+                sb.append(prefix)
                         .append(order.getProperty())
                         .append(" ")
                         .append(order.getDirection().name())
@@ -1642,85 +2929,32 @@ public class HibernatePaginationSortingDao<Pk, Entity> extends HibernateGenericD
 
 ---
 
-## File: `src/main/java/com/mkii/coursemanagementsystem/repository/CourseRepository.java`
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/AuthRest.java`
 
 ```java
-package com.mkii.coursemanagementsystem.repository;
+package com.mkii.coursemanagementsystem.rest;
 
-import com.mkii.coursemanagementsystem.dto.CourseResponseDTO;
-import com.mkii.coursemanagementsystem.entity.Course;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import com.mkii.coursemanagementsystem.dto.auth.AuthResponse;
+import com.mkii.coursemanagementsystem.dto.auth.LoginRequest;
+import com.mkii.coursemanagementsystem.dto.auth.RegisterRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.List;
+@RequestMapping("/api/auth")
+public interface AuthRest {
 
-@Repository
-public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecificationExecutor<Course> {
+    @PostMapping("/login")
+    ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request);
 
-    // Query 1: Tìm kiếm khóa học theo tên (Search title gần đúng) và map thẳng ra DTO
-    @Query("SELECT new com.mkii.coursemanagementsystem.dto.CourseResponseDTO(c.id, c.title, c.description, c.duration, c.price) " +
-            "FROM Course c WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<CourseResponseDTO> searchByTitle(@Param("keyword") String keyword);
+    @PostMapping("/register")
+    ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request);
 
-    // Query 2: Lọc danh sách khóa học theo khoảng giá (Price range)
-    @Query("SELECT new com.mkii.coursemanagementsystem.dto.CourseResponseDTO(c.id, c.title, c.description, c.duration, c.price) " +
-            "FROM Course c WHERE c.price BETWEEN :minPrice AND :maxPrice")
-    List<CourseResponseDTO> findByPriceRange(@Param("minPrice") Double minPrice, @Param("maxPrice") Double maxPrice);
-}
-```
-
----
-
-## File: `src/main/java/com/mkii/coursemanagementsystem/repository/DocumentRepository.java`
-
-```java
-package com.mkii.coursemanagementsystem.repository;
-
-import com.mkii.coursemanagementsystem.entity.Document;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-
-@Repository
-public interface DocumentRepository extends JpaRepository<Document, String>, JpaSpecificationExecutor<Document> {
-
-    List<Document> findByAppIdAndDeletedFalse(String appId);
-
-    List<Document> findByDeletedFalse();
-}
-```
-
----
-
-## File: `src/main/java/com/mkii/coursemanagementsystem/repository/StudentRepository.java`
-
-```java
-package com.mkii.coursemanagementsystem.repository;
-
-import com.mkii.coursemanagementsystem.dto.StudentResponseDTO;
-import com.mkii.coursemanagementsystem.entity.Student;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
-
-@Repository
-public interface StudentRepository extends JpaRepository<Student, Long>, JpaSpecificationExecutor<Student> {
-
-    Optional<Student> findByEmail(String email);
-
-    @Query("SELECT new com.mkii.coursemanagementsystem.dto.StudentResponseDTO(s.id, s.fullName, s.email, s.phone, s.address) " +
-            "FROM Student s WHERE LOWER(s.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<StudentResponseDTO> searchByKeyword(@Param("keyword") String keyword);
+    @GetMapping("/me")
+    ResponseEntity<AuthResponse> getCurrentUser(Authentication authentication);
 }
 ```
 
@@ -1760,7 +2994,8 @@ public interface CourseRest {
     @GetMapping(value = {"/title/{title}", "/by-title"})
     ResponseEntity<CourseResponseDTO> getCourseByTitle(
             @PathVariable(required = false) String title,
-            @RequestParam(required = false) String queryTitle);
+            @RequestParam(name = "queryTitle", required = false) String queryTitle,
+            @RequestParam(name = "title", required = false) String paramTitle);
 
     @PostMapping("/batch")
     ResponseEntity<List<CourseResponseDTO>> createCoursesBatch(@RequestBody List<CourseRequestDTO> requestDTOs);
@@ -1846,6 +3081,46 @@ public interface CourseRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/DepartmentRest.java`
+
+```java
+package com.mkii.coursemanagementsystem.rest;
+
+import com.mkii.coursemanagementsystem.dto.DepartmentRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RequestMapping("/api/departments")
+public interface DepartmentRest {
+
+    @PostMapping
+    ResponseEntity<DepartmentResponseDTO> create(@RequestBody DepartmentRequestDTO dto);
+
+    @PutMapping("/{id}")
+    ResponseEntity<DepartmentResponseDTO> update(@PathVariable("id") Long id, @RequestBody DepartmentRequestDTO dto);
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<Void> delete(@PathVariable("id") Long id);
+
+    @GetMapping("/{id}")
+    ResponseEntity<DepartmentResponseDTO> getById(@PathVariable("id") Long id);
+
+    @GetMapping("/code/{code}")
+    ResponseEntity<DepartmentResponseDTO> getByCode(@PathVariable("code") String code);
+
+    @GetMapping
+    ResponseEntity<List<DepartmentResponseDTO>> getAll();
+
+    @GetMapping("/search")
+    ResponseEntity<List<DepartmentResponseDTO>> search(@RequestParam("keyword") String keyword);
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/rest/DocumentRest.java`
 
 ```java
@@ -1894,7 +3169,7 @@ public interface DocumentRest {
             @RequestParam(defaultValue = "desc") String direction);
 
     @GetMapping(value = {"/list", ""})
-    ResponseEntity<List<Document>> getAllActiveDocuments();
+    ResponseEntity<List<Document>> getAllActiveDocuments(@RequestParam(name = "appId", required = false) String appId);
 
     @GetMapping("/paged")
     ResponseEntity<Page<Document>> getDocumentsPaged(
@@ -1934,6 +3209,61 @@ public interface DocumentRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/SecurityRest.java`
+
+```java
+package com.mkii.coursemanagementsystem.rest;
+
+import com.mkii.coursemanagementsystem.dto.DecryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DecryptResponseDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptResponseDTO;
+import io.swagger.annotations.*;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@Api(tags = {"SecurityRest"})
+@SwaggerDefinition(tags = {@Tag(name = "SecurityRest", description = "REST APIs for AES Encryption and Decryption")})
+public interface SecurityRest {
+
+    @PostMapping("/encrypt")
+    @ApiOperation(value = "Encrypt plaintext payload with AES", tags = {"encrypt"}, authorizations = {
+            @Authorization(value = "default", scopes = {
+                    @AuthorizationScope(scope = "ROLE_ADMIN", description = "Admin role"),
+                    @AuthorizationScope(scope = "ROLE_LECTURER", description = "Lecturer role")
+            })
+    })
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Success|OK", response = EncryptResponseDTO.class),
+            @ApiResponse(code = 400, message = "Bad Request"),
+            @ApiResponse(code = 403, message = "Access is denied")
+    })
+    @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER') or hasRole('LECTURER')")
+    ResponseEntity<EncryptResponseDTO> encrypt(@Valid @RequestBody EncryptRequestDTO request);
+
+    @PostMapping("/decrypt")
+    @ApiOperation(value = "Decrypt ciphertext payload with AES", tags = {"decrypt"}, authorizations = {
+            @Authorization(value = "default", scopes = {
+                    @AuthorizationScope(scope = "ROLE_ADMIN", description = "Admin role"),
+                    @AuthorizationScope(scope = "ROLE_TEACHER", description = "Teacher role"),
+                    @AuthorizationScope(scope = "ROLE_LECTURER", description = "Lecturer role")
+            })
+    })
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Success|OK", response = DecryptResponseDTO.class),
+            @ApiResponse(code = 400, message = "Bad Request"),
+            @ApiResponse(code = 403, message = "Access is denied")
+    })
+    @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER') or hasRole('LECTURER')")
+    ResponseEntity<DecryptResponseDTO> decrypt(@Valid @RequestBody DecryptRequestDTO request);
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/rest/StudentRest.java`
 
 ```java
@@ -1968,7 +3298,8 @@ public interface StudentRest {
     @GetMapping(value = {"/email/{email}", "/by-email"})
     ResponseEntity<StudentResponseDTO> getStudentByEmail(
             @PathVariable(required = false) String email,
-            @RequestParam(required = false) String queryEmail);
+            @RequestParam(name = "queryEmail", required = false) String queryEmail,
+            @RequestParam(name = "email", required = false) String paramEmail);
 
     @PostMapping("/batch")
     ResponseEntity<List<StudentResponseDTO>> createStudentsBatch(@RequestBody List<StudentRequestDTO> requestDTOs);
@@ -1993,7 +3324,9 @@ public interface StudentRest {
             @RequestParam(defaultValue = "asc") String direction);
 
     @GetMapping("/search")
-    ResponseEntity<List<StudentResponseDTO>> searchStudents(@RequestParam String keyword);
+    ResponseEntity<List<StudentResponseDTO>> searchStudents(
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "name", required = false) String name);
 
     @GetMapping("/spec-search")
     ResponseEntity<List<StudentResponseDTO>> searchStudentsBySpecification(@RequestParam String search);
@@ -2047,6 +3380,148 @@ public interface StudentRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/AuthRestImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.rest.impl;
+
+import com.mkii.coursemanagementsystem.common.exception.BadRequestException;
+import com.mkii.coursemanagementsystem.common.exception.ResourceNotFoundException;
+import com.mkii.coursemanagementsystem.dao.IUserDao;
+import com.mkii.coursemanagementsystem.dto.auth.AuthResponse;
+import com.mkii.coursemanagementsystem.dto.auth.LoginRequest;
+import com.mkii.coursemanagementsystem.dto.auth.RegisterRequest;
+import com.mkii.coursemanagementsystem.entity.User;
+import com.mkii.coursemanagementsystem.rest.AuthRest;
+import com.mkii.coursemanagementsystem.security.jwt.JwtTokenProvider;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class AuthRestImpl implements AuthRest {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthRestImpl.class);
+
+    private final AuthenticationManager authenticationManager;
+    private final IUserDao userDao;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider tokenProvider;
+
+    public AuthRestImpl(AuthenticationManager authenticationManager,
+                        IUserDao userDao,
+                        PasswordEncoder passwordEncoder,
+                        JwtTokenProvider tokenProvider) {
+        this.authenticationManager = authenticationManager;
+        this.userDao = userDao;
+        this.passwordEncoder = passwordEncoder;
+        this.tokenProvider = tokenProvider;
+    }
+
+    @Override
+    public ResponseEntity<AuthResponse> login(@Valid LoginRequest request) {
+        logger.info("Attempting login for user: {}", request.getUsername());
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = tokenProvider.generateToken(authentication);
+
+        User user = userDao.findByUsername(request.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getUsername()));
+
+        AuthResponse response = AuthResponse.builder()
+                .token(jwt)
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    public ResponseEntity<AuthResponse> register(@Valid RegisterRequest request) {
+        logger.info("Registering new user: {}", request.getUsername());
+
+        if (userDao.existsByUsername(request.getUsername())) {
+            throw new BadRequestException("Username đã tồn tại: " + request.getUsername());
+        }
+
+        if (request.getEmail() != null && userDao.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email đã tồn tại: " + request.getEmail());
+        }
+
+        // Quyền mặc định khi tự đăng ký luôn là USER để ngăn chặn leo thang đặc quyền (A2)
+        String role = "USER";
+
+        User user = User.builder()
+                .username(request.getUsername().trim())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
+                .fullName(request.getFullName())
+                .role(role)
+                .build();
+
+        User savedUser = userDao.save(user);
+
+        // Auto login after registration
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = tokenProvider.generateToken(authentication);
+
+        AuthResponse response = AuthResponse.builder()
+                .token(jwt)
+                .userId(savedUser.getUserId())
+                .username(savedUser.getUsername())
+                .email(savedUser.getEmail())
+                .fullName(savedUser.getFullName())
+                .role(savedUser.getRole())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @Override
+    public ResponseEntity<AuthResponse> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() 
+                || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
+            throw new org.springframework.security.authentication.InsufficientAuthenticationException("Vui lòng đăng nhập để thực hiện thao tác");
+        }
+
+        String username = authentication.getName();
+        User user = userDao.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+        AuthResponse response = AuthResponse.builder()
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/CourseRestImpl.java`
 
 ```java
@@ -2072,7 +3547,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_COURSE_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class CourseRestImpl implements CourseRest {
 
     private static final Logger logger = LoggerFactory.getLogger(CourseRestImpl.class);
@@ -2141,9 +3615,9 @@ public class CourseRestImpl implements CourseRest {
     }
 
     @Override
-    public ResponseEntity<CourseResponseDTO> getCourseByTitle(String title, String queryTitle) {
+    public ResponseEntity<CourseResponseDTO> getCourseByTitle(String title, String queryTitle, String paramTitle) {
         try {
-            String searchTitle = title != null ? title : queryTitle;
+            String searchTitle = title != null ? title : (queryTitle != null ? queryTitle : paramTitle);
             logger.info("Getting Course by title: {}", searchTitle);
             CourseResponseDTO responseDTO = courseService.getByTitle(searchTitle);
             return ResponseEntity.ok(responseDTO);
@@ -2304,6 +3778,73 @@ public class CourseRestImpl implements CourseRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/DepartmentRestImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.rest.impl;
+
+import com.mkii.coursemanagementsystem.dto.DepartmentRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO;
+import com.mkii.coursemanagementsystem.rest.DepartmentRest;
+import com.mkii.coursemanagementsystem.service.DepartmentService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class DepartmentRestImpl implements DepartmentRest {
+
+    private final DepartmentService departmentService;
+
+    public DepartmentRestImpl(DepartmentService departmentService) {
+        this.departmentService = departmentService;
+    }
+
+    @Override
+    public ResponseEntity<DepartmentResponseDTO> create(@Valid DepartmentRequestDTO dto) {
+        DepartmentResponseDTO created = departmentService.createDepartment(dto);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    @Override
+    public ResponseEntity<DepartmentResponseDTO> update(Long id, @Valid DepartmentRequestDTO dto) {
+        DepartmentResponseDTO updated = departmentService.updateDepartment(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @Override
+    public ResponseEntity<Void> delete(Long id) {
+        departmentService.deleteDepartment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<DepartmentResponseDTO> getById(Long id) {
+        return ResponseEntity.ok(departmentService.getDepartmentById(id));
+    }
+
+    @Override
+    public ResponseEntity<DepartmentResponseDTO> getByCode(String code) {
+        return ResponseEntity.ok(departmentService.getDepartmentByCode(code));
+    }
+
+    @Override
+    public ResponseEntity<List<DepartmentResponseDTO>> getAll() {
+        return ResponseEntity.ok(departmentService.getAllDepartments());
+    }
+
+    @Override
+    public ResponseEntity<List<DepartmentResponseDTO>> search(String keyword) {
+        return ResponseEntity.ok(departmentService.searchDepartments(keyword));
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/DocumentRestImpl.java`
 
 ```java
@@ -2328,7 +3869,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_DOCUMENT_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class DocumentRestImpl implements DocumentRest {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentRestImpl.class);
@@ -2431,13 +3971,15 @@ public class DocumentRestImpl implements DocumentRest {
     }
 
     @Override
-    public ResponseEntity<List<Document>> getAllActiveDocuments() {
+    public ResponseEntity<List<Document>> getAllActiveDocuments(String appId) {
         try {
-            logger.info("REST: Getting all active documents");
-            List<Document> documents = documentService.getAllActive();
+            logger.info("REST: Getting documents, appId={}", appId);
+            List<Document> documents = (appId != null && !appId.isBlank())
+                    ? documentService.getByAppId(appId.trim())
+                    : documentService.getAllActive();
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
-            logger.error("REST: Error getting all documents: ", e);
+            logger.error("REST: Error getting documents: ", e);
             throw e;
         }
     }
@@ -2507,6 +4049,65 @@ public class DocumentRestImpl implements DocumentRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/SecurityRestImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.rest.impl;
+
+import com.mkii.coursemanagementsystem.common.ApiConstants;
+import com.mkii.coursemanagementsystem.dto.DecryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DecryptResponseDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptResponseDTO;
+import com.mkii.coursemanagementsystem.rest.SecurityRest;
+import com.mkii.coursemanagementsystem.service.SecurityService;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(ApiConstants.BASE_SECURITY_URL)
+public class SecurityRestImpl implements SecurityRest {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityRestImpl.class);
+
+    private final SecurityService securityService;
+
+    public SecurityRestImpl(SecurityService securityService) {
+        this.securityService = securityService;
+    }
+
+    @Override
+    public ResponseEntity<EncryptResponseDTO> encrypt(@Valid EncryptRequestDTO request) {
+        try {
+            logger.info("REST: Encrypting request payload");
+            EncryptResponseDTO response = securityService.encrypt(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("REST: Error during encrypt: ", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public ResponseEntity<DecryptResponseDTO> decrypt(@Valid DecryptRequestDTO request) {
+        try {
+            logger.info("REST: Decrypting request payload");
+            DecryptResponseDTO response = securityService.decrypt(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("REST: Error during decrypt: ", e);
+            throw e;
+        }
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/rest/impl/StudentRestImpl.java`
 
 ```java
@@ -2532,7 +4133,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_STUDENT_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class StudentRestImpl implements StudentRest {
 
     private static final Logger logger = LoggerFactory.getLogger(StudentRestImpl.class);
@@ -2601,9 +4201,9 @@ public class StudentRestImpl implements StudentRest {
     }
 
     @Override
-    public ResponseEntity<StudentResponseDTO> getStudentByEmail(String email, String queryEmail) {
+    public ResponseEntity<StudentResponseDTO> getStudentByEmail(String email, String queryEmail, String paramEmail) {
         try {
-            String searchEmail = email != null ? email : queryEmail;
+            String searchEmail = email != null ? email : (queryEmail != null ? queryEmail : paramEmail);
             logger.info("Getting Student by email: {}", searchEmail);
             StudentResponseDTO responseDTO = studentService.getByEmail(searchEmail);
             return ResponseEntity.ok(responseDTO);
@@ -2663,10 +4263,14 @@ public class StudentRestImpl implements StudentRest {
     }
 
     @Override
-    public ResponseEntity<List<StudentResponseDTO>> searchStudents(String keyword) {
+    public ResponseEntity<List<StudentResponseDTO>> searchStudents(String keyword, String name) {
+        String searchKey = (keyword != null && !keyword.isBlank()) ? keyword : name;
+        if (searchKey == null) {
+            searchKey = "";
+        }
         try {
-            logger.info("Searching Students by keyword: {}", keyword);
-            List<StudentResponseDTO> list = studentService.searchByKeyword(keyword);
+            logger.info("Searching Students by keyword: {}", searchKey);
+            List<StudentResponseDTO> list = studentService.searchByKeyword(searchKey);
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             logger.error("Error searching Students: ", e);
@@ -2752,6 +4356,308 @@ public class StudentRestImpl implements StudentRest {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/security/jwt/JwtAccessDeniedHandler.java`
+
+```java
+package com.mkii.coursemanagementsystem.security.jwt;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+public class JwtAccessDeniedHandler implements AccessDeniedHandler {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public void handle(HttpServletRequest request, HttpServletResponse response,
+                       AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        body.put("status", HttpServletResponse.SC_FORBIDDEN);
+        body.put("error", "Forbidden");
+        body.put("message", "Tài khoản của bạn không có quyền hạn truy cập tài nguyên này!");
+        body.put("path", request.getServletPath());
+
+        objectMapper.writeValue(response.getOutputStream(), body);
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/security/jwt/JwtAuthenticationEntryPoint.java`
+
+```java
+package com.mkii.coursemanagementsystem.security.jwt;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public void commence(HttpServletRequest request, HttpServletResponse response,
+                         AuthenticationException authException) throws IOException, ServletException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+        body.put("error", "Unauthorized");
+        body.put("message", "Bạn cần đăng nhập (truyền Bearer Token) để thực hiện thao tác này!");
+        body.put("path", request.getServletPath());
+
+        objectMapper.writeValue(response.getOutputStream(), body);
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/security/jwt/JwtAuthenticationFilter.java`
+
+```java
+package com.mkii.coursemanagementsystem.security.jwt;
+
+import com.mkii.coursemanagementsystem.security.service.UserDetailsServiceImpl;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+    private final JwtTokenProvider tokenProvider;
+    private final UserDetailsServiceImpl userDetailsService;
+
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserDetailsServiceImpl userDetailsService) {
+        this.tokenProvider = tokenProvider;
+        this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        try {
+            String jwt = parseJwt(request);
+            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+                String username = tokenProvider.getUsernameFromToken(jwt);
+
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+            logger.error("Không thể thiết lập xác thực người dùng trong Security Context: {}", e.getMessage());
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    private String parseJwt(HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
+            return headerAuth.substring(7);
+        }
+        return null;
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/security/jwt/JwtTokenProvider.java`
+
+```java
+package com.mkii.coursemanagementsystem.security.jwt;
+
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.stream.Collectors;
+
+@Component
+public class JwtTokenProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
+
+    @Value("${jwt.secret:9a4f2c8d3b7a1e6f4c8b2d0e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration:86400000}")
+    private long jwtExpirationMs;
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String generateToken(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+
+        return generateTokenFromUsername(userDetails.getUsername(), roles);
+    }
+
+    public String generateTokenFromUsername(String username, String role) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        return Jwts.builder()
+                .subject(username)
+                .claim("role", role)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String getUsernameFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
+            return true;
+        } catch (SecurityException | MalformedJwtException e) {
+            logger.error("Chữ ký JWT không hợp lệ: {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            logger.error("Token JWT đã hết hạn: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            logger.error("Token JWT không được hỗ trợ: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            logger.error("Chuỗi JWT claims rỗng: {}", e.getMessage());
+        }
+        return false;
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/security/service/UserDetailsServiceImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.security.service;
+
+import com.mkii.coursemanagementsystem.dao.IUserDao;
+import com.mkii.coursemanagementsystem.entity.User;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
+import java.util.List;
+
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    private final IUserDao userDao;
+
+    public UserDetailsServiceImpl(@Lazy IUserDao userDao) {
+        this.userDao = userDao;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userDao.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với username: " + username));
+
+        String role = user.getRole();
+        if (role == null || role.trim().isEmpty()) {
+            role = "USER";
+        }
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role;
+        }
+
+        List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                authorities
+        );
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/service/CourseService.java`
 
 ```java
@@ -2810,6 +4716,36 @@ public interface CourseService {
     Page<CourseResponseDTO> searchBySpecificationPaged(String search, int page, int size, String sortBy, String direction);
 
     Integer getCount();
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/service/DepartmentService.java`
+
+```java
+package com.mkii.coursemanagementsystem.service;
+
+import com.mkii.coursemanagementsystem.dto.DepartmentRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO;
+
+import java.util.List;
+
+public interface DepartmentService {
+
+    DepartmentResponseDTO createDepartment(DepartmentRequestDTO dto);
+
+    DepartmentResponseDTO updateDepartment(Long id, DepartmentRequestDTO dto);
+
+    void deleteDepartment(Long id);
+
+    DepartmentResponseDTO getDepartmentById(Long id);
+
+    DepartmentResponseDTO getDepartmentByCode(String code);
+
+    List<DepartmentResponseDTO> getAllDepartments();
+
+    List<DepartmentResponseDTO> searchDepartments(String keyword);
 }
 ```
 
@@ -2960,6 +4896,32 @@ public class MinioStorageService {
             throw new RuntimeException("Failed to delete file from MinIO: " + e.getMessage(), e);
         }
     }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/service/SecurityService.java`
+
+```java
+package com.mkii.coursemanagementsystem.service;
+
+import com.mkii.coursemanagementsystem.dto.DecryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DecryptResponseDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptResponseDTO;
+
+public interface SecurityService {
+
+    /**
+     * Encrypts plaintext string using AES CBC mode with random IV.
+     */
+    EncryptResponseDTO encrypt(EncryptRequestDTO request);
+
+    /**
+     * Decrypts Base64 ciphertext with prepended IV back to original plaintext.
+     */
+    DecryptResponseDTO decrypt(DecryptRequestDTO request);
 }
 ```
 
@@ -3254,6 +5216,145 @@ public class CourseServiceImpl implements CourseService {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/service/impl/DepartmentServiceImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.service.impl;
+
+import com.mkii.coursemanagementsystem.common.exception.BadRequestException;
+import com.mkii.coursemanagementsystem.common.exception.ResourceNotFoundException;
+import com.mkii.coursemanagementsystem.dao.IDepartmentDao;
+import com.mkii.coursemanagementsystem.dto.DepartmentRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO;
+import com.mkii.coursemanagementsystem.entity.Department;
+import com.mkii.coursemanagementsystem.service.DepartmentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class DepartmentServiceImpl implements DepartmentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DepartmentServiceImpl.class);
+
+    private final IDepartmentDao departmentDao;
+
+    public DepartmentServiceImpl(IDepartmentDao departmentDao) {
+        this.departmentDao = departmentDao;
+    }
+
+    @Override
+    public DepartmentResponseDTO createDepartment(DepartmentRequestDTO dto) {
+        if (dto.getDepartmentCode() == null || dto.getDepartmentCode().trim().isEmpty()) {
+            throw new BadRequestException("Mã khoa không được để trống.");
+        }
+        String normalizedCode = dto.getDepartmentCode().trim().toUpperCase();
+        logger.info("Creating Department with code: {}", normalizedCode);
+        if (departmentDao.findByDepartmentCode(normalizedCode).isPresent()) {
+            throw new BadRequestException("Mã khoa đã tồn tại: " + normalizedCode);
+        }
+
+        Department department = Department.builder()
+                .departmentCode(normalizedCode)
+                .departmentName(dto.getDepartmentName() != null ? dto.getDepartmentName().trim() : "")
+                .description(dto.getDescription())
+                .build();
+
+        Department saved = departmentDao.save(department);
+        return toDTO(saved);
+    }
+
+    @Override
+    public DepartmentResponseDTO updateDepartment(Long id, DepartmentRequestDTO dto) {
+        logger.info("Updating Department with ID: {}", id);
+        Department existing = departmentDao.getById(id);
+        if (existing == null) {
+            throw new ResourceNotFoundException("Department not found with id: " + id);
+        }
+
+        if (dto.getDepartmentCode() != null && !dto.getDepartmentCode().trim().isEmpty()) {
+            String normalizedCode = dto.getDepartmentCode().trim().toUpperCase();
+            departmentDao.findByDepartmentCode(normalizedCode).ifPresent(d -> {
+                if (!d.getDepartmentId().equals(id)) {
+                    throw new BadRequestException("Mã khoa đã tồn tại: " + normalizedCode);
+                }
+            });
+            existing.setDepartmentCode(normalizedCode);
+        }
+
+        if (dto.getDepartmentName() != null) {
+            existing.setDepartmentName(dto.getDepartmentName().trim());
+        }
+        existing.setDescription(dto.getDescription());
+
+        Department updated = departmentDao.update(existing);
+        return toDTO(updated);
+    }
+
+    @Override
+    public void deleteDepartment(Long id) {
+        logger.info("Deleting Department with ID: {}", id);
+        Department existing = departmentDao.getById(id);
+        if (existing == null) {
+            throw new ResourceNotFoundException("Department not found with id: " + id);
+        }
+        departmentDao.delete(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DepartmentResponseDTO getDepartmentById(Long id) {
+        Department department = departmentDao.getById(id);
+        if (department == null) {
+            throw new ResourceNotFoundException("Department not found with id: " + id);
+        }
+        return toDTO(department);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DepartmentResponseDTO getDepartmentByCode(String code) {
+        return departmentDao.findByDepartmentCode(code)
+                .map(this::toDTO)
+                .orElseThrow(() -> new ResourceNotFoundException("Department not found with code: " + code));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepartmentResponseDTO> getAllDepartments() {
+        return departmentDao.getAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DepartmentResponseDTO> searchDepartments(String keyword) {
+        return departmentDao.searchByName(keyword).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    private DepartmentResponseDTO toDTO(Department d) {
+        return DepartmentResponseDTO.builder()
+                .departmentId(d.getDepartmentId())
+                .departmentCode(d.getDepartmentCode())
+                .departmentName(d.getDepartmentName())
+                .description(d.getDescription())
+                .createdAt(d.getCreatedAt())
+                .updatedAt(d.getUpdatedAt())
+                .build();
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java`
 
 ```java
@@ -3314,47 +5415,71 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         List<Document> documentList = new ArrayList<>();
+        List<String> uploadedStoragePaths = new ArrayList<>();
 
-        for (MultipartFile file : files) {
-            if (file != null && !file.isEmpty() && file.getOriginalFilename() != null && !file.getOriginalFilename().trim().isEmpty()) {
-                String originalFilename = FilenameUtils.getName(file.getOriginalFilename());
+        try {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty() && file.getOriginalFilename() != null && !file.getOriginalFilename().trim().isEmpty()) {
+                    String originalFilename = FilenameUtils.getName(file.getOriginalFilename());
 
-                // 1. Kiểm tra ký tự đặc biệt trong tên file
-                if (!checkFileNameSpecialChar(originalFilename)) {
-                    throw new BadRequestException("Tên file không được chứa ký tự đặc biệt: " + originalFilename);
-                }
+                    // 1. Kiểm tra ký tự đặc biệt trong tên file
+                    if (!checkFileNameSpecialChar(originalFilename)) {
+                        throw new BadRequestException("Tên file không được chứa ký tự đặc biệt: " + originalFilename);
+                    }
 
-                // 2. Kiểm tra độ dài tên file (phần trước dấu chấm <= 50 ký tự)
-                String baseName = FilenameUtils.getBaseName(originalFilename);
-                if (baseName.length() > 50) {
-                    throw new BadRequestException("Tên file vượt quá độ dài tối đa 50 ký tự: " + baseName);
-                }
+                    // 2. Kiểm tra độ dài tên file (phần trước dấu chấm <= 50 ký tự)
+                    String baseName = FilenameUtils.getBaseName(originalFilename);
+                    if (baseName.length() > 50) {
+                        throw new BadRequestException("Tên file vượt quá độ dài tối đa 50 ký tự: " + baseName);
+                    }
 
-                // 3. Kiểm tra định dạng đuôi file
-                InputStream inputStream = validateFileExtension(file);
+                    // 3. Kiểm tra định dạng đuôi file
+                    String extension = FilenameUtils.getExtension(originalFilename);
+                    String storagePath = appId + "/" + UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
 
-                String extension = FilenameUtils.getExtension(originalFilename);
-                String storagePath = appId + "/" + UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+                    try (InputStream inputStream = validateFileExtension(file)) {
+                        // 4. Lưu trữ file lên MinIO
+                        minioStorageService.upload(storagePath, inputStream, file.getContentType(), file.getSize());
+                        uploadedStoragePaths.add(storagePath);
+                    }
 
-                // 4. Lưu trữ file lên MinIO
-                minioStorageService.upload(storagePath, inputStream, file.getContentType(), file.getSize());
-
-                // 5. Kiểm tra tài liệu cùng tên đã tồn tại cho appId này chưa (Versioning logic)
-                Document documentDetail = documentDao.getDocumentName(originalFilename, appId);
-                if (documentDetail == null) {
-                    Document docData = createDocument(originalFilename, appId, storagePath);
-                    documentList.add(docData);
+                    // 5. Kiểm tra tài liệu cùng tên đã tồn tại cho appId này chưa (Versioning logic)
+                    Document documentDetail = documentDao.getDocumentName(originalFilename, appId);
+                    if (documentDetail == null) {
+                        Document docData = createDocument(originalFilename, appId, storagePath);
+                        documentList.add(docData);
+                    } else {
+                        logger.info("Tài liệu '{}' đã tồn tại, tạo phiên bản mới", documentDetail.getName());
+                        Document docDataWithNewVersion = createDocumentWithNewVersion(originalFilename, appId, storagePath, documentDetail);
+                        documentList.add(docDataWithNewVersion);
+                    }
                 } else {
-                    logger.info("Tài liệu '{}' đã tồn tại, tạo phiên bản mới", documentDetail.getName());
-                    Document docDataWithNewVersion = createDocumentWithNewVersion(originalFilename, appId, storagePath, documentDetail);
-                    documentList.add(docDataWithNewVersion);
+                    throw new BadRequestException("File tải lên không được để trống.");
                 }
-            } else {
-                throw new BadRequestException("File tải lên không được để trống.");
             }
+            return documentList;
+        } catch (RuntimeException ex) {
+            // Rollback bù trừ (Compensating action): xóa các file đã tải lên MinIO nếu giao dịch thất bại (A6)
+            for (String path : uploadedStoragePaths) {
+                try {
+                    logger.warn("MinIO compensating rollback: xóa object mồ côi {}", path);
+                    minioStorageService.delete(path);
+                } catch (Exception cleanupEx) {
+                    logger.error("Lỗi dọn dẹp file MinIO mồ côi {}: {}", path, cleanupEx.getMessage());
+                }
+            }
+            throw ex;
+        } catch (Exception ex) {
+            for (String path : uploadedStoragePaths) {
+                try {
+                    logger.warn("MinIO compensating rollback: xóa object mồ côi {}", path);
+                    minioStorageService.delete(path);
+                } catch (Exception cleanupEx) {
+                    logger.error("Lỗi dọn dẹp file MinIO mồ côi {}: {}", path, cleanupEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Lỗi trong quá trình upload tài liệu: " + ex.getMessage(), ex);
         }
-
-        return documentList;
     }
 
     @Override
@@ -3555,6 +5680,92 @@ public class DocumentServiceImpl implements DocumentService {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/service/impl/SecurityServiceImpl.java`
+
+```java
+package com.mkii.coursemanagementsystem.service.impl;
+
+import com.mkii.coursemanagementsystem.common.MessageConstants;
+import com.mkii.coursemanagementsystem.common.exception.BadRequestException;
+import com.mkii.coursemanagementsystem.dto.DecryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.DecryptResponseDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptRequestDTO;
+import com.mkii.coursemanagementsystem.dto.EncryptResponseDTO;
+import com.mkii.coursemanagementsystem.service.SecurityService;
+import com.mkii.coursemanagementsystem.util.AESUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+
+@Service
+public class SecurityServiceImpl implements SecurityService {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityServiceImpl.class);
+    private static final String DEFAULT_KEY = System.getenv("CMS_AES_KEY") != null
+            ? System.getenv("CMS_AES_KEY") : "CourseManagementSystemSecretKey2026";
+    private static final String DEFAULT_SALT = System.getenv("CMS_AES_SALT") != null
+            ? System.getenv("CMS_AES_SALT") : "cms-salt-2026-v1";
+
+    private final SecretKey secretKey;
+
+    public SecurityServiceImpl() {
+        this(DEFAULT_KEY, DEFAULT_SALT);
+    }
+
+    @Autowired
+    public SecurityServiceImpl(
+            @Value("${cms.security.aes-key:" + "CourseManagementSystemSecretKey2026}") String aesKey,
+            @Value("${cms.security.aes-salt:" + "cms-salt-2026-v1}") String aesSalt) {
+        try {
+            this.secretKey = AESUtil.getKeyFromPassword(aesKey, aesSalt);
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError("Could not initialize SecurityService SecretKey: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public EncryptResponseDTO encrypt(EncryptRequestDTO request) {
+        if (request == null || request.getData() == null) {
+            throw new BadRequestException(MessageConstants.DATA_TO_ENCRYPT_CANNOT_BE_EMPTY);
+        }
+        try {
+            logger.info("Encrypting sensitive payload of length {}", request.getData().length());
+            String encrypted = AESUtil.encryptStringWithIv(request.getData(), this.secretKey);
+            return EncryptResponseDTO.builder()
+                    .encryptedData(encrypted)
+                    .algorithm(AESUtil.DEFAULT_ALGORITHM)
+                    .build();
+        } catch (Exception e) {
+            logger.error("Error during encryption: {}", e.getMessage(), e);
+            throw new BadRequestException(String.format(MessageConstants.ENCRYPTION_FAILED, e.getMessage()));
+        }
+    }
+
+    @Override
+    public DecryptResponseDTO decrypt(DecryptRequestDTO request) {
+        if (request == null || request.getEncryptedData() == null) {
+            throw new BadRequestException(MessageConstants.DATA_TO_DECRYPT_CANNOT_BE_EMPTY);
+        }
+        try {
+            logger.info("Decrypting payload of length {}", request.getEncryptedData().length());
+            String decrypted = AESUtil.decryptStringWithIv(request.getEncryptedData(), this.secretKey);
+            return DecryptResponseDTO.builder()
+                    .decryptedData(decrypted)
+                    .build();
+        } catch (Exception e) {
+            logger.error("Error during decryption: {}", e.getMessage(), e);
+            throw new BadRequestException(String.format(MessageConstants.DECRYPTION_FAILED, e.getMessage()));
+        }
+    }
+}
+```
+
+---
+
 ## File: `src/main/java/com/mkii/coursemanagementsystem/service/impl/StudentServiceImpl.java`
 
 ```java
@@ -3586,6 +5797,9 @@ public class StudentServiceImpl implements StudentService {
     // Call ONLY IStudentDao (in dao package), never call Hibernate DAO directly
     @Autowired
     private IStudentDao studentDao;
+
+    @Autowired
+    private com.mkii.coursemanagementsystem.dao.IDepartmentDao departmentDao;
 
     @Override
     public Student create(StudentRequestDTO requestDTO) {
@@ -3770,16 +5984,37 @@ public class StudentServiceImpl implements StudentService {
         if (requestDTO.getAddress() != null) {
             student.setAddress(requestDTO.getAddress());
         }
+        if (requestDTO.getDob() != null) {
+            student.setDob(requestDTO.getDob());
+        }
+        if (requestDTO.getDepartmentId() != null) {
+            com.mkii.coursemanagementsystem.entity.Department dept = departmentDao.getById(requestDTO.getDepartmentId());
+            if (dept == null) {
+                throw new ResourceNotFoundException("Khoa không tồn tại với ID: " + requestDTO.getDepartmentId());
+            }
+            student.setDepartment(dept);
+        }
     }
 
     private StudentResponseDTO mapToDTO(Student student) {
-        return new StudentResponseDTO(
-                student.getId(),
-                student.getFullName(),
-                student.getEmail(),
-                student.getPhone(),
-                student.getAddress()
-        );
+        com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO deptDTO = null;
+        if (student.getDepartment() != null) {
+            deptDTO = com.mkii.coursemanagementsystem.dto.DepartmentResponseDTO.builder()
+                    .departmentId(student.getDepartment().getDepartmentId())
+                    .departmentCode(student.getDepartment().getDepartmentCode())
+                    .departmentName(student.getDepartment().getDepartmentName())
+                    .description(student.getDepartment().getDescription())
+                    .build();
+        }
+        return StudentResponseDTO.builder()
+                .id(student.getId())
+                .fullName(student.getFullName())
+                .email(student.getEmail())
+                .phone(student.getPhone())
+                .address(student.getAddress())
+                .dob(student.getDob())
+                .department(deptDTO)
+                .build();
     }
 }
 ```
@@ -4010,15 +6245,540 @@ public class SearchCriteria {
 
 ---
 
+## File: `src/main/java/com/mkii/coursemanagementsystem/util/AESUtil.java`
+
+```java
+package com.mkii.coursemanagementsystem.util;
+
+import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.util.Base64;
+
+/**
+ * Technical helper utility providing static methods for AES Encryption and Decryption,
+ * key generation, password-based key derivation (PBKDF2), initialization vectors (IV),
+ * String, File, and SealedObject operations.
+ *
+ * Implemented based on official Baeldung Java AES Encryption and Decryption standards.
+ */
+public final class AESUtil {
+
+    public static final String DEFAULT_ALGORITHM = "AES/CBC/PKCS5Padding";
+    public static final String GCM_ALGORITHM = "AES/GCM/NoPadding";
+    public static final int GCM_TAG_LENGTH = 128;
+    public static final int DEFAULT_IV_SIZE = 16;
+    public static final int GCM_IV_SIZE = 12;
+    public static final int PBKDF2_ITERATIONS = 65536;
+    public static final int PBKDF2_KEY_LENGTH = 256;
+
+    private AESUtil() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+
+    /**
+     * Generates a random AES SecretKey with the specified bit size (128, 192, 256).
+     */
+    public static SecretKey generateKey(int n) throws NoSuchAlgorithmException {
+        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+        keyGenerator.init(n);
+        return keyGenerator.generateKey();
+    }
+
+    /**
+     * Derives an AES SecretKey from a given password and salt using PBKDF2WithHmacSHA256.
+     */
+    public static SecretKey getKeyFromPassword(String password, String salt)
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
+        if (password == null || salt == null) {
+            throw new IllegalArgumentException("Password and salt cannot be null");
+        }
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(StandardCharsets.UTF_8), PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH);
+        return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
+    }
+
+    /**
+     * Generates a cryptographically random 16-byte Initialization Vector (IV) for CBC mode.
+     */
+    public static IvParameterSpec generateIv() {
+        byte[] iv = new byte[DEFAULT_IV_SIZE];
+        new SecureRandom().nextBytes(iv);
+        return new IvParameterSpec(iv);
+    }
+
+    /**
+     * Generates a cryptographically random 12-byte IV for GCM mode with 128-bit authentication tag.
+     */
+    public static GCMParameterSpec generateGcmIv() {
+        byte[] iv = new byte[GCM_IV_SIZE];
+        new SecureRandom().nextBytes(iv);
+        return new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+    }
+
+    /**
+     * Encrypts a plaintext String using AES with IvParameterSpec (e.g. CBC mode) and returns Base64 ciphertext.
+     */
+    public static String encrypt(String algorithm, String input, SecretKey key, IvParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (input == null) {
+            return null;
+        }
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        byte[] cipherText = cipher.doFinal(input.getBytes(StandardCharsets.UTF_8));
+        return Base64.getEncoder().encodeToString(cipherText);
+    }
+
+    /**
+     * Decrypts a Base64 ciphertext String using AES with IvParameterSpec (e.g. CBC mode).
+     */
+    public static String decrypt(String algorithm, String cipherText, SecretKey key, IvParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (cipherText == null) {
+            return null;
+        }
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(cipherText));
+        return new String(plainText, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Encrypts a plaintext String using AES with GCMParameterSpec (e.g. GCM mode) and returns Base64 ciphertext.
+     */
+    public static String encryptGcm(String input, SecretKey key, GCMParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (input == null) {
+            return null;
+        }
+        Cipher cipher = Cipher.getInstance(GCM_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        byte[] cipherText = cipher.doFinal(input.getBytes(StandardCharsets.UTF_8));
+        return Base64.getEncoder().encodeToString(cipherText);
+    }
+
+    /**
+     * Decrypts a Base64 ciphertext String using AES with GCMParameterSpec (e.g. GCM mode).
+     */
+    public static String decryptGcm(String cipherText, SecretKey key, GCMParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (cipherText == null) {
+            return null;
+        }
+        Cipher cipher = Cipher.getInstance(GCM_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(cipherText));
+        return new String(plainText, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Encrypts a Serializable Java Object into a SealedObject using AES.
+     */
+    public static SealedObject encryptObject(String algorithm, Serializable object, SecretKey key, IvParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, IOException, IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        return new SealedObject(object, cipher);
+    }
+
+    /**
+     * Decrypts a SealedObject back into its original Serializable Java Object.
+     */
+    public static Serializable decryptObject(String algorithm, SealedObject sealedObject, SecretKey key, IvParameterSpec iv)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, ClassNotFoundException, BadPaddingException, IllegalBlockSizeException, IOException {
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        return (Serializable) sealedObject.getObject(cipher);
+    }
+
+    /**
+     * Encrypts an input File to an output File using AES and stream buffering.
+     */
+    public static void encryptFile(String algorithm, SecretKey key, IvParameterSpec iv, File inputFile, File outputFile)
+            throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        processFile(cipher, inputFile, outputFile);
+    }
+
+    /**
+     * Decrypts an encrypted File to an output File using AES and stream buffering.
+     */
+    public static void decryptFile(String algorithm, SecretKey key, IvParameterSpec iv, File inputFile, File outputFile)
+            throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance(algorithm != null ? algorithm : DEFAULT_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        processFile(cipher, inputFile, outputFile);
+    }
+
+    private static void processFile(Cipher cipher, File inputFile, File outputFile)
+            throws IOException, BadPaddingException, IllegalBlockSizeException {
+        try (FileInputStream inputStream = new FileInputStream(inputFile);
+             FileOutputStream outputStream = new FileOutputStream(outputFile)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byte[] output = cipher.update(buffer, 0, bytesRead);
+                if (output != null) {
+                    outputStream.write(output);
+                }
+            }
+            byte[] outputBytes = cipher.doFinal();
+            if (outputBytes != null) {
+                outputStream.write(outputBytes);
+            }
+        }
+    }
+
+    /**
+     * Encrypts a raw byte array by generating a random 16-byte IV, encrypting the bytes,
+     * and prepending the IV to the ciphertext [IV (16 bytes) | Encrypted payload].
+     */
+    public static byte[] encryptBytesWithIv(byte[] input, SecretKey key)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (input == null) {
+            return null;
+        }
+        IvParameterSpec iv = generateIv();
+        Cipher cipher = Cipher.getInstance(DEFAULT_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        byte[] encrypted = cipher.doFinal(input);
+        byte[] result = new byte[DEFAULT_IV_SIZE + encrypted.length];
+        System.arraycopy(iv.getIV(), 0, result, 0, DEFAULT_IV_SIZE);
+        System.arraycopy(encrypted, 0, result, DEFAULT_IV_SIZE, encrypted.length);
+        return result;
+    }
+
+    /**
+     * Decrypts a raw byte array formatted as [IV (16 bytes) | Encrypted payload].
+     */
+    public static byte[] decryptBytesWithIv(byte[] input, SecretKey key)
+            throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        if (input == null || input.length <= DEFAULT_IV_SIZE) {
+            return input;
+        }
+        byte[] ivBytes = new byte[DEFAULT_IV_SIZE];
+        System.arraycopy(input, 0, ivBytes, 0, DEFAULT_IV_SIZE);
+        IvParameterSpec iv = new IvParameterSpec(ivBytes);
+
+        Cipher cipher = Cipher.getInstance(DEFAULT_ALGORITHM);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        return cipher.doFinal(input, DEFAULT_IV_SIZE, input.length - DEFAULT_IV_SIZE);
+    }
+
+    /**
+     * Encrypts plaintext string with prepended IV and returns a Base64 encoded string.
+     */
+    public static String encryptStringWithIv(String plainText, SecretKey key) throws Exception {
+        if (plainText == null) {
+            return null;
+        }
+        byte[] encrypted = encryptBytesWithIv(plainText.getBytes(StandardCharsets.UTF_8), key);
+        return Base64.getEncoder().encodeToString(encrypted);
+    }
+
+    /**
+     * Decrypts a Base64 string that has prepended IV.
+     */
+    public static String decryptStringWithIv(String cipherText, SecretKey key) throws Exception {
+        if (cipherText == null) {
+            return null;
+        }
+        byte[] decoded = Base64.getDecoder().decode(cipherText);
+        byte[] decrypted = decryptBytesWithIv(decoded, key);
+        return new String(decrypted, StandardCharsets.UTF_8);
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/util/DateTimeUtil.java`
+
+```java
+package com.mkii.coursemanagementsystem.util;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * Technical helper utility providing static methods for date/time formatting,
+ * parsing, and epoch millisecond conversions.
+ * Contains purely technical methods without any business logic.
+ */
+public final class DateTimeUtil {
+
+    public static final String DEFAULT_DATETIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    public static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd";
+    public static final String ISO_DATETIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
+
+    private DateTimeUtil() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+
+    /**
+     * Formats a LocalDateTime into a string with the specified pattern.
+     */
+    public static String format(LocalDateTime dateTime, String pattern) {
+        if (dateTime == null) {
+            return "";
+        }
+        String p = (pattern != null && !pattern.isEmpty()) ? pattern : DEFAULT_DATETIME_PATTERN;
+        return dateTime.format(DateTimeFormatter.ofPattern(p));
+    }
+
+    /**
+     * Parses a string into a LocalDateTime with the specified pattern.
+     */
+    public static LocalDateTime parse(String text, String pattern) {
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        String p = (pattern != null && !pattern.isEmpty()) ? pattern : DEFAULT_DATETIME_PATTERN;
+        return LocalDateTime.parse(text.trim(), DateTimeFormatter.ofPattern(p));
+    }
+
+    /**
+     * Converts a LocalDateTime to epoch milliseconds in the system default timezone.
+     */
+    public static long toEpochMillis(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return 0L;
+        }
+        return dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    /**
+     * Converts epoch milliseconds to LocalDateTime in the system default timezone.
+     */
+    public static LocalDateTime fromEpochMillis(long epochMillis) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/util/FileUtil.java`
+
+```java
+package com.mkii.coursemanagementsystem.util;
+
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+/**
+ * Technical helper utility providing static methods for file name validation,
+ * extension extraction, sanitization against path traversal, and byte size formatting.
+ * Contains purely technical methods without any business logic.
+ */
+public final class FileUtil {
+
+    private static final Pattern SAFE_FILENAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_.-]+$");
+    private static final String[] SIZE_UNITS = new String[]{"B", "KB", "MB", "GB", "TB"};
+
+    private FileUtil() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+
+    /**
+     * Checks if a file name contains only safe characters (alphanumeric, dot, underscore, dash).
+     * Returns true if safe, false if contains invalid/special characters.
+     */
+    public static boolean checkFileNameSpecialChar(String fileName) {
+        if (fileName == null || fileName.trim().isEmpty()) {
+            return false;
+        }
+        return SAFE_FILENAME_PATTERN.matcher(fileName.trim()).matches();
+    }
+
+    /**
+     * Extracts the extension of a file name in lowercase (e.g. "document.PDF" -> "pdf").
+     * Returns empty string if no extension is present.
+     */
+    public static String getFileExtension(String fileName) {
+        if (fileName == null || fileName.lastIndexOf('.') == -1) {
+            return "";
+        }
+        return fileName.substring(fileName.lastIndexOf('.') + 1).trim().toLowerCase();
+    }
+
+    /**
+     * Sanitizes a file name by removing path traversal characters and illegal path separators.
+     */
+    public static String sanitizeFileName(String fileName) {
+        if (fileName == null) {
+            return "";
+        }
+        // Remove path traversal sequences and separators
+        String clean = fileName.replaceAll("[\\\\/]+", "_")
+                .replaceAll("\\.\\.+", ".")
+                .trim();
+        return clean.replaceAll("[^a-zA-Z0-9_.-]", "_");
+    }
+
+    /**
+     * Formats raw bytes into human-readable representation (e.g. 1024 -> "1 KB", 1048576 -> "1 MB").
+     */
+    public static String formatFileSize(long bytes) {
+        if (bytes <= 0) {
+            return "0 B";
+        }
+        int digitGroups = (int) (Math.log10(bytes) / Math.log10(1024));
+        if (digitGroups >= SIZE_UNITS.length) {
+            digitGroups = SIZE_UNITS.length - 1;
+        }
+        return new DecimalFormat("#,##0.#", DecimalFormatSymbols.getInstance(Locale.ENGLISH))
+                .format(bytes / Math.pow(1024, digitGroups)) + " " + SIZE_UNITS[digitGroups];
+    }
+
+    /**
+     * Checks whether the file size is within acceptable threshold.
+     */
+    public static boolean isValidFileSize(long bytes, long maxBytes) {
+        return bytes > 0 && bytes <= maxBytes;
+    }
+}
+```
+
+---
+
+## File: `src/main/java/com/mkii/coursemanagementsystem/util/StringUtil.java`
+
+```java
+package com.mkii.coursemanagementsystem.util;
+
+import java.text.Normalizer;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+/**
+ * Technical helper utility providing static methods for string manipulation,
+ * sensitive data masking, slug generation, and validation checks.
+ * Contains purely technical methods without any business logic.
+ */
+public final class StringUtil {
+
+    private static final Pattern NON_LATIN = Pattern.compile("[^\\w-]");
+    private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
+
+    private StringUtil() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+
+    public static boolean isEmpty(CharSequence cs) {
+        return cs == null || cs.length() == 0;
+    }
+
+    public static boolean isNotEmpty(CharSequence cs) {
+        return !isEmpty(cs);
+    }
+
+    public static boolean isBlank(CharSequence cs) {
+        if (cs == null) {
+            return true;
+        }
+        for (int i = 0; i < cs.length(); i++) {
+            if (!Character.isWhitespace(cs.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean isNotBlank(CharSequence cs) {
+        return !isBlank(cs);
+    }
+
+    /**
+     * Masks sensitive string content, keeping a prefix and suffix visible.
+     * Example: maskSensitive("mysecrettoken123", 3, 3) -> "mys**********123"
+     */
+    public static String maskSensitive(String input, int startVisible, int endVisible) {
+        if (input == null) {
+            return null;
+        }
+        int len = input.length();
+        if (len <= (startVisible + endVisible)) {
+            return "*".repeat(len);
+        }
+        String prefix = input.substring(0, startVisible);
+        String suffix = input.substring(len - endVisible);
+        String masked = "*".repeat(len - startVisible - endVisible);
+        return prefix + masked + suffix;
+    }
+
+    /**
+     * Masks an email address for privacy.
+     * Example: "student@example.com" -> "s***t@example.com"
+     */
+    public static String maskEmail(String email) {
+        if (email == null || !email.contains("@")) {
+            return maskSensitive(email, 1, 1);
+        }
+        String[] parts = email.split("@", 2);
+        String name = parts[0];
+        String domain = parts[1];
+        if (name.length() <= 2) {
+            return "*".repeat(name.length()) + "@" + domain;
+        }
+        return name.charAt(0) + "*".repeat(name.length() - 2) + name.charAt(name.length() - 1) + "@" + domain;
+    }
+
+    /**
+     * Generates a clean URL slug from text (supporting Vietnamese diacritics).
+     * Example: "Khóa học Lập trình Java 2026!" -> "khoa-hoc-lap-trinh-java-2026"
+     */
+    public static String toSlug(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        String noDiacritics = Pattern.compile("\\p{InCombiningDiacriticalMarks}+").matcher(normalized).replaceAll("");
+        noDiacritics = noDiacritics.replace("đ", "d").replace("Đ", "D");
+        String noWhitespace = WHITESPACE.matcher(noDiacritics).replaceAll("-");
+        String slug = NON_LATIN.matcher(noWhitespace).replaceAll("");
+        return slug.toLowerCase(Locale.ENGLISH).replaceAll("-+", "-").replaceAll("^-|-$", "");
+    }
+}
+```
+
+---
+
 ## File: `src/main/resources/application.properties`
 
 ```properties
 spring.application.name=course-management-system
 
-# Datasource Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/course_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-spring.datasource.username=root
-spring.datasource.password=dmcvmkii28
+# Datasource Configuration (Hỗ trợ cả Localhost và Docker Container)
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/course_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:root}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:123456}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 # HikariCP Connection Pool Optimization
@@ -4032,23 +6792,28 @@ spring.datasource.hikari.max-lifetime=1800000
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
-spring.jpa.open-in-view=true
+spring.jpa.open-in-view=false
 
 # Encoding Configuration
 server.servlet.encoding.charset=UTF-8
 server.servlet.encoding.enabled=true
 server.servlet.encoding.force=true
 
-# MinIO Object Storage Configuration
-minio.endpoint=http://localhost:9000
-minio.access-key=minioadmin
-minio.secret-key=minioadmin
-minio.bucket-name=documents
+# MinIO Object Storage Configuration (Hỗ trợ cả Localhost và Docker Container)
+minio.endpoint=${MINIO_ENDPOINT:http://localhost:9000}
+minio.access-key=${MINIO_ACCESS_KEY:minioadmin}
+minio.secret-key=${MINIO_SECRET_KEY:minioadmin}
+minio.bucket-name=${MINIO_BUCKET_NAME:documents}
 
 # Multipart File Upload Limits
 spring.servlet.multipart.max-file-size=50MB
 spring.servlet.multipart.max-request-size=100MB
+
+# JWT & AES Security Configuration
+jwt.secret=${JWT_SECRET:9a4f2c8d3b7a1e6f4c8b2d0e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a}
+jwt.expiration=${JWT_EXPIRATION:86400000}
+cms.security.aes-key=${CMS_AES_KEY:CourseManagementSystemSecretKey2026}
+cms.security.aes-salt=${CMS_AES_SALT:cms-salt-2026-v1}
 ```
 
 ---

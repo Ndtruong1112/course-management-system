@@ -1504,5 +1504,37 @@
         }
       ]
     }
+  ],
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{authUsername}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{authPassword}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "authUsername",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "authPassword",
+      "value": "admin123",
+      "type": "string"
+    }
   ]
 }

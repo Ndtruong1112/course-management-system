@@ -1,0 +1,14 @@
+target/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+.mvn/wrapper/maven-wrapper.jar
+mvnw.cmd
+outputs/
+distillation/
+.env
+*.log
+*.zip
+*.jsonl

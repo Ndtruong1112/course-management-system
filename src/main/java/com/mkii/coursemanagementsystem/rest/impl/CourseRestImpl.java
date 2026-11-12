@@ -20,7 +20,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(ApiConstants.BASE_COURSE_URL)
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class CourseRestImpl implements CourseRest {
 
     private static final Logger logger = LoggerFactory.getLogger(CourseRestImpl.class);
@@ -89,9 +88,9 @@ public class CourseRestImpl implements CourseRest {
     }
 
     @Override
-    public ResponseEntity<CourseResponseDTO> getCourseByTitle(String title, String queryTitle) {
+    public ResponseEntity<CourseResponseDTO> getCourseByTitle(String title, String queryTitle, String paramTitle) {
         try {
-            String searchTitle = title != null ? title : queryTitle;
+            String searchTitle = title != null ? title : (queryTitle != null ? queryTitle : paramTitle);
             logger.info("Getting Course by title: {}", searchTitle);
             CourseResponseDTO responseDTO = courseService.getByTitle(searchTitle);
             return ResponseEntity.ok(responseDTO);

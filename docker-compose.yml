@@ -1,0 +1,110 @@
+services:
+  # ==========================================
+  # 1. Cơ sở dữ liệu MySQL 8.0
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: cms-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: course_db
+      MYSQL_ROOT_PASSWORD: "123456"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - cms-network
+
+  # ==========================================
+  # 2. MinIO Object Storage (Lưu trữ tài liệu)
+  # ==========================================
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: cms-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Web Console Dashboard
+    volumes:
+      - minio_data:/data
+    networks:
+      - cms-network
+
+  # ==========================================
+  # 3. Backend Spring Boot (Java 21)
+  # ==========================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cms-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/course_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "123456"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET_NAME: documents
+    ports:
+      - "8080:8080"
+    networks:
+      - cms-network
+
+  # ==========================================
+  # 4. Trợ Lý AI Nội Bộ Chatbot (Local Qwen + Cloud)
+  # ==========================================
+  chatbot:
+    build:
+      context: .
+      dockerfile: chatbot/Dockerfile
+    container_name: cms-chatbot
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+      FLASK_ENV: production
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./outputs:/app/outputs
+      - ./src:/app/src:ro
+      - ./README.md:/app/README.md:ro
+      - ./.agents/skills/cms-standards/references:/app/.agents/skills/cms-standards/references:ro
+      - ./.env:/app/.env:ro
+    networks:
+      - cms-network
+
+# ==========================================
+# Volumes lưu trữ dữ liệu bền vững
+# ==========================================
+volumes:
+  mysql_data:
+    driver: local
+  minio_data:
+    driver: local
+
+# ==========================================
+# Mạng nội bộ kết nối giữa các Container
+# ==========================================
+networks:
+  cms-network:
+    driver: bridge

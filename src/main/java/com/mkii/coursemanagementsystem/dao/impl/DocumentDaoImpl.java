@@ -8,6 +8,9 @@ import jakarta.persistence.TypedQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -28,7 +31,7 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
     @Override
     public Document save(Document document) {
         logger.info("Saving Document: name={}, appId={}", document.getName(), document.getAppId());
-        return create(document);
+        return super.save(document);
     }
 
     @Override
@@ -123,7 +126,7 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
         }
 
         Sort sort = buildSort(sortField, direction);
-        jpql.append(buildOrderClause(sort));
+        jpql.append(buildOrderClause("d", sort));
 
         TypedQuery<Document> typedQuery = getEntityManager().createQuery(jpql.toString(), Document.class);
         params.forEach(typedQuery::setParameter);
@@ -158,8 +161,50 @@ public class DocumentDaoImpl extends HibernatePaginationSortingDao<String, Docum
     }
 
     @Override
+    public Page<Document> findAllPaged(int page, int size, String sortBy, String direction) {
+        Sort sort = buildSort(sortBy, direction);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String countJpql = "SELECT COUNT(d) FROM Document d WHERE d.deleted = false";
+        Long total = getEntityManager().createQuery(countJpql, Long.class).getSingleResult();
+        if (total == null || total == 0) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.deleted = false" + orderClause;
+        List<Document> content = getEntityManager().createQuery(jpql, Document.class)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    @Override
+    public List<Document> findAllSorted(String sortBy, String direction) {
+        Sort sort = buildSort(sortBy, direction);
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.deleted = false" + orderClause;
+        return getEntityManager().createQuery(jpql, Document.class).getResultList();
+    }
+
+    @Override
     public Page<Document> findByAppIdPaged(String appId, int page, int size, String sortBy, String direction) {
         logger.info("findByAppIdPaged: appId={}, page={}, size={}, sort={} {}", appId, page, size, sortBy, direction);
-        return findByFieldPaged("appId", appId, page, size, sortBy, direction);
+        Sort sort = buildSort(sortBy, direction);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String countJpql = "SELECT COUNT(d) FROM Document d WHERE d.appId = :appId AND d.deleted = false";
+        Long total = getEntityManager().createQuery(countJpql, Long.class)
+                .setParameter("appId", appId)
+                .getSingleResult();
+        if (total == null || total == 0) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        String orderClause = buildOrderClause("d", sort);
+        String jpql = "SELECT d FROM Document d WHERE d.appId = :appId AND d.deleted = false" + orderClause;
+        List<Document> content = getEntityManager().createQuery(jpql, Document.class)
+                .setParameter("appId", appId)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(content, pageable, total);
     }
 }

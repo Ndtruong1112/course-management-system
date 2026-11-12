@@ -65,13 +65,16 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_use_double_quant=True
 )
 
-print(f"\nĐang tải Tokenizer và Model '{model_id}'...")
-tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+local_sharded_3b = r"D:\models\Qwen2.5-Coder-3B-Instruct-sharded"
+load_source = local_sharded_3b if (args.model == "3b" and os.path.exists(local_sharded_3b)) else model_id
+
+print(f"\nĐang tải Tokenizer và Model '{model_id}' (từ {load_source})...")
+tokenizer = AutoTokenizer.from_pretrained(load_source, trust_remote_code=True)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
-    model_id,
+    load_source,
     quantization_config=bnb_config,
     device_map="auto",
     trust_remote_code=True
@@ -177,6 +180,15 @@ final_lora_dir = os.path.join(output_dir, "course-management-lora-adapter")
 print(f"\nĐang lưu trọng số LoRA vào: {final_lora_dir}")
 trainer.model.save_pretrained(final_lora_dir)
 tokenizer.save_pretrained(final_lora_dir)
+
+# Chuẩn hóa base_model_name_or_path để portable giữa các máy và Docker
+adapter_cfg_path = os.path.join(final_lora_dir, "adapter_config.json")
+if os.path.exists(adapter_cfg_path):
+    with open(adapter_cfg_path, "r", encoding="utf-8") as f:
+        acfg = json.load(f)
+    acfg["base_model_name_or_path"] = model_id
+    with open(adapter_cfg_path, "w", encoding="utf-8") as f:
+        json.dump(acfg, f, indent=2)
 
 # Ghi lại metadata base_model_id vào file cấu hình
 config_path = os.path.join(final_lora_dir, "model_meta.json")

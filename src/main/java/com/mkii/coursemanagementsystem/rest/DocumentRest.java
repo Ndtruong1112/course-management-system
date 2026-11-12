@@ -43,7 +43,7 @@ public interface DocumentRest {
             @RequestParam(defaultValue = "desc") String direction);
 
     @GetMapping(value = {"/list", ""})
-    ResponseEntity<List<Document>> getAllActiveDocuments();
+    ResponseEntity<List<Document>> getAllActiveDocuments(@RequestParam(name = "appId", required = false) String appId);
 
     @GetMapping("/paged")
     ResponseEntity<Page<Document>> getDocumentsPaged(

@@ -13,7 +13,7 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080 ^| findstr LISTENING') 
     taskkill /f /pid %%a >nul 2>&1
 )
 
-echo Dang dung Chatbot AI Copilot (Port 7860)...
+echo Dang dung Chatbot Trợ Lý AI Nội Bộ (Port 7860)...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :7860 ^| findstr LISTENING') do (
     taskkill /f /pid %%a >nul 2>&1
 )

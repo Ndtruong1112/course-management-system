@@ -25,8 +25,8 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
 
     private static final Logger logger = LoggerFactory.getLogger(HibernateGenericDao.class);
 
-    private Class<Entity> type;
-    private EntityManager entityManager;
+    protected Class<Entity> type;
+    protected EntityManager entityManager;
 
     public HibernateGenericDao(Class<Entity> type, EntityManager entityManager) {
         super(type, entityManager);
@@ -59,7 +59,7 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
             logger.warn(MessageConstants.ENTITY_CANNOT_BE_NULL);
             throw new IllegalArgumentException(String.format(MessageConstants.CANNOT_CREATE_NULL_ENTITY, getType().getName()));
         }
-        return save(anEntity);
+        return super.save(anEntity);
     }
 
     @Override
@@ -79,7 +79,7 @@ public class HibernateGenericDao<Pk, Entity> extends SimpleJpaRepository<Entity,
             logger.warn(MessageConstants.ENTITY_CANNOT_BE_NULL);
             throw new IllegalArgumentException(String.format(MessageConstants.CANNOT_SAVE_OR_UPDATE_NULL_ENTITY, getType().getName()));
         }
-        return save(anEntity);
+        return super.save(anEntity);
     }
 
     @Override
