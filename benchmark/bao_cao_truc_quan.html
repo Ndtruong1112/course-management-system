@@ -28,7 +28,7 @@
                 </p>
             </div>
             <div class="text-right text-xs text-slate-500">
-                <p>Thời gian chạy: <span class="text-slate-300 font-mono">12/11/2026 20:18</span></p>
+                <p>Thời gian chạy: <span class="text-slate-300 font-mono">12/11/2026 22:32</span></p>
                 <p class="mt-1">Codebase: <span class="text-emerald-400 font-mono">Hibernate Generic DAO</span></p>
             </div>
         </div>
@@ -38,11 +38,11 @@
             <!-- Thẻ 1 -->
             <div class="bg-slate-900/90 border border-rose-500/30 rounded-2xl p-6 relative overflow-hidden shadow-lg">
                 <div class="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2">1. AI Tiêu Chuẩn (Zero Context)</div>
-                <div class="text-4xl font-extrabold text-white font-mono">30.0%</div>
+                <div class="text-4xl font-extrabold text-white font-mono">15.0%</div>
                 <p class="text-xs text-slate-400 mt-2">Mặc định dùng <code>JpaRepository</code>, sai lệch package, 0% code dùng được ngay.</p>
                 <div class="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-500 flex justify-between">
                     <span>Thời gian phản hồi TB:</span>
-                    <span class="font-mono text-slate-300">6.94s</span>
+                    <span class="font-mono text-slate-300">0.73s</span>
                 </div>
             </div>
 
@@ -53,18 +53,18 @@
                 <p class="text-xs text-slate-400 mt-2">Không nhận biết được các lớp DAO đặc thù của dự án, phụ thuộc thư viện chung.</p>
                 <div class="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-500 flex justify-between">
                     <span>Thời gian phản hồi TB:</span>
-                    <span class="font-mono text-slate-300">26.44s</span>
+                    <span class="font-mono text-slate-300">26.77s</span>
                 </div>
             </div>
 
             <!-- Thẻ 3 -->
             <div class="bg-slate-900/90 border border-emerald-500/50 rounded-2xl p-6 relative overflow-hidden shadow-lg ring-2 ring-emerald-500/20">
                 <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">3. Hệ Thống Dự Án (Fine-tuned)</div>
-                <div class="text-4xl font-extrabold text-emerald-400 font-mono">92.0%</div>
+                <div class="text-4xl font-extrabold text-emerald-400 font-mono">100.0%</div>
                 <p class="text-xs text-slate-300 mt-2">Kế thừa chuẩn xác <code>HibernatePaginationSortingDao</code>, inject <code>EntityManager</code>, 100% Plug & Play.</p>
                 <div class="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400 flex justify-between">
                     <span>Mức độ cải thiện:</span>
-                    <span class="font-mono text-emerald-400 font-bold">+62.0% vượt trội</span>
+                    <span class="font-mono text-emerald-400 font-bold">+85.0% vượt trội</span>
                 </div>
             </div>
         </div>
@@ -138,7 +138,7 @@
             </td>
             <td class="p-4 text-center">
                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                    45%
+                    20%
                 </span>
             </td>
             <td class="p-4 text-center">
@@ -148,7 +148,7 @@
             </td>
             <td class="p-4 text-center">
                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/20">
-                    60% (Đạt)
+                    100% (Đạt)
                 </span>
             </td>
         </tr>
@@ -161,7 +161,7 @@
             </td>
             <td class="p-4 text-center">
                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                    40%
+                    15%
                 </span>
             </td>
             <td class="p-4 text-center">
@@ -207,7 +207,7 @@
             </td>
             <td class="p-4 text-center">
                 <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                    25%
+                    0%
                 </span>
             </td>
             <td class="p-4 text-center">
@@ -234,7 +234,7 @@
             </h3>
             <ul class="space-y-2 list-disc list-inside text-slate-300 text-xs sm:text-sm">
                 <li><strong>Thực trạng:</strong> AI phổ thông ngoài thị trường khi chưa được nạp kiến trúc dự án (Zero Context) dù rất mạnh nhưng được huấn luyện đại trà trên các dự án Spring Boot thông thường (chiếm 95% trên Github), luôn sinh ra <code>JpaRepository</code>. Khi áp dụng vào dự án này, toàn bộ code đó bị <strong>Lỗi Biên Dịch</strong> và không thể kết nối vào hệ thống DAO dùng chung.</li>
-                <li><strong>Giá trị của Fine-tuning & Context Orchestration:</strong> Mô hình được tinh chỉnh hiểu rõ cấu trúc <code>HibernatePaginationSortingDao</code>, cách thức inject <code>EntityManager</code>, bảng lưu trữ <code>tbl_document</code> và quy chuẩn DTO. Nhờ đó, tỷ lệ sinh mã tương thích tăng vọt từ <strong>30.0% lên 92.0%</strong>.</li>
+                <li><strong>Giá trị của Fine-tuning & Context Orchestration:</strong> Mô hình được tinh chỉnh hiểu rõ cấu trúc <code>HibernatePaginationSortingDao</code>, cách thức inject <code>EntityManager</code>, bảng lưu trữ <code>tbl_document</code> và quy chuẩn DTO. Nhờ đó, tỷ lệ sinh mã tương thích tăng vọt từ <strong>15.0% lên 100.0%</strong>.</li>
                 <li><strong>Khả năng ứng dụng thực tế:</strong> Tiết kiệm hàng trăm giờ làm việc tái cấu trúc (refactoring) của đội ngũ kỹ sư khi mở rộng các module mới (như Quản lý Giảng viên, Đăng ký học phần, Quản lý Khách sạn, Bệnh viện...) trên nền tảng kiến trúc đã xây dựng.</li>
             </ul>
         </div>
@@ -251,7 +251,7 @@
                 datasets: [
                     {
                         label: 'AI Tiêu Chuẩn (Zero-Context)',
-                        data: [20, 45, 40, 20, 25],
+                        data: [20, 20, 15, 20, 0],
                         backgroundColor: 'rgba(239, 68, 68, 0.65)',
                         borderColor: '#ef4444',
                         borderWidth: 1
@@ -265,7 +265,7 @@
                     },
                     {
                         label: 'Hệ Thống Dự Án (Fine-tuned)',
-                        data: [100, 60, 100, 100, 100],
+                        data: [100, 100, 100, 100, 100],
                         backgroundColor: 'rgba(16, 185, 129, 0.75)',
                         borderColor: '#10b981',
                         borderWidth: 1
@@ -310,14 +310,14 @@
                 datasets: [
                     {
                         label: 'AI Tiêu Chuẩn (Zero-Context)',
-                        data: [20, 45, 40, 20, 25],
+                        data: [20, 20, 15, 20, 0],
                         backgroundColor: 'rgba(239, 68, 68, 0.2)',
                         borderColor: '#ef4444',
                         borderWidth: 2
                     },
                     {
                         label: 'Hệ Thống Dự Án (LoRA + RAG)',
-                        data: [100, 60, 100, 100, 100],
+                        data: [100, 100, 100, 100, 100],
                         backgroundColor: 'rgba(16, 185, 129, 0.25)',
                         borderColor: '#10b981',
                         borderWidth: 2

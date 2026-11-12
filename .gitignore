@@ -10,9 +10,15 @@ target/
 *.war
 *.ear
 
-# Logs
+# Logs & Crash Dumps
 *.log
+*.err
 hs_err_pid*
+replay_pid*
+
+# Local Scratch & IDE / Agent Config
+.agents/mcp_config.json
+hvac_*.csv
 
 # Python
 __pycache__/

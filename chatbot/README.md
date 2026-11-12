@@ -4,26 +4,28 @@ Thư mục này được tổ chức tách biệt làm 2 luồng mô hình và �
 
 ```text
 chatbot/
-├── 1_base_model/            # LUỒNG 1: Mô hình gốc Qwen2.5-Coder-1.5B (Chưa huấn luyện với Codebase)
-│   ├── chat.py              # Script chat dòng lệnh (CLI) độc lập với Base Model
+├── 1_base_model/            # LUỒNG 1: Mô hình gốc (Chưa gắn LoRA Adapter)
+│   ├── chat.py              # Script chat CLI độc lập với Base Model
 │   └── README.md            # Giải thích vai trò của Base Model
 │
-├── 2_finetuned_model/       # LUỒNG 2: Mô hình đã Fine-tune bằng QLoRA (Am hiểu 100% Codebase)
-│   ├── chat.py              # Script chat dòng lệnh (CLI) độc lập với Fine-tuned Model
+├── 2_finetuned_model/       # LUỒNG 2: Mô hình đã Fine-tune bằng QLoRA (Am hiểu Codebase)
+│   ├── chat.py              # Script chat CLI độc lập với Fine-tuned Model
 │   └── README.md            # Giải thích vai trò của Fine-tuned Model
 │
-├── web_app.py               # ỨNG DỤNG WEB CHATBOT DUAL-STREAM (So sánh song song 2 cột A/B)
-├── run_web.bat              # File click đúp chuột chạy ngay Web UI trên Windows
+├── rag_engine.py            # CodebaseRAG & Bộ đánh giá tuân thủ kiến trúc 5 tiêu chí
+├── web_app.py               # ỨNG DỤNG WEB STUDIO (SSE Streaming, 7 chế độ, chấm điểm đồng bộ)
+├── Dockerfile               # Đóng gói container dịch vụ AI Chatbot
+├── requirements.txt         # Thư viện Python AI
 └── README.md                # Tài liệu hướng dẫn sử dụng
 ```
 
 ---
 
-## 🚀 Cách 1: Sử dụng Giao diện Web Chatbot (Khuyên dùng khi demo với thầy)
+## 🚀 Cách 1: Sử dụng Giao diện Web Chatbot (Khuyên dùng)
 
-Chỉ cần **click đúp vào file `run_web.bat`** (hoặc gõ lệnh trong terminal):
+Nhấp đúp vào **`scripts/run_chatbot.bat`** (hoặc chạy lệnh từ gốc dự án):
 ```bash
-python web_app.py
+python chatbot/web_app.py
 ```
 Sau đó mở trình duyệt web và truy cập địa chỉ:
 👉 **`http://localhost:7860`**

@@ -162,15 +162,26 @@ def retrieve_rag_for_query(user_message, top_k=3, max_chars=2600):
         return "", []
 
 
-def format_prompt(user_message, use_rag=True, rag_context=None):
+def _normalize_history(history, max_turns=4, max_chars=550):
+    """Chuẩn hóa lịch sử hội thoại nhiều lượt gọn nhẹ để giữ VRAM ổn định."""
+    if not isinstance(history, list):
+        return []
+    cleaned = []
+    for item in history[-(max_turns * 2):]:
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = (item.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            cleaned.append({"role": role, "content": content[:max_chars]})
+    return cleaned
+
+
+def format_prompt(user_message, use_rag=True, rag_context=None, history=None):
     if use_rag:
         system_content = (
-            "Bạn là trợ lý AI kỹ sư phần mềm chuyên sâu về Java 21, Spring Boot 3 và kiến trúc Generic DAO của dự án Course Management System (`com.mkii.coursemanagementsystem`).\n"
-            "Quy chuẩn thiết kế bắt buộc:\n"
-            "1. Tầng Entity: Sử dụng Jakarta Persistence (`jakarta.persistence.*`) và Lombok (`@Getter`, `@Setter`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`).\n"
-            "2. Tầng DAO: BẮT BUỘC kế thừa `HibernatePaginationSortingDao<Pk, Entity>` kết hợp `EntityManager` (`super(Entity.class, entityManager);`) và HQL (`findByHql`). TUYỆT ĐỐI KHÔNG dùng `JpaRepository` hay `CrudRepository`.\n"
-            "3. Tầng Service & Controller: Tách rõ Interface/Impl, dùng DTO Pattern (`RequestDTO`, `ResponseDTO`).\n"
-            "4. Bám sát tên class, field, package trong ngữ cảnh codebase thật được cung cấp bên dưới. Không bịa tên class hoặc field không có."
+            SYSTEM_INSTRUCTION_PROJECT
+            + "\n6. Bám sát tên class, field, package trong tài liệu tham khảo codebase bên dưới; không bịa tên class hoặc field không có."
         )
         if rag_context is None:
             rag_context, _ = retrieve_rag_for_query(user_message, top_k=3, max_chars=1800)
@@ -186,10 +197,10 @@ def format_prompt(user_message, use_rag=True, rag_context=None):
         )
         final_user_content = user_message
 
-    messages = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": final_user_content}
-    ]
+    messages = [{"role": "system", "content": system_content}]
+    if use_rag and history:
+        messages.extend(_normalize_history(history))
+    messages.append({"role": "user", "content": final_user_content})
     try:
         return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     except Exception:
@@ -256,7 +267,7 @@ def generate_local(user_message, use_adapter=True, max_tokens=1500, use_rag=None
         
     return response, round(elapsed, 2)
 
-def generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=None, rag_context=None):
+def generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=None, rag_context=None, history=None):
     """Sinh câu trả lời STREAMING 100% CỤC BỘ TRÊN GPU (RTX 4050)"""
     if use_rag is None:
         use_rag = bool(use_adapter)
@@ -270,7 +281,7 @@ def generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_r
         yield "⚠️ Mô hình Local đang được nạp vào VRAM GPU... Vui lòng thử lại sau giây lát!"
         return
 
-    formatted = format_prompt(user_message, use_rag=use_rag, rag_context=rag_context)
+    formatted = format_prompt(user_message, use_rag=use_rag, rag_context=rag_context, history=history)
     inputs = tokenizer(formatted, return_tensors="pt")
     if has_cuda:
         inputs = inputs.to("cuda")
@@ -316,60 +327,97 @@ def generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_r
 # ======================================================================
 # CLOUD AI (GEMINI / CLAUDE ANTHROPIC) INFERENCE & STREAMING
 # ======================================================================
-CLOUD_MODELS = ['gemini-2.5-flash']
+CLOUD_MODELS = [
+    'gemini-3-flash-preview',
+    'gemini-3.5-flash',
+    'gemini-flash-lite-latest',
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+]
 CLAUDE_MODELS = ['claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-sonnet-4-20250514']
 
 
-def _build_cloud_project_prompt(user_message):
+def _extract_gemini_text(obj):
+    """Trích xuất toàn bộ text non-thought từ mọi parts của phản hồi Gemini/Gemma."""
+    chunks = []
+    for cand in obj.get("candidates", []):
+        for part in cand.get("content", {}).get("parts", []):
+            if part.get("thought"):
+                continue
+            txt = part.get("text")
+            if txt:
+                chunks.append(txt)
+    return "".join(chunks)
+
+
+def _format_cloud_error(status_code=None, detail=""):
+    if status_code == 429:
+        return "⚠️ Lỗi Cloud API (HTTP 429: Hết quota/rate-limit hiện tại). Vui lòng kiểm tra quota hoặc bổ sung API Key."
+    if status_code == 401 or status_code == 403:
+        return f"⚠️ Lỗi Cloud API (HTTP {status_code}: API Key không hợp lệ hoặc bị từ chối quyền)."
+    if status_code:
+        return f"⚠️ Lỗi Cloud API (HTTP {status_code}). {detail}".strip()
+    return "⚠️ Không thể kết nối đến máy chủ Cloud AI. Vui lòng kiểm tra lại mạng hoặc API Key."
+
+
+def _build_cloud_project_prompt(user_message, history=None):
     rag_block, _ = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
+    hist_items = _normalize_history(history, max_turns=4, max_chars=800)
+    hist_block = ""
+    if hist_items:
+        lines = [f"- {'Người dùng' if m['role'] == 'user' else 'Trợ lý'}: {m['content']}" for m in hist_items]
+        hist_block = "\n\n[LỊCH SỬ HỘI THOẠI GẦN ĐÂY]:\n" + "\n".join(lines)
     if rag_block:
-        return f"{SYSTEM_INSTRUCTION_PROJECT}\n\n{rag_block}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}"
-    return f"{SYSTEM_INSTRUCTION_PROJECT}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}"
+        return f"{SYSTEM_INSTRUCTION_PROJECT}{hist_block}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}\n\n{rag_block}"
+    return f"{SYSTEM_INSTRUCTION_PROJECT}{hist_block}\n\n[YÊU CẦU CỦA NGƯỜI DÙNG]:\n{user_message}"
 
 
-def call_cloud_gemini(user_message):
+def call_cloud_gemini(user_message, history=None):
     """Gọi Cloud AI (Gemini) với Ngữ cảnh Kiến trúc & RAG Codebase thật của dự án"""
     if not gemini_api_key:
         return "Lỗi: Chưa cấu hình GEMINI_API_KEY trong file .env", 0.0
 
-    prompt = _build_cloud_project_prompt(user_message)
+    prompt = _build_cloud_project_prompt(user_message, history=history)
     start_time = time.time()
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.2}
+        'generationConfig': {'maxOutputTokens': 4096, 'temperature': 0.2}
     }
 
+    last_status = None
     for m in CLOUD_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_api_key}"
         try:
             res = requests.post(url, json=payload, timeout=30)
+            last_status = res.status_code
             if res.status_code == 200:
-                text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                elapsed = time.time() - start_time
-                return text, round(elapsed, 2)
+                text = _extract_gemini_text(res.json())
+                if text:
+                    elapsed = time.time() - start_time
+                    return text, round(elapsed, 2)
         except Exception:
             continue
 
     elapsed = time.time() - start_time
-    return "Không thể kết nối đến máy chủ Cloud AI. Vui lòng kiểm tra lại mạng hoặc thử lại sau.", round(elapsed, 2)
+    return _format_cloud_error(last_status), round(elapsed, 2)
 
-def call_cloud_gemini_stream(user_message):
+def call_cloud_gemini_stream(user_message, history=None):
     """Streaming từ Cloud Gemini với ngữ cảnh kiến trúc + RAG codebase dự án"""
     if not gemini_api_key:
         yield "Lỗi: Chưa cấu hình GEMINI_API_KEY trong file .env"
         return
 
-    prompt = _build_cloud_project_prompt(user_message)
+    prompt = _build_cloud_project_prompt(user_message, history=history)
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.2}
+        'generationConfig': {'maxOutputTokens': 4096, 'temperature': 0.2}
     }
 
-    success = False
+    yielded_any = False
     for m in CLOUD_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:streamGenerateContent?alt=sse&key={gemini_api_key}"
         try:
-            res = requests.post(url, json=payload, stream=True, timeout=30)
+            res = requests.post(url, json=payload, stream=True, timeout=35)
             if res.status_code == 200:
                 for line in res.iter_lines():
                     if line:
@@ -377,17 +425,19 @@ def call_cloud_gemini_stream(user_message):
                         if line_str.startswith('data:'):
                             try:
                                 obj = json.loads(line_str[5:].strip())
-                                text_part = obj['candidates'][0]['content']['parts'][0]['text']
-                                yield text_part
+                                text_part = _extract_gemini_text(obj)
+                                if text_part:
+                                    yielded_any = True
+                                    yield text_part
                             except Exception:
                                 pass
-                success = True
-                break
+                if yielded_any:
+                    return
         except Exception:
             continue
 
-    if not success:
-        text, _ = call_cloud_gemini(user_message)
+    if not yielded_any:
+        text, _ = call_cloud_gemini(user_message, history=history)
         yield text
 
 
@@ -451,22 +501,25 @@ def call_cloud_general_ai(user_message):
     start_time = time.time()
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 1500, 'temperature': 0.2}
+        'generationConfig': {'maxOutputTokens': 4096, 'temperature': 0.2}
     }
 
+    last_status = None
     for m in CLOUD_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_api_key}"
         try:
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(url, json=payload, timeout=30)
+            last_status = res.status_code
             if res.status_code == 200:
-                text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                elapsed = time.time() - start_time
-                return text, round(elapsed, 2)
+                text = _extract_gemini_text(res.json())
+                if text:
+                    elapsed = time.time() - start_time
+                    return text, round(elapsed, 2)
         except Exception:
             continue
 
     elapsed = time.time() - start_time
-    return "Không thể kết nối đến máy chủ AI bên ngoài.", round(elapsed, 2)
+    return _format_cloud_error(last_status), round(elapsed, 2)
 
 def call_cloud_general_ai_stream(user_message, claude_key=""):
     """Streaming từ External Zero-Context AI (ưu tiên Claude API nếu có key, ngược lại dùng Gemini Zero-Context)"""
@@ -483,14 +536,14 @@ def call_cloud_general_ai_stream(user_message, claude_key=""):
     prompt = f"{SYSTEM_INSTRUCTION_GENERAL}\n\n[USER QUESTION]:\n{user_message}"
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 1500, 'temperature': 0.2}
+        'generationConfig': {'maxOutputTokens': 4096, 'temperature': 0.2}
     }
 
-    success = False
+    yielded_any = False
     for m in CLOUD_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:streamGenerateContent?alt=sse&key={gemini_api_key}"
         try:
-            res = requests.post(url, json=payload, stream=True, timeout=20)
+            res = requests.post(url, json=payload, stream=True, timeout=30)
             if res.status_code == 200:
                 for line in res.iter_lines():
                     if line:
@@ -498,16 +551,18 @@ def call_cloud_general_ai_stream(user_message, claude_key=""):
                         if line_str.startswith('data:'):
                             try:
                                 obj = json.loads(line_str[5:].strip())
-                                text_part = obj['candidates'][0]['content']['parts'][0]['text']
-                                yield text_part
+                                text_part = _extract_gemini_text(obj)
+                                if text_part:
+                                    yielded_any = True
+                                    yield text_part
                             except Exception:
                                 pass
-                success = True
-                break
+                if yielded_any:
+                    return
         except Exception:
             continue
 
-    if not success:
+    if not yielded_any:
         ans, _ = call_cloud_general_ai(user_message)
         yield ans
 
@@ -718,7 +773,10 @@ HTML_TEMPLATE = r"""
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                     <span>GPU RTX 4050 (Qwen-3B)</span>
                 </span>
-                <span class="text-slate-400">Offline</span>
+                <button type="button" onclick="refreshRagIndex()" id="rag-refresh-btn" title="Cập nhật chỉ mục mã nguồn RAG"
+                        class="text-[10px] px-1.5 py-0.5 rounded bg-white border border-slate-200 hover:border-indigo-300 text-slate-600 hover:text-indigo-700 cursor-pointer">
+                    ↻ RAG ({{ rag_count }})
+                </button>
             </div>
             <div class="flex items-center gap-2 pt-1 border-t border-slate-200/80 text-[11px]">
                 <a href="http://localhost:8080" target="_blank" class="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 font-medium">
@@ -970,8 +1028,25 @@ HTML_TEMPLATE = r"""
             handleSend();
         }
 
+        let chatHistory = [];
+
         function clearChat() {
+            chatHistory = [];
             document.getElementById('chat-box').innerHTML = defaultWelcomeHtml;
+        }
+
+        async function refreshRagIndex() {
+            const btn = document.getElementById('rag-refresh-btn');
+            if (btn) btn.textContent = '↻ Đang quét...';
+            try {
+                const res = await fetch('/api/rag/refresh', { method: 'POST' });
+                const data = await res.json();
+                if (btn) btn.textContent = `↻ RAG (${data.indexed_files || 0})`;
+                showToast(`Đã làm mới RAG: ${data.indexed_files || 0} chỉ mục`, "✓");
+            } catch (e) {
+                if (btn) btn.textContent = '↻ RAG lỗi';
+                showToast("Không thể làm mới RAG", "⚠️");
+            }
         }
 
         // ======================================================================
@@ -1197,7 +1272,8 @@ HTML_TEMPLATE = r"""
                     body: JSON.stringify({
                         message: query,
                         mode: targetMode,
-                        anthropic_api_key: customClaudeKey
+                        anthropic_api_key: customClaudeKey,
+                        history: chatHistory.slice(-8)
                     })
                 });
 
@@ -1212,6 +1288,7 @@ HTML_TEMPLATE = r"""
                 let streamState = {
                     mode: targetMode,
                     prompt: query,
+                    hasClaudeApi: false,
                     singleText: '',
                     cols: {
                         base: { text: '', elapsed: 0, eval: null, ragFiles: [] },
@@ -1239,11 +1316,13 @@ HTML_TEMPLATE = r"""
                         try {
                             const evt = JSON.parse(jsonStr);
                             processStreamEvent(evt, containerId, streamState, chatBox);
+                            if (evt.type === 'single_chunk' || evt.type === 'init_compare' || evt.type === 'all_done') {
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
                         } catch (err) {
                             console.error("Lỗi parse SSE:", err, jsonStr);
                         }
                     }
-                    chatBox.scrollTop = chatBox.scrollHeight;
                 }
 
                 // Kết thúc: Nâng cấp Code blocks và lưu session
@@ -1329,6 +1408,9 @@ HTML_TEMPLATE = r"""
                     const evalEl = document.getElementById(`${containerId}-eval`);
                     if (evalEl) evalEl.innerHTML = renderEvalScorecard(evt.eval);
                 }
+                chatHistory.push({ role: 'user', content: state.prompt });
+                chatHistory.push({ role: 'assistant', content: state.singleText });
+                if (chatHistory.length > 10) chatHistory = chatHistory.slice(-8);
                 return;
             }
 
@@ -1336,10 +1418,11 @@ HTML_TEMPLATE = r"""
             // CHẾ ĐỘ SO SÁNH (COMPARE MODELS / SYSTEM / ARENA / CLAUDE)
             // ==========================================
             if (evt.type === 'init_compare') {
+                state.hasClaudeApi = Boolean(evt.has_claude_api);
                 let columnsHtml = '';
                 if (evt.mode === 'compare_models') {
                     columnsHtml = `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                             <div class="bg-white border border-amber-200 rounded-xl p-4 flex flex-col shadow-sm">
                                 <div class="flex items-center justify-between pb-2 mb-2 border-b border-amber-100 text-xs">
                                     <span class="font-bold text-amber-800 flex items-center gap-1.5">
@@ -1347,7 +1430,7 @@ HTML_TEMPLATE = r"""
                                     </span>
                                     <span id="${containerId}-base-time" class="text-amber-700 font-mono">Đang chờ...</span>
                                 </div>
-                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-base-eval" class="mt-3"></div>
                             </div>
                             <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
@@ -1358,14 +1441,14 @@ HTML_TEMPLATE = r"""
                                     <span id="${containerId}-finetuned-time" class="text-emerald-700 font-mono">Đang chờ...</span>
                                 </div>
                                 <div id="${containerId}-finetuned-rag" class="mb-2"></div>
-                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-finetuned-eval" class="mt-3"></div>
                             </div>
                         </div>
                     `;
                 } else if (evt.mode === 'compare_system') {
                     columnsHtml = `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                             <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm">
                                 <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
                                     <span class="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1373,7 +1456,7 @@ HTML_TEMPLATE = r"""
                                     </span>
                                     <span id="${containerId}-general-time" class="text-slate-600 font-mono">Đang chờ...</span>
                                 </div>
-                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-general-eval" class="mt-3"></div>
                             </div>
                             <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
@@ -1384,20 +1467,20 @@ HTML_TEMPLATE = r"""
                                     <span id="${containerId}-project-time" class="text-emerald-700 font-mono">Đang chờ...</span>
                                 </div>
                                 <div id="${containerId}-project-rag" class="mb-2"></div>
-                                <div id="${containerId}-project-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-project-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-project-eval" class="mt-3"></div>
                             </div>
                         </div>
                     `;
                 } else if (evt.mode === 'compare_arena') {
                     columnsHtml = `
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                             <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col shadow-sm">
                                 <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
                                     <span class="font-bold text-slate-800 flex items-center gap-1">🌐 AI Tiêu Chuẩn (Zero Context)</span>
                                     <span id="${containerId}-general-time" class="text-slate-600 font-mono">Đang chờ...</span>
                                 </div>
-                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-general-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-general-eval" class="mt-3"></div>
                             </div>
                             <div class="bg-white border border-amber-200 rounded-xl p-4 flex flex-col shadow-sm">
@@ -1405,7 +1488,7 @@ HTML_TEMPLATE = r"""
                                     <span class="font-bold text-amber-800 flex items-center gap-1">💻 Base Model (GPU)</span>
                                     <span id="${containerId}-base-time" class="text-amber-700 font-mono">Đang chờ...</span>
                                 </div>
-                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-base-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-base-eval" class="mt-3"></div>
                             </div>
                             <div class="bg-white border border-emerald-300 rounded-xl p-4 flex flex-col shadow-sm ring-1 ring-emerald-100">
@@ -1414,7 +1497,7 @@ HTML_TEMPLATE = r"""
                                     <span id="${containerId}-finetuned-time" class="text-emerald-700 font-mono">Đang chờ...</span>
                                 </div>
                                 <div id="${containerId}-finetuned-rag" class="mb-2"></div>
-                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                                <div id="${containerId}-finetuned-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                                 <div id="${containerId}-finetuned-eval" class="mt-3"></div>
                             </div>
                         </div>
@@ -1422,7 +1505,7 @@ HTML_TEMPLATE = r"""
                 } else if (evt.mode === 'compare_claude') {
                     const autoClaude = Boolean(evt.has_claude_api);
                     const claudePanelHtml = autoClaude
-                        ? `<div id="${containerId}-claude-body" class="prose text-xs text-slate-700 leading-relaxed overflow-x-auto flex-1"></div>
+                        ? `<div id="${containerId}-claude-body" class="prose text-xs text-slate-700 leading-relaxed overflow-y-auto overflow-x-auto max-h-[460px] pr-1"></div>
                            <div id="${containerId}-claude-eval" class="mt-3"></div>`
                         : `<div class="space-y-2.5 flex-1 flex flex-col">
                                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 leading-relaxed">
@@ -1494,6 +1577,15 @@ HTML_TEMPLATE = r"""
             }
 
             if (evt.type === 'col_start') {
+                const statusEl = document.getElementById(`${containerId}-status`);
+                if (statusEl && evt.title) {
+                    statusEl.textContent = `Đang chạy: ${evt.title}...`;
+                }
+                const timer = document.getElementById(`${containerId}-${evt.col}-time`);
+                if (timer) {
+                    timer.classList.add('animate-pulse');
+                    timer.textContent = 'Đang sinh...';
+                }
                 if (evt.rag_files && evt.rag_files.length) {
                     const ragBox = document.getElementById(`${containerId}-${evt.col}-rag`);
                     if (ragBox) {
@@ -1512,6 +1604,7 @@ HTML_TEMPLATE = r"""
                     const el = document.getElementById(`${containerId}-${evt.col}-body`);
                     if (el) {
                         el.innerHTML = marked.parse(state.cols[evt.col].text);
+                        el.scrollTop = el.scrollHeight;
                     }
                 }
                 return;
@@ -1523,13 +1616,17 @@ HTML_TEMPLATE = r"""
                     state.cols[evt.col].eval = evt.eval || null;
                     const timer = document.getElementById(`${containerId}-${evt.col}-time`);
                     if (timer) {
-                        timer.textContent = `${evt.elapsed}s`;
+                        timer.classList.remove('animate-pulse');
+                        timer.textContent = `✓ ${evt.elapsed}s`;
                     }
-                    if (evt.eval) {
-                        const evalEl = document.getElementById(`${containerId}-${evt.col}-eval`);
-                        if (evalEl) {
-                            evalEl.innerHTML = renderEvalScorecard(evt.eval);
-                        }
+                    const evalEl = document.getElementById(`${containerId}-${evt.col}-eval`);
+                    if (evalEl && evt.eval) {
+                        evalEl.innerHTML = `
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                <span>Đã sinh xong (${evt.elapsed}s) — Chờ các mô hình còn lại hoàn tất để chấm điểm đồng bộ...</span>
+                            </div>
+                        `;
                     }
                 }
                 return;
@@ -1540,8 +1637,20 @@ HTML_TEMPLATE = r"""
                 if (status) {
                     status.classList.remove('animate-pulse');
                     status.classList.add('text-slate-600');
-                    status.textContent = `Hoàn tất (${evt.total_elapsed}s)`;
+                    status.textContent = `Hoàn tất & Đã chấm điểm (${evt.total_elapsed}s)`;
                 }
+                Object.entries(state.cols).forEach(([colKey, colState]) => {
+                    const bodyEl = document.getElementById(`${containerId}-${colKey}-body`);
+                    if (bodyEl) {
+                        bodyEl.scrollTop = 0;
+                    }
+                    if (colState && colState.eval) {
+                        const evalEl = document.getElementById(`${containerId}-${colKey}-eval`);
+                        if (evalEl) {
+                            evalEl.innerHTML = renderEvalScorecard(colState.eval);
+                        }
+                    }
+                });
                 renderComparisonSummary(containerId, state);
                 return;
             }
@@ -1549,6 +1658,17 @@ HTML_TEMPLATE = r"""
 
         function renderEvalScorecard(ev) {
             if (!ev) return '';
+            if (ev.api_error) {
+                return `
+                    <div class="rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+                        <div class="flex items-center justify-between font-semibold mb-0.5">
+                            <span>⚠️ Cloud API không phản hồi</span>
+                            <span class="px-2 py-0.5 rounded bg-amber-600 text-white font-mono text-[10px]">N/A</span>
+                        </div>
+                        <div class="opacity-85">${escapeHtml(ev.task_label || 'Không chấm điểm do lỗi kết nối/quota API')}</div>
+                    </div>
+                `;
+            }
             const score = ev.score || 0;
             const tone = score >= 80
                 ? { box: 'bg-emerald-50 border-emerald-200', badge: 'bg-emerald-600 text-white', text: 'text-emerald-900' }
@@ -1585,16 +1705,18 @@ HTML_TEMPLATE = r"""
                 project: 'Hệ Thống Dự Án (LoRA + RAG)',
                 claude: 'Claude'
             };
-            const entries = Object.entries(state.cols)
+            const allEntries = Object.entries(state.cols)
                 .filter(([, v]) => v && v.eval)
-                .map(([k, v]) => ({ key: k, label: labels[k] || k, score: v.eval.score, elapsed: v.elapsed }));
-            if (entries.length < 2) return;
+                .map(([k, v]) => ({ key: k, label: labels[k] || k, score: v.eval.score, apiError: Boolean(v.eval.api_error), elapsed: v.elapsed }));
+            const validEntries = allEntries.filter(e => !e.apiError);
+            if (!validEntries.length) return;
+            if (allEntries.length < 2) return;
 
-            const best = [...entries].sort((a, b) => b.score - a.score || a.elapsed - b.elapsed)[0];
+            const best = [...validEntries].sort((a, b) => b.score - a.score || a.elapsed - b.elapsed)[0];
             summaryEl.innerHTML = `
                 <div class="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
                     <span class="font-semibold text-slate-800">🏆 Kết Luận Đối Chiếu: <span class="text-emerald-700">${escapeHtml(best.label)}</span> dẫn đầu với <strong>${best.score}/100 điểm</strong> (${best.elapsed}s)</span>
-                    <span class="text-[11px] text-slate-500">${entries.map(e => `${escapeHtml(e.label)}: ${e.score}%`).join(' • ')}</span>
+                    <span class="text-[11px] text-slate-500">${allEntries.map(e => `${escapeHtml(e.label)}: ${e.apiError ? 'Lỗi API' : e.score + '%'}`).join(' • ')}</span>
                 </div>
             `;
         }
@@ -1670,7 +1792,7 @@ HTML_TEMPLATE = r"""
 
 @app.route("/")
 def index():
-    return render_template_string(HTML_TEMPLATE, has_claude_key=bool(anthropic_api_key))
+    return render_template_string(HTML_TEMPLATE, has_claude_key=bool(anthropic_api_key), rag_count=len(rag_engine.docs))
 
 
 @app.route("/api/rag/refresh", methods=["POST"])
@@ -1706,6 +1828,7 @@ def chat_stream():
     user_message = data.get("message", "").strip()
     mode = data.get("mode", "hybrid")
     req_claude_key = (data.get("anthropic_api_key") or "").strip()
+    chat_history = data.get("history") or []
 
     if not user_message:
         def err_stream():
@@ -1837,14 +1960,14 @@ def chat_stream():
                        ("🌐 Local AI đã phân tích & Ủy quyền cho Cloud AI sinh toàn bộ dự án lớn" if is_heavy else "🌐 Cloud AI phục vụ với Ngữ cảnh Codebase Chuẩn")
                 source = "cloud_delegated"
                 yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': cloud_rag_files})}\n\n"
-                for chunk in call_cloud_gemini_stream(user_message):
+                for chunk in call_cloud_gemini_stream(user_message, history=chat_history):
                     buf_single.append(chunk)
                     yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
             else:
                 badge = f"⚡ Xử lý 100% Cục bộ trên GPU RTX 4050 ({base_model_id} + LoRA + RAG)"
                 source = "local_direct"
                 yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': rag_files})}\n\n"
-                for chunk in generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=True, rag_context=rag_block):
+                for chunk in generate_local_stream(user_message, use_adapter=True, max_tokens=1500, use_rag=True, rag_context=rag_block, history=chat_history):
                     buf_single.append(chunk)
                     yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
 

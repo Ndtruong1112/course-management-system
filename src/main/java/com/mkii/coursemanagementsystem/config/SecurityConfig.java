@@ -96,16 +96,16 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/*.html", "/*.css", "/*.js", "/static/**", "/error").permitAll()
                 // Public tài liệu Swagger / OpenAPI
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-resources/**", "/webjars/**").permitAll()
-                // Public các API xác thực (Đăng nhập, Đăng ký)
-                .requestMatchers("/api/auth/**").permitAll()
+                // Public các API xác thực (Đăng nhập, Đăng ký) và thống kê tổng quan không chứa PII
+                .requestMatchers("/api/auth/**", "/api/dashboard/**").permitAll()
                 // Cho phép xem thông tin khóa học và khoa công khai không cần token (A3)
                 .requestMatchers(HttpMethod.GET, "/api/courses/**", "/api/departments/**").permitAll()
                 // Cho phép CORS preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Quyền ghi đối với khóa học và khoa (ADMIN, TEACHER, LECTURER) (A4)
-                .requestMatchers(HttpMethod.POST, "/api/courses/**", "/api/departments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
-                .requestMatchers(HttpMethod.PUT, "/api/courses/**", "/api/departments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
-                .requestMatchers(HttpMethod.DELETE, "/api/courses/**", "/api/departments/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/courses/**", "/api/departments/**", "/api/enrollments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.PUT, "/api/courses/**", "/api/departments/**", "/api/enrollments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.DELETE, "/api/courses/**", "/api/departments/**", "/api/enrollments/**").hasRole("ADMIN")
                 // Quyền ghi đối với sinh viên
                 .requestMatchers(HttpMethod.POST, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
                 .requestMatchers(HttpMethod.PUT, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")

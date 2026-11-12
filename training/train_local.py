@@ -100,12 +100,12 @@ if args.model == "7b":
 elif args.model == "3b":
     batch_size = 1
     grad_accum = 8
-    max_seq_len = 768
+    max_seq_len = 1152
     use_gradient_checkpointing = True
     peft_config = LoraConfig(
         r=16,
         lora_alpha=32,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM"
@@ -146,14 +146,14 @@ training_args = TrainingArguments(
     output_dir=output_dir,
     per_device_train_batch_size=batch_size,
     gradient_accumulation_steps=grad_accum,
-    learning_rate=2e-4,
+    learning_rate=1.5e-4,
     logging_steps=5,
     max_steps=args.steps,
     save_strategy="no",
     fp16=True,
     optim="paged_adamw_8bit",                 # Chống tràn VRAM: tự động tràn sang RAM hệ thống khi cần
     gradient_checkpointing=use_gradient_checkpointing, # Giảm 60% VRAM activation
-    warmup_ratio=0.05,
+    warmup_ratio=0.06,
     lr_scheduler_type="cosine",
     report_to="none"
 )

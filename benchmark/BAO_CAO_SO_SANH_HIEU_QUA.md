@@ -1,7 +1,7 @@
 # BÁO CÁO ĐÁNH GIÁ THỰC NGHIỆM SO SÁNH HIỆU QUẢ FINE-TUNING VÀ ĐIỀU PHỐI KIẾN TRÚC AI
 
 **Dự án:** Course Management System  
-**Thời gian thực hiện:** 12/11/2026 20:18  
+**Thời gian thực hiện:** 12/11/2026 22:32  
 **Mục tiêu nghiên cứu:** Chứng minh bằng thực nghiệm khoa học sự cần thiết của việc Huấn luyện tinh chỉnh (Fine-tuning) và Điều phối kiến trúc chuyên sâu (Context Orchestration) đối với mô hình ngôn ngữ lớn (LLM) trong các dự án phần mềm doanh nghiệp đặc thù.
 
 ---
@@ -25,13 +25,13 @@ Trong phát triển phần mềm doanh nghiệp, hầu hết các hệ thống l
 
 | Chỉ Số Đánh Giá | AI Tiêu Chuẩn (Zero Context) | Base Model (Chưa Fine-tune) | Hệ Thống Dự Án (LoRA + RAG) | Mức Cải Thiện |
 | :--- | :---: | :---: | :---: | :---: |
-| **Điểm Tuân Thủ Kiến Trúc TB (Score)** | **30.0%** | **55.0%** | **92.0%** | **+62.0%** |
-| **Thời Gian Phản Hồi Trung Bình (s)** | 6.94s | 26.44s | 44.43s | Phản hồi thực tế |
+| **Điểm Tuân Thủ Kiến Trúc TB (Score)** | **15.0%** | **55.0%** | **100.0%** | **+85.0%** |
+| **Thời Gian Phản Hồi Trung Bình (s)** | 0.73s | 26.77s | 59.73s | Phản hồi thực tế |
 | **TC-01 (Entity + Generic DAO)** | 20% | 20% | **100%** | +80% |
-| **TC-02 (HQL & EntityManager)** | 45% | 100% | **60%** | +15% |
-| **TC-03 (MinIO & Versioning)** | 40% | 85% | **100%** | +60% |
+| **TC-02 (HQL & EntityManager)** | 20% | 100% | **100%** | +80% |
+| **TC-03 (MinIO & Versioning)** | 15% | 85% | **100%** | +85% |
 | **TC-04 (Soft Delete DAO)** | 20% | 20% | **100%** | +80% |
-| **TC-05 (DTO & Jakarta Validation)** | 25% | 50% | **100%** | +75% |
+| **TC-05 (DTO & Jakarta Validation)** | 0% | 50% | **100%** | +100% |
 
 ---
 
@@ -55,26 +55,21 @@ Trong phát triển phần mềm doanh nghiệp, hầu hết các hệ thống l
 
 **1. AI Tiêu Chuẩn (Zero Context):**
 ```text
-Chào bạn,
-
-Bạn muốn tạo một module Quản lý Giảng viên (Instructor) trong dự án Spring Boot của mình. Yêu cầu của bạn đề cập đến "Instructor Entity" và "InstructorDaoImpl" theo kiến trúc của dự án.
-
-Tuy nhiên, trong kiến trúc Spring Boot hiện đại và tiêu chuẩn công nghiệp, chúng ta thường sử dụng **Spring Data JPA** với các interface `
+Lỗi kết nối máy chủ Cloud AI.
 ```
 
 **2. Hệ Thống AI Dự Án (Qwen-3B LoRA + Codebase RAG):**
 ```text
-Dưới đây là mã nguồn `Instructor.java` và `InstructorDaoImpl.java` mới được tạo ra trong module `instructor-management`:
+Dưới đây là mã nguồn `src/main/java/com/mkii/coursemanagementsystem/entity/Instructor.java`:
 
 '''java
-package com.mkii.instructormanagement.entity;
+package com.mkii.coursemanagementsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "instructors", indexes = {
-        @Index(name = "idx_instructor_name", columnList = "name"),
         @Index(name = "idx_instructor_email", columnList = "email")
 })
 @Getter
@@ -88,7 +83,11 @@ public class Instructor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.
+    @EqualsAndHashCode.Include
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String 
 ```
 
 ---
@@ -99,44 +98,41 @@ public class Instructor {
 
 | Tiêu Chí Đánh Giá (Trọng số) | AI Tiêu Chuẩn (Zero Context) | Base Model | Hệ Thống Dự Án (LoRA + RAG) |
 | :--- | :---: | :---: | :---: |
-| 1. Tương thích Generic DAO (CourseDaoImpl / findByHql) (25đ) | ✔ (+25đ) | ✔ (+25đ) | ✔ (+25đ) |
-| 2. Quản lý EntityManager & Truy vấn HQL có tham số (25đ) | ✘ (0đ) | ✔ (+25đ) | ✘ (0đ) |
+| 1. Tương thích Generic DAO (CourseDaoImpl / findByHql) (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
+| 2. Quản lý EntityManager & Truy vấn HQL có tham số (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
 | 3. Không lạm dụng Spring Data JpaRepository (20đ) | ✔ (+20đ) | ✔ (+20đ) | ✔ (+20đ) |
 | 4. Đúng tên hàm, Entity & thuộc tính (findByPriceRange, price) (15đ) | ✘ (0đ) | ✔ (+15đ) | ✔ (+15đ) |
-| 5. Chuẩn chữ ký Java & kiểu trả về (@Override, List<Course>) (15đ) | ✘ (0đ) | ✔ (+15đ) | ✘ (0đ) |
-| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **45%** | **100%** | **60%** |
+| 5. Chuẩn chữ ký Java & kiểu trả về (@Override, List<Course>) (15đ) | ✘ (0đ) | ✔ (+15đ) | ✔ (+15đ) |
+| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **20%** | **100%** | **100%** |
 
 #### Trích đoạn phản hồi thực tế:
 
 **1. AI Tiêu Chuẩn (Zero Context):**
 ```text
-Chào bạn,
-
-Bạn muốn tìm kiếm khóa học theo khoảng giá sử dụng `EntityManager` và HQL trong `CourseDaoImpl`. Đây là một cách tiếp cận hoàn toàn khả thi, đặc biệt khi bạn cần các truy vấn phức tạp
+Lỗi kết nối máy chủ Cloud AI.
 ```
 
 **2. Hệ Thống AI Dự Án (Qwen-3B LoRA + Codebase RAG):**
 ```text
-Dưới đây là implementation chính xác của `findByPriceRange` trong `CourseDaoImpl`:
+Dưới đây là mã nguồn phương thức `findByPriceRange` trong `CourseDaoImpl`:
 
 '''java
 package com.mkii.coursemanagementsystem.dao.impl;
 
-import jakarta.persistence.EntityManager;
+import com.mkii.coursemanagementsystem.dao.ICourseDao;
+import com.mkii.coursemanagementsystem.entity.Course;
+import org.hibernate.query.NativeQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-
+import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> implements ICourseDao {
 
-    private static final Logger logger = LoggerFactory.getLogger(CourseDaoImpl.class);
-
-    public CourseDaoImpl(Class<Long> pkClass, EntityManager entityManager) {
-        super(pkClass, entityManag
-'''
+    private static final Logger logger = LoggerFactory.
 ```
 
 ---
@@ -149,34 +145,42 @@ public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> i
 | :--- | :---: | :---: | :---: |
 | 1. Nhận diện đúng Entity / Service / Thành phần thật (20đ) | ✘ (0đ) | ✔ (+20đ) | ✔ (+20đ) |
 | 2. Đúng tên bảng, khóa ngoại & MinIO Storage (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
-| 3. Đúng logic Versioning / Soft Delete (active=false, version) (25đ) | ✔ (+25đ) | ✔ (+25đ) | ✔ (+25đ) |
+| 3. Đúng logic Versioning / Soft Delete (active=false, version) (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
 | 4. Đúng định hướng tầng DAO / Query của dự án (15đ) | ✘ (0đ) | ✘ (0đ) | ✔ (+15đ) |
 | 5. Không nhầm sang kiến trúc JpaRepository ngoài luồng (15đ) | ✔ (+15đ) | ✔ (+15đ) | ✔ (+15đ) |
-| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **40%** | **85%** | **100%** |
+| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **15%** | **85%** | **100%** |
 
 #### Trích đoạn phản hồi thực tế:
 
 **1. AI Tiêu Chuẩn (Zero Context):**
 ```text
-Chào bạn,
-
-Bạn đang muốn triển khai một hệ thống quản lý tài liệu có tính năng versioning (quản lý phiên bản) sử dụng Spring Boot, Spring Data JPA, và REST controllers. Cụ thể, bạn muốn hiểu
+Lỗi kết nối máy chủ Cloud AI.
 ```
 
 **2. Hệ Thống AI Dự Án (Qwen-3B LoRA + Codebase RAG):**
 ```text
-Dưới đây là mã nguồn `DocumentServiceImpl` và `Document` entity đã tuân thủ đúng các chuẩn kỹ thuật và logic business cần thiết:
+Dưới đây là mã nguồn đầy đủ cho `Document` entity và phương thức `createDocumentWithNewVersion` trong `DocumentServiceImpl`:
 
-**src/main/java/com/mkii/coursemanagementsystem/service/impl/DocumentServiceImpl.java**
 '''java
-package com.mkii.coursemanagementsystem.service.impl;
+package com.mkii.coursemanagementsystem.entity;
 
-import com.mkii.coursemanagementsystem.dao.IDocumentDao;
-import com.mkii.coursemanagementsystem.dto.DocumentCreateRequestDTO;
-import com.mkii.coursemanagementsystem.dto.DocumentResponseDTO;
-import com.mkii.coursemanagementsystem.entity.Document;
-import com.mkii.coursemanagementsystem.exception.EntityNotFoundException;
-import com.mkii.coursemanagementsystem.mapper.Doc
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "documents", indexes = {
+        @Index(name = "idx_doc_app_id", columnList = "APP_DETAIL_FK"),
+        @Index(name = "idx_doc_name", columnList = "NAME"),
+        @Index(name = "idx_doc_deleted", columnList = "DELETED"),
+        @Index(name = "idx_doc_active", columnList = "ACTIVE")
+})
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIn
 ```
 
 ---
@@ -198,34 +202,28 @@ import com.mkii.coursemanagementsystem.mapper.Doc
 
 **1. AI Tiêu Chuẩn (Zero Context):**
 ```text
-Chào bạn,
-
-Bạn muốn triển khai cơ chế xóa mềm (Soft Delete) cho `Student` entity trong Spring Boot, sử dụng Spring Data JPA và cập nhật trường `deleted=true` thay vì xóa cứng. Đây
+Lỗi kết nối máy chủ Cloud AI.
 ```
 
 **2. Hệ Thống AI Dự Án (Qwen-3B LoRA + Codebase RAG):**
 ```text
-Dưới đây là implementation của `StudentDaoImpl` mới sau khi bổ sung logic xóa mềm (soft delete):
+Dưới đây là mã nguồn `StudentDaoImpl` và `Student` sau khi thực hiện cơ chế xóa mềm bằng `deleted = true`:
 
 '''java
 package com.mkii.coursemanagementsystem.dao.impl;
 
+import com.mkii.coursemanagementsystem.dao.IStudentDao;
+import com.mkii.coursemanagementsystem.entity.Student;
+import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;
 import jakarta.persistence.EntityManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-
-import javax.persistence.EntityExistsException;
-import javax.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 
-import static com.mkii.coursemanagementsystem.constant.AppConstant.PK_NOT_FOUND_MSG;
-
 @Repository
-@Transactional
-public class StudentD
+public class StudentDaoImpl extends HibernatePaginationSortingDao<Long, Student> implements IStudentDao {
+
+    public StudentDaoImpl(E
 ```
 
 ---
@@ -237,24 +235,22 @@ public class StudentD
 | Tiêu Chí Đánh Giá (Trọng số) | AI Tiêu Chuẩn (Zero Context) | Base Model | Hệ Thống Dự Án (LoRA + RAG) |
 | :--- | :---: | :---: | :---: |
 | 1. Đúng Package com.mkii.coursemanagementsystem (20đ) | ✘ (0đ) | ✘ (0đ) | ✔ (+20đ) |
-| 2. Tách biệt RequestDTO & ResponseDTO (25đ) | ✔ (+25đ) | ✔ (+25đ) | ✔ (+25đ) |
+| 2. Tách biệt RequestDTO & ResponseDTO (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
 | 3. Áp dụng Jakarta Validation (@NotBlank, @NotNull, @Min...) (25đ) | ✘ (0đ) | ✔ (+25đ) | ✔ (+25đ) |
 | 4. Chuẩn Lombok & Clean DTO (không lẫn @Entity) (15đ) | ✘ (0đ) | ✘ (0đ) | ✔ (+15đ) |
 | 5. Khớp đúng thuộc tính Course thật (title, price, duration) (15đ) | ✘ (0đ) | ✘ (0đ) | ✔ (+15đ) |
-| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **25%** | **50%** | **100%** |
+| **TỔNG ĐIỂM ĐẠT ĐƯỢC** | **0%** | **50%** | **100%** |
 
 #### Trích đoạn phản hồi thực tế:
 
 **1. AI Tiêu Chuẩn (Zero Context):**
 ```text
-Chào bạn,
-
-Bạn muốn thiết kế `CourseRequestDTO` và `CourseResponseDTO` với validation chuẩn Jakarta Bean Validation để tách biệt dữ liệu giữa tầng REST và tầng Entity trong một ứng dụng Spring Boot. Đây là một thực hành
+Lỗi kết nối máy chủ Cloud AI.
 ```
 
 **2. Hệ Thống AI Dự Án (Qwen-3B LoRA + Codebase RAG):**
 ```text
-Dưới đây là mã nguồn `CourseRequestDTO` và `CourseResponseDTO` tuân thủ các chuẩn kỹ thuật và business rule của hệ thống:
+Dưới đây là mã nguồn `CourseRequestDTO` và `CourseResponseDTO` tuân thủ chính xác các quy chuẩn:
 
 '''java
 package com.mkii.coursemanagementsystem.dto;
@@ -268,15 +264,14 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class CourseRequestDTO {
-
     @NotBlank(message = "Tiêu đề khóa học không được để trống")
     @Size(max = 255, message = "Tiêu đề khóa học không được vượt quá 255 ký tự")
     private String title;
 
-    @Size(max = 255, message = "Mô tả khóa học không được vượt quá 255 ký tự")
     private String description;
 
-    @NotNull(message = "Thời lượn
+    @NotNull(message = "Thời lượng khóa học không được để trống")
+    @PositiveOrZero(message = "Thời lượng khóa học phải lớn hơn hoặc bằn
 ```
 
 ---

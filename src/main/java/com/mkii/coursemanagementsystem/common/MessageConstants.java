@@ -75,6 +75,11 @@ public final class MessageConstants {
     public static final String DATA_INTEGRITY_VIOLATION = "Dữ liệu vi phạm ràng buộc cơ sở dữ liệu (ví dụ: email đã tồn tại).";
     public static final String PARAM_TYPE_MISMATCH = "Tham số '%s' có giá trị '%s' không đúng kiểu dữ liệu yêu cầu";
 
+    // Enrollment Validation Messages
+    public static final String ENROLLMENT_NOT_FOUND = "Không tìm thấy lượt ghi danh với ID: %d";
+    public static final String ENROLLMENT_ALREADY_EXISTS = "Sinh viên (ID: %d) đã ghi danh khóa học (ID: %d) trước đó.";
+    public static final String ENROLLMENT_DELETED_SUCCESS = "Xóa lượt ghi danh thành công";
+
     // Storage (MinIO) Messages
     public static final String MINIO_CONNECT_FAILED = "Could not connect to MinIO storage: %s";
     public static final String MINIO_UPLOAD_FAILED = "Failed to upload file to MinIO: %s";

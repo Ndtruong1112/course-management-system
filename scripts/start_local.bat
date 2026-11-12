@@ -9,15 +9,17 @@ echo   - Tiet kiem toi da RAM va bo nho o dia
 echo ======================================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-REM Tu dong thiet lap JDK 21
-if exist "C:\Users\Admin\.jdks\openjdk-26.0.2.1" (
-    set "JAVA_HOME=C:\Users\Admin\.jdks\openjdk-26.0.2.1"
+REM Tu dong thiet lap JAVA_HOME neu may chua cau hinh
+if not defined JAVA_HOME (
+    if exist "C:\Users\Admin\.jdks\openjdk-26.0.2.1" (
+        set "JAVA_HOME=C:\Users\Admin\.jdks\openjdk-26.0.2.1"
+    )
 )
 
 echo [1/2] Dang khoi chay Backend Spring Boot (Port 8080)...
-start "Backend Spring Boot" cmd /k "set JAVA_HOME=C:\Users\Admin\.jdks\openjdk-26.0.2.1&& .\mvnw.cmd spring-boot:run"
+start "Backend Spring Boot" cmd /k "cd /d "%~dp0.." && .\mvnw.cmd spring-boot:run"
 
 echo [2/2] Dang khoi chay Tro Ly AI Noi Bo (Port 7860)...
 start "Tro Ly AI Noi Bo" cmd /k "cd chatbot && python web_app.py"

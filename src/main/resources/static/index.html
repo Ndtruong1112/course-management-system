@@ -3,951 +3,1253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduCaze Management Portal - Spring Boot & Local AI Ecosystem</title>
-    <!-- Bootstrap 5.3 + Bootstrap Icons -->
+    <title>Course Management System — Cổng Quản Trị Đào Tạo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
     <style>
         :root {
-            --primary-color: #4f46e5;
-            --primary-hover: #4338ca;
-            --sidebar-bg: #0f172a;
-            --card-radius: 14px;
+            --bg-app: #f8fafc;
+            --bg-surface: #ffffff;
+            --border-subtle: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #4f46e5;
+            --accent-soft: #eef2ff;
         }
         body {
-            background-color: #f8fafc;
+            background-color: var(--bg-app);
+            color: var(--text-main);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: #334155;
+            min-height: 100vh;
+            margin: 0;
         }
-        .navbar-brand-custom {
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #4f46e5, #06b6d4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .app-shell {
+            display: flex;
+            min-height: 100vh;
         }
-        .card-custom {
-            border-radius: var(--card-radius);
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            background: #ffffff;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        .sidebar-taskbar {
+            width: 268px;
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
         }
-        .card-custom:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+        .sidebar-brand {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-subtle);
         }
-        .nav-pills .nav-link {
-            font-weight: 600;
-            color: #64748b;
+        .brand-mark {
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
-            padding: 10px 18px;
-            transition: all 0.2s;
-        }
-        .nav-pills .nav-link.active {
-            background-color: var(--primary-color);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
-        }
-        .role-badge {
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
+            background: var(--accent);
+            color: #fff;
             font-weight: 700;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-section-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #94a3b8;
+            padding: 12px 18px 6px;
+        }
+        .task-btn {
+            width: calc(100% - 20px);
+            margin: 2px 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 0;
+            background: transparent;
+            color: #475569;
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            transition: background 0.15s, color 0.15s;
+        }
+        .task-btn:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+        .task-btn.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-weight: 600;
+            border-left: 3px solid var(--accent);
+        }
+        .main-workspace {
+            flex: 1;
+            min-width: 0;
+            padding: 24px 28px;
+        }
+        .panel-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+        .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
         }
         .table thead th {
-            background-color: #f1f5f9;
+            background: #f8fafc;
             color: #475569;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
             font-weight: 600;
-            border-bottom: 2px solid #cbd5e1;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        @media (max-width: 991px) {
+            .app-shell { flex-direction: column; }
+            .sidebar-taskbar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: 0;
+                border-bottom: 1px solid var(--border-subtle);
+            }
         }
     </style>
 </head>
 <body>
+<div class="app-shell">
+    <!-- LEFT LIGHT SIDEBAR TASKBAR -->
+    <aside class="sidebar-taskbar">
+        <div class="sidebar-brand d-flex align-items-center gap-2.5">
+            <span class="brand-mark me-2">CMS</span>
+            <div>
+                <div class="fw-bold fs-6 lh-sm">Course Portal</div>
+                <div class="text-muted" style="font-size: 0.72rem;">Spring Boot 3 · Generic DAO</div>
+            </div>
+        </div>
 
-    <!-- TOP NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2 shadow-sm" style="background-color: #0f172a !important;">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-                <i class="bi bi-mortarboard-fill fs-4 text-primary"></i>
-                <span class="navbar-brand-custom fs-4">EduCaze Portal</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2">Spring Boot 3 + Generic DAO</span>
+        <div class="flex-grow-1 overflow-auto py-2">
+            <div class="nav-section-title">Quản Lý Đào Tạo</div>
+            <button class="task-btn active" id="nav-overview" onclick="switchTab('overview')">
+                <i class="bi bi-grid-1x2"></i><span>Tổng Quan &amp; Ghi Danh</span>
+            </button>
+            <button class="task-btn" id="nav-courses" onclick="switchTab('courses')">
+                <i class="bi bi-book"></i><span>Khóa Học</span>
+            </button>
+            <button class="task-btn" id="nav-students" onclick="switchTab('students')">
+                <i class="bi bi-people"></i><span>Sinh Viên</span>
+            </button>
+            <button class="task-btn" id="nav-departments" onclick="switchTab('departments')">
+                <i class="bi bi-building"></i><span>Khoa &amp; Ngành</span>
+            </button>
+            <button class="task-btn" id="nav-documents" onclick="switchTab('documents')">
+                <i class="bi bi-folder2-open"></i><span>Tài Liệu MinIO</span>
+            </button>
+
+            <div class="nav-section-title mt-3">Công Cụ Hệ Thống</div>
+            <a href="/swagger-ui/index.html" target="_blank" class="task-btn text-decoration-none">
+                <i class="bi bi-braces text-success"></i><span>Swagger API Docs</span>
             </a>
-            
-            <div class="d-flex align-items-center gap-3">
-                <a href="/swagger-ui/index.html" target="_blank" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">
-                    <i class="bi bi-file-code"></i> Swagger API Docs
-                </a>
-                <a href="http://localhost:7860" target="_blank" class="btn btn-sm btn-outline-info d-flex align-items-center gap-1">
-                    <i class="bi bi-robot"></i> Trợ Lý AI (Port 7860)
-                </a>
-                <a href="http://localhost:7860/benchmark-report" target="_blank" class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1">
-                    <i class="bi bi-graph-up-arrow"></i> Đấu Trường Benchmark
-                </a>
+            <a href="http://localhost:7860" target="_blank" class="task-btn text-decoration-none">
+                <i class="bi bi-cpu text-primary"></i><span>AI Studio (Port 7860)</span>
+            </a>
+            <a href="http://localhost:7860/benchmark-report" target="_blank" class="task-btn text-decoration-none">
+                <i class="bi bi-bar-chart-line text-warning"></i><span>Báo Cáo Benchmark</span>
+            </a>
+        </div>
 
-                <!-- User status badge -->
-                <div id="userHeaderSection" class="d-none align-items-center gap-2 text-white">
-                    <span class="badge bg-success role-badge" id="currentUserRoleBadge">ADMIN</span>
-                    <span class="fw-semibold text-light" id="currentUserName">Admin</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="logout()">
+        <!-- SIDEBAR AUTH PANEL -->
+        <div class="p-3 border-top bg-light-subtle">
+            <div id="userHeaderSection" class="d-none">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="text-truncate">
+                        <div class="fw-semibold small text-truncate" id="currentUserName">Admin</div>
+                        <span class="badge text-bg-success" style="font-size: 0.68rem;" id="currentUserRoleBadge">ADMIN</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="logout()" title="Đăng xuất">
                         <i class="bi bi-box-arrow-right"></i>
                     </button>
                 </div>
             </div>
+            <div id="loginCompact">
+                <div class="small fw-semibold mb-2 text-muted"><i class="bi bi-shield-lock me-1"></i>Đăng nhập JWT</div>
+                <div class="d-flex gap-1 mb-2">
+                    <button class="btn btn-outline-primary btn-sm flex-fill py-1" style="font-size: 0.72rem;" onclick="quickLogin('admin', '123456')">admin</button>
+                    <button class="btn btn-outline-secondary btn-sm flex-fill py-1" style="font-size: 0.72rem;" onclick="quickLogin('gv_nam', '123456')">gv_nam</button>
+                </div>
+                <button class="btn btn-primary btn-sm w-100 py-1" style="font-size: 0.76rem;" onclick="openLoginModal()">
+                    Đăng nhập / Đăng ký
+                </button>
+            </div>
         </div>
-    </nav>
+    </aside>
 
-    <!-- MAIN CONTAINER -->
-    <div class="container-fluid px-4 py-4">
-        
-        <!-- LOGIN CARD (Hiện khi chưa đăng nhập) -->
-        <div id="loginCard" class="card card-custom p-4 mb-4 border-primary shadow-sm">
-            <div class="row align-items-center">
-                <div class="col-md-7">
-                    <h5 class="fw-bold text-primary mb-1"><i class="bi bi-shield-lock-fill"></i> Đăng Nhập Hệ Thống Quản Trị (Spring Security + JWT)</h5>
-                    <p class="text-muted small mb-3">Bạn có thể xem dữ liệu công khai. Để thêm, sửa hoặc xóa dữ liệu, vui lòng đăng nhập.</p>
+    <!-- MAIN WORKSPACE -->
+    <main class="main-workspace">
+        <!-- KPI SUMMARY STRIP -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Khóa học</div>
+                    <div class="kpi-value text-primary" id="kpiCourses">-</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Sinh viên</div>
+                    <div class="kpi-value" id="kpiStudents">-</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Khoa / Ngành</div>
+                    <div class="kpi-value" id="kpiDepartments">-</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Lượt ghi danh</div>
+                    <div class="kpi-value text-success" id="kpiEnrollments">-</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Tài liệu MinIO</div>
+                    <div class="kpi-value" id="kpiDocuments">-</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card">
+                    <div class="kpi-label">Học phí ghi danh</div>
+                    <div class="kpi-value text-indigo" id="kpiRevenue">$0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 0: OVERVIEW & ENROLLMENTS -->
+        <section id="tab-overview" class="tab-section">
+            <div class="panel-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">Quản Lý Ghi Danh Khóa Học (Enrollments)</h5>
+                        <p class="text-muted small mb-0">Liên kết Sinh viên - Khóa học qua <code>EnrollmentDaoImpl</code> (Hibernate Generic DAO)</p>
+                    </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-outline-primary btn-sm" onclick="quickLogin('admin', '123456')">
-                            <i class="bi bi-lightning-charge-fill"></i> Đăng nhập nhanh Quản trị viên (admin)
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="quickLogin('gv_nam', '123456')">
-                            <i class="bi bi-person-badge"></i> Đăng nhập nhanh Giáo viên (gv_nam)
+                        <input type="text" id="enrollSearchInput" class="form-control form-control-sm" style="width: 220px;" placeholder="Tìm sinh viên, khóa học, trạng thái..." oninput="searchEnrollments()">
+                        <button class="btn btn-primary btn-sm" onclick="openEnrollModal()">
+                            <i class="bi bi-plus-circle me-1"></i>Ghi Danh Mới
                         </button>
                     </div>
                 </div>
-                <div class="col-md-5">
-                    <div class="input-group mb-2">
-                        <span class="input-group-text"><i class="bi bi-person"></i></span>
-                        <input type="text" id="loginUsername" class="form-control" placeholder="Tên đăng nhập" value="admin">
-                        <span class="input-group-text"><i class="bi bi-key"></i></span>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="Mật khẩu" value="123456">
-                        <button class="btn btn-primary" onclick="handleLogin()">Đăng nhập</button>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Sinh Viên</th>
+                            <th>Khóa Học</th>
+                            <th>Tiến Độ</th>
+                            <th>Trạng Thái</th>
+                            <th>Ngày Ghi Danh</th>
+                            <th class="text-end">Thao Tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="enrollTableBody">
+                        <tr><td colspan="7" class="text-center py-4 text-muted">Đăng nhập để xem &amp; quản lý danh sách ghi danh.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 1: COURSES -->
+        <section id="tab-courses" class="tab-section d-none">
+            <div class="panel-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">Danh Sách Khóa Học (Courses)</h5>
+                        <p class="text-muted small mb-0">Hỗ trợ phân trang Hibernate &amp; lọc khoảng giá HQL</p>
                     </div>
-                    <div class="text-end">
-                        <button class="btn btn-link btn-sm text-decoration-none p-0" onclick="openRegisterModal()">
-                            <i class="bi bi-person-plus"></i> Chưa có tài khoản? Đăng ký ngay
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <input type="text" id="courseSearchInput" class="form-control form-control-sm" style="width: 180px;" placeholder="Tìm tên khóa học..." oninput="searchCourses()">
+                        <input type="number" id="courseMinPrice" class="form-control form-control-sm" style="width: 95px;" placeholder="Giá từ">
+                        <input type="number" id="courseMaxPrice" class="form-control form-control-sm" style="width: 95px;" placeholder="Đến">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="filterCoursesByPrice()">Lọc giá</button>
+                        <button class="btn btn-primary btn-sm" onclick="openCourseModal()">
+                            <i class="bi bi-plus-circle me-1"></i>Thêm Khóa Học
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- MAIN TABS NAVIGATION -->
-        <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-3 shadow-sm border" id="pills-tab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" id="tab-courses-btn" data-bs-toggle="pill" data-bs-target="#tab-courses">
-                    <i class="bi bi-book-half me-1"></i> Quản Lý Khóa Học
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="tab-students-btn" data-bs-toggle="pill" data-bs-target="#tab-students">
-                    <i class="bi bi-people-fill me-1"></i> Quản Lý Sinh Viên
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="tab-departments-btn" data-bs-toggle="pill" data-bs-target="#tab-departments">
-                    <i class="bi bi-building me-1"></i> Khoa & Viện Đào Tạo
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="tab-documents-btn" data-bs-toggle="pill" data-bs-target="#tab-documents">
-                    <i class="bi bi-folder-fill me-1"></i> Tài Liệu MinIO Storage
-                </button>
-            </li>
-        </ul>
-
-        <!-- TAB CONTENTS -->
-        <div class="tab-content" id="pills-tabContent">
-            
-            <!-- TAB 1: COURSES -->
-            <div class="tab-pane fade show active" id="tab-courses">
-                <div class="card card-custom p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div>
-                            <h4 class="fw-bold mb-1">Danh Sách Khóa Học (Courses)</h4>
-                            <p class="text-muted small mb-0">Quản lý qua Hibernate Generic DAO & DTO Projections</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="courseSearchInput" class="form-control form-control-sm" placeholder="Tìm theo tên..." oninput="searchCourses()">
-                            <button class="btn btn-primary btn-sm d-flex align-items-center gap-1" onclick="openCourseModal()">
-                                <i class="bi bi-plus-circle"></i> Thêm Khóa Học
-                            </button>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Tên Khóa Học</th>
-                                    <th>Mô Tả</th>
-                                    <th>Thời Lượng (giờ)</th>
-                                    <th>Học Phí ($)</th>
-                                    <th class="text-end">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="courseTableBody">
-                                <tr><td colspan="6" class="text-center py-4 text-muted">Đang tải dữ liệu khóa học...</td></tr>
-                            </tbody>
-                        </table>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên Khóa Học</th>
+                            <th>Mô Tả</th>
+                            <th>Thời Lượng</th>
+                            <th>Học Phí ($)</th>
+                            <th class="text-end">Thao Tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="courseTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="small text-muted" id="coursePageInfo">Trang 1</span>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="changeCoursePage(-1)">Trước</button>
+                        <button class="btn btn-outline-secondary" onclick="changeCoursePage(1)">Sau</button>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- TAB 2: STUDENTS -->
-            <div class="tab-pane fade" id="tab-students">
-                <div class="card card-custom p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div>
-                            <h4 class="fw-bold mb-1">Danh Sách Sinh Viên (Students)</h4>
-                            <p class="text-muted small mb-0">Liên kết @ManyToOne với Khoa và MinIO Document</p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="studentSearchInput" class="form-control form-control-sm" placeholder="Tìm theo tên hoặc email..." oninput="searchStudents()">
-                            <button class="btn btn-primary btn-sm d-flex align-items-center gap-1" onclick="openStudentModal()">
-                                <i class="bi bi-plus-circle"></i> Thêm Sinh Viên
-                            </button>
-                        </div>
+        <!-- TAB 2: STUDENTS -->
+        <section id="tab-students" class="tab-section d-none">
+            <div class="panel-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">Danh Sách Sinh Viên (Students)</h5>
+                        <p class="text-muted small mb-0">Liên kết @ManyToOne với Khoa &amp; mã hóa PII AES-256</p>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Họ Và Tên</th>
-                                    <th>Email</th>
-                                    <th>Điện Thoại</th>
-                                    <th>Ngày Sinh</th>
-                                    <th>Khoa Trực Thuộc</th>
-                                    <th class="text-end">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="studentTableBody">
-                                <tr><td colspan="7" class="text-center py-4 text-muted">Đang tải dữ liệu sinh viên...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 3: DEPARTMENTS -->
-            <div class="tab-pane fade" id="tab-departments">
-                <div class="card card-custom p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                        <div>
-                            <h4 class="fw-bold mb-1">Khoa & Ngành Đào Tạo (Departments)</h4>
-                            <p class="text-muted small mb-0">Quản lý cơ cấu tổ chức và phân ngành sinh viên</p>
-                        </div>
-                        <button class="btn btn-primary btn-sm d-flex align-items-center gap-1" onclick="openDeptModal()">
-                            <i class="bi bi-plus-circle"></i> Thêm Khoa
+                    <div class="d-flex gap-2">
+                        <input type="text" id="studentSearchInput" class="form-control form-control-sm" style="width: 210px;" placeholder="Tìm tên hoặc email..." oninput="searchStudents()">
+                        <button class="btn btn-primary btn-sm" onclick="openStudentModal()">
+                            <i class="bi bi-plus-circle me-1"></i>Thêm Sinh Viên
                         </button>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Mã Khoa</th>
-                                    <th>Tên Khoa / Ngành</th>
-                                    <th>Mô Tả</th>
-                                    <th>Ngày Tạo</th>
-                                    <th class="text-end">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="deptTableBody">
-                                <tr><td colspan="6" class="text-center py-4 text-muted">Đang tải danh sách khoa...</td></tr>
-                            </tbody>
-                        </table>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Họ Và Tên</th>
+                            <th>Email</th>
+                            <th>Điện Thoại</th>
+                            <th>Ngày Sinh</th>
+                            <th>Khoa Trực Thuộc</th>
+                            <th class="text-end">Thao Tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="studentTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="small text-muted" id="studentPageInfo">Trang 1</span>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="changeStudentPage(-1)">Trước</button>
+                        <button class="btn btn-outline-secondary" onclick="changeStudentPage(1)">Sau</button>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- TAB 4: DOCUMENTS -->
-            <div class="tab-pane fade" id="tab-documents">
-                <div class="card card-custom p-4">
-                    <h4 class="fw-bold mb-1">Tài Liệu Đính Kèm MinIO Storage</h4>
-                    <p class="text-muted small mb-3">Lưu trữ Object Storage kết hợp khóa ngoại APP_DETAIL_FK</p>
-                    
-                    <div class="row g-3 mb-4 p-3 bg-light rounded-3 border">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Mã Nghiệp Vụ (appId / Sinh Viên):</label>
-                            <input type="text" id="docAppId" class="form-control form-control-sm" placeholder="VD: 1, 2 hoặc COURSE_101" value="1">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label small fw-semibold">Chọn File tải lên:</label>
-                            <input type="file" id="docFileInput" class="form-control form-control-sm" multiple>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button class="btn btn-success btn-sm w-100" onclick="uploadDocument()">
-                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Tải Lên MinIO
-                            </button>
-                        </div>
+        <!-- TAB 3: DEPARTMENTS -->
+        <section id="tab-departments" class="tab-section d-none">
+            <div class="panel-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">Khoa &amp; Ngành Đào Tạo (Departments)</h5>
+                        <p class="text-muted small mb-0">Quản lý cơ cấu tổ chức đào tạo</p>
                     </div>
+                    <button class="btn btn-primary btn-sm" onclick="openDeptModal()">
+                        <i class="bi bi-plus-circle me-1"></i>Thêm Khoa
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Mã Khoa</th>
+                            <th>Tên Khoa / Ngành</th>
+                            <th>Mô Tả</th>
+                            <th>Ngày Tạo</th>
+                            <th class="text-end">Thao Tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="deptTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0">Danh sách tài liệu của hồ sơ:</h6>
-                        <button class="btn btn-outline-primary btn-sm" onclick="loadDocuments()">
-                            <i class="bi bi-arrow-clockwise"></i> Tải lại
+        <!-- TAB 4: DOCUMENTS -->
+        <section id="tab-documents" class="tab-section d-none">
+            <div class="panel-card p-4">
+                <h5 class="fw-bold mb-1">Tài Liệu Đính Kèm MinIO Storage</h5>
+                <p class="text-muted small mb-3">Lưu trữ Object Storage với khóa ngoại <code>APP_DETAIL_FK</code> và Versioning tự động</p>
+
+                <div class="row g-3 mb-4 p-3 bg-light rounded-3 border">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Mã Nghiệp Vụ (appId):</label>
+                        <input type="text" id="docAppId" class="form-control form-control-sm" placeholder="VD: 1, 2 hoặc COURSE_1" value="1">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Chọn File tải lên:</label>
+                        <input type="file" id="docFileInput" class="form-control form-control-sm" multiple>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-success btn-sm w-100" onclick="uploadDocument()">
+                            <i class="bi bi-cloud-arrow-up me-1"></i>Tải Lên MinIO
                         </button>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>ID Tài Liệu</th>
-                                    <th>Tên Tệp</th>
-                                    <th>Người Đăng</th>
-                                    <th>Phiên Bản</th>
-                                    <th>Trạng Thái</th>
-                                    <th class="text-end">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="docTableBody">
-                                <tr><td colspan="6" class="text-center py-4 text-muted">Nhập mã hồ sơ và nhấn Tải lại để xem danh sách.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">Danh sách tài liệu của hồ sơ:</h6>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadDocuments()">
+                        <i class="bi bi-arrow-clockwise"></i> Tải lại
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>ID Tài Liệu</th>
+                            <th>Tên Tệp</th>
+                            <th>Người Đăng</th>
+                            <th>Phiên Bản</th>
+                            <th>Trạng Thái</th>
+                            <th class="text-end">Thao Tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="docTableBody">
+                        <tr><td colspan="6" class="text-center py-4 text-muted">Nhập mã hồ sơ và nhấn Tải lại để xem danh sách.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </section>
+    </main>
+</div>
 
-        </div>
-    </div>
-
-    <!-- MODAL: KHÓA HỌC (THÊM / SỬA) -->
-    <div class="modal fade" id="courseModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="courseModalTitle">Thêm Khóa Học</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL: ĐĂNG NHẬP / ĐĂNG KÝ -->
+<div class="modal fade" id="loginModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold">Đăng Nhập Hệ Thống</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Tên đăng nhập</label>
+                    <input type="text" id="loginUsername" class="form-control form-control-sm" value="admin">
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" id="courseIdInput">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Tên Khóa Học *</label>
-                        <input type="text" id="courseTitleInput" class="form-control" placeholder="VD: Spring Boot 3 Microservices">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Mô Tả</label>
-                        <textarea id="courseDescInput" class="form-control" rows="3" placeholder="Nội dung khóa học..."></textarea>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="form-label fw-semibold small">Thời Lượng (giờ) *</label>
-                            <input type="number" id="courseDurationInput" class="form-control" min="0" value="30">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold small">Học Phí ($) *</label>
-                            <input type="number" id="coursePriceInput" class="form-control" min="0" step="0.01" value="299">
-                        </div>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Mật khẩu</label>
+                    <input type="password" id="loginPassword" class="form-control form-control-sm" value="123456">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary" onclick="saveCourse()">Lưu Khóa Học</button>
-                </div>
+                <button class="btn btn-primary btn-sm w-100 mb-2" onclick="handleLogin()">Đăng Nhập</button>
+                <button class="btn btn-link btn-sm w-100 text-decoration-none" onclick="openRegisterModal()">Tạo tài khoản mới</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- MODAL: SINH VIÊN (THÊM / SỬA) -->
-    <div class="modal fade" id="studentModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="studentModalTitle">Thêm Sinh Viên</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL: ĐĂNG KÝ -->
+<div class="modal fade" id="registerModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold">Đăng Ký Tài Khoản</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Tên đăng nhập *</label><input type="text" id="regUsername" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Mật khẩu *</label><input type="password" id="regPassword" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Họ và tên</label><input type="text" id="regFullName" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Email</label><input type="email" id="regEmail" class="form-control form-control-sm"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary btn-sm w-100" onclick="handleRegister()">Tạo Tài Khoản</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: GHI DANH -->
+<div class="modal fade" id="enrollModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="enrollModalTitle">Ghi Danh Khóa Học</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="enrollIdInput">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Sinh Viên *</label>
+                    <select id="enrollStudentSelect" class="form-select"></select>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" id="studentIdInput">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Họ Và Tên *</label>
-                        <input type="text" id="studentNameInput" class="form-control" placeholder="VD: Nguyễn Văn An">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Email *</label>
-                        <input type="email" id="studentEmailInput" class="form-control" placeholder="an@school.edu.vn">
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-semibold small">Số Điện Thoại (10-11 số)</label>
-                            <input type="text" id="studentPhoneInput" class="form-control" placeholder="0912345678">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold small">Ngày Sinh</label>
-                            <input type="date" id="studentDobInput" class="form-control">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Địa Chỉ</label>
-                        <input type="text" id="studentAddressInput" class="form-control" placeholder="Hà Nội">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold small">Khoa / Ngành Trực Thuộc</label>
-                        <select id="studentDeptSelect" class="form-select">
-                            <option value="">-- Chưa phân khoa --</option>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Khóa Học *</label>
+                    <select id="enrollCourseSelect" class="form-select"></select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Trạng Thái</label>
+                        <select id="enrollStatusSelect" class="form-select">
+                            <option value="ENROLLED">ENROLLED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="DROPPED">DROPPED</option>
                         </select>
                     </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Tiến Độ (%)</label>
+                        <input type="number" id="enrollProgressInput" class="form-control" min="0" max="100" value="0">
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary" onclick="saveStudent()">Lưu Sinh Viên</button>
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Ghi Chú</label>
+                    <textarea id="enrollNotesInput" class="form-control" rows="2"></textarea>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveEnrollment()">Lưu Ghi Danh</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- MODAL: KHOA / NGÀNH (THÊM / SỬA) -->
-    <div class="modal fade" id="deptModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="deptModalTitle">Thêm Khoa / Ngành</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL: KHÓA HỌC -->
+<div class="modal fade" id="courseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="courseModalTitle">Thêm Khóa Học</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="courseIdInput">
+                <div class="mb-3"><label class="form-label fw-semibold small">Tên Khóa Học *</label><input type="text" id="courseTitleInput" class="form-control"></div>
+                <div class="mb-3"><label class="form-label fw-semibold small">Mô Tả</label><textarea id="courseDescInput" class="form-control" rows="3"></textarea></div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label fw-semibold small">Thời Lượng (giờ) *</label><input type="number" id="courseDurationInput" class="form-control" min="0" value="30"></div>
+                    <div class="col-6"><label class="form-label fw-semibold small">Học Phí ($) *</label><input type="number" id="coursePriceInput" class="form-control" min="0" step="0.01" value="299"></div>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" id="deptIdInput">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Mã Khoa *</label>
-                        <input type="text" id="deptCodeInput" class="form-control" placeholder="VD: CNTT">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">Tên Khoa / Ngành *</label>
-                        <input type="text" id="deptNameInput" class="form-control" placeholder="VD: Công nghệ thông tin">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold small">Mô Tả</label>
-                        <textarea id="deptDescInput" class="form-control" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-primary" onclick="saveDept()">Lưu Khoa</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveCourse()">Lưu Khóa Học</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- MODAL: ĐĂNG KÝ TÀI KHOẢN -->
-    <div class="modal fade" id="registerModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Đăng Ký Tài Khoản</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL: SINH VIÊN -->
+<div class="modal fade" id="studentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="studentModalTitle">Thêm Sinh Viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="studentIdInput">
+                <div class="mb-3"><label class="form-label fw-semibold small">Họ Và Tên *</label><input type="text" id="studentNameInput" class="form-control"></div>
+                <div class="mb-3"><label class="form-label fw-semibold small">Email *</label><input type="email" id="studentEmailInput" class="form-control"></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><label class="form-label fw-semibold small">Số Điện Thoại</label><input type="text" id="studentPhoneInput" class="form-control"></div>
+                    <div class="col-6"><label class="form-label fw-semibold small">Ngày Sinh</label><input type="date" id="studentDobInput" class="form-control"></div>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold">Tên đăng nhập *</label>
-                        <input type="text" id="regUsername" class="form-control form-control-sm">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold">Mật khẩu *</label>
-                        <input type="password" id="regPassword" class="form-control form-control-sm">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold">Họ và tên</label>
-                        <input type="text" id="regFullName" class="form-control form-control-sm">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold">Email</label>
-                        <input type="email" id="regEmail" class="form-control form-control-sm">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary btn-sm w-100" onclick="handleRegister()">Tạo Tài Khoản</button>
-                </div>
+                <div class="mb-3"><label class="form-label fw-semibold small">Địa Chỉ</label><input type="text" id="studentAddressInput" class="form-control"></div>
+                <div class="mb-2"><label class="form-label fw-semibold small">Khoa / Ngành Trực Thuộc</label><select id="studentDeptSelect" class="form-select"></select></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveStudent()">Lưu Sinh Viên</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- TOAST NOTIFICATION -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-        <div id="appToast" class="toast align-items-center text-white border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body" id="toastMessage">Thông báo</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+<!-- MODAL: KHOA -->
+<div class="modal fade" id="deptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="deptModalTitle">Thêm Khoa / Ngành</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deptIdInput">
+                <div class="mb-3"><label class="form-label fw-semibold small">Mã Khoa *</label><input type="text" id="deptCodeInput" class="form-control"></div>
+                <div class="mb-3"><label class="form-label fw-semibold small">Tên Khoa / Ngành *</label><input type="text" id="deptNameInput" class="form-control"></div>
+                <div class="mb-2"><label class="form-label fw-semibold small">Mô Tả</label><textarea id="deptDescInput" class="form-control" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveDept()">Lưu Khoa</button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="appToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage">Thông báo</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        let authToken = localStorage.getItem("cms_auth_token") || "";
-        let currentUser = JSON.parse(localStorage.getItem("cms_user") || "null");
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API_BASE = window.location.origin;
+    let authToken = localStorage.getItem("cms_auth_token") || "";
+    let currentUser = JSON.parse(localStorage.getItem("cms_user") || "null");
+    if (authToken) axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 
-        // Axios defaults
-        if (authToken) {
+    let cachedCourses = [], cachedStudents = [], cachedDepartments = [], cachedEnrollments = [];
+    let coursePage = 0, courseTotalPages = 1;
+    let studentPage = 0, studentTotalPages = 1;
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab-section').forEach(el => el.classList.add('d-none'));
+        document.querySelectorAll('.task-btn[id^="nav-"]').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tab-${name}`).classList.remove('d-none');
+        document.getElementById(`nav-${name}`).classList.add('active');
+    }
+
+    function showToast(msg, type = "success") {
+        const toastEl = document.getElementById("appToast");
+        toastEl.className = `toast align-items-center text-white border-0 bg-${type === 'success' ? 'success' : type === 'warning' ? 'warning text-dark' : type === 'info' ? 'primary' : 'danger'}`;
+        document.getElementById("toastMessage").innerText = msg;
+        new bootstrap.Toast(toastEl, { delay: 3200 }).show();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function updateAuthUI() {
+        const userSection = document.getElementById("userHeaderSection");
+        const loginCompact = document.getElementById("loginCompact");
+        if (currentUser && authToken) {
+            userSection.classList.remove("d-none");
+            loginCompact.classList.add("d-none");
+            document.getElementById("currentUserRoleBadge").innerText = currentUser.role || "USER";
+            document.getElementById("currentUserName").innerText = currentUser.fullName || currentUser.username;
+        } else {
+            userSection.classList.add("d-none");
+            loginCompact.classList.remove("d-none");
+        }
+    }
+
+    function openLoginModal() { bootstrap.Modal.getOrCreateInstance(document.getElementById("loginModal")).show(); }
+    function openRegisterModal() {
+        bootstrap.Modal.getInstance(document.getElementById("loginModal"))?.hide();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("registerModal")).show();
+    }
+
+    async function quickLogin(u, p) {
+        document.getElementById("loginUsername").value = u;
+        document.getElementById("loginPassword").value = p;
+        await handleLogin();
+    }
+
+    async function handleLogin() {
+        const u = document.getElementById("loginUsername").value.trim();
+        const p = document.getElementById("loginPassword").value.trim();
+        if (!u || !p) return showToast("Vui lòng nhập đầy đủ username và password", "warning");
+        try {
+            const res = await axios.post(`${API_BASE}/api/auth/login`, { username: u, password: p });
+            authToken = res.data.token;
+            currentUser = res.data;
+            localStorage.setItem("cms_auth_token", authToken);
+            localStorage.setItem("cms_user", JSON.stringify(currentUser));
             axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-        }
-
-        function showToast(msg, type = "success") {
-            const toastEl = document.getElementById("appToast");
-            const toastMsg = document.getElementById("toastMessage");
-            toastEl.className = `toast align-items-center text-white border-0 bg-${type === 'success' ? 'success' : type === 'warning' ? 'warning text-dark' : 'danger'}`;
-            toastMsg.innerText = msg;
-            new bootstrap.Toast(toastEl, { delay: 3500 }).show();
-        }
-
-        function updateAuthUI() {
-            const userSection = document.getElementById("userHeaderSection");
-            const loginCard = document.getElementById("loginCard");
-            if (currentUser && authToken) {
-                userSection.classList.remove("d-none");
-                userSection.classList.add("d-flex");
-                loginCard.classList.add("d-none");
-                document.getElementById("currentUserRoleBadge").innerText = currentUser.role || "USER";
-                document.getElementById("currentUserName").innerText = currentUser.fullName || currentUser.username;
-            } else {
-                userSection.classList.remove("d-flex");
-                userSection.classList.add("d-none");
-                loginCard.classList.remove("d-none");
-            }
-        }
-
-        async function quickLogin(u, p) {
-            document.getElementById("loginUsername").value = u;
-            document.getElementById("loginPassword").value = p;
-            await handleLogin();
-        }
-
-        async function handleLogin() {
-            const u = document.getElementById("loginUsername").value.trim();
-            const p = document.getElementById("loginPassword").value.trim();
-            if (!u || !p) return showToast("Vui lòng nhập đầy đủ username và password", "warning");
-
-            try {
-                const res = await axios.post(`${API_BASE}/api/auth/login`, { username: u, password: p });
-                authToken = res.data.token;
-                currentUser = res.data;
-                localStorage.setItem("cms_auth_token", authToken);
-                localStorage.setItem("cms_user", JSON.stringify(currentUser));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-                updateAuthUI();
-                loadCourses();
-                loadStudents();
-                loadDepartments();
-                showToast(`Đăng nhập thành công! Quyền: ${currentUser.role}`, "success");
-            } catch (err) {
-                showToast("Đăng nhập thất bại: " + (err.response?.data?.message || err.message), "danger");
-            }
-        }
-
-        function logout() {
-            authToken = "";
-            currentUser = null;
-            localStorage.removeItem("cms_auth_token");
-            localStorage.removeItem("cms_user");
-            delete axios.defaults.headers.common['Authorization'];
+            bootstrap.Modal.getInstance(document.getElementById("loginModal"))?.hide();
             updateAuthUI();
-            cachedStudents = [];
-            renderStudentRows([]);
-            showToast("Đã đăng xuất tài khoản", "info");
+            refreshAllData();
+            showToast(`Đăng nhập thành công (${currentUser.role})`, "success");
+        } catch (err) {
+            showToast("Đăng nhập thất bại: " + (err.response?.data?.message || err.message), "danger");
         }
+    }
 
-        // --- COURSES ---
-        let cachedCourses = [];
-        let cachedStudents = [];
-        let cachedDepartments = [];
-
-        function renderCourseRows(items) {
-            const tbody = document.getElementById("courseTableBody");
-            if (!items || items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có khóa học nào.</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = items.map(c => `
-                <tr>
-                    <td class="fw-bold">${c.id}</td>
-                    <td class="text-primary fw-semibold">${escapeHtml(c.title)}</td>
-                    <td class="text-muted small">${escapeHtml(c.description || 'N/A')}</td>
-                    <td><span class="badge bg-secondary">${c.duration}h</span></td>
-                    <td class="text-success fw-bold">$${c.price}</td>
-                    <td class="text-end text-nowrap">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openCourseModal(${c.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${c.id})"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadCourses() {
-            try {
-                const res = await axios.get(`${API_BASE}/api/courses`);
-                cachedCourses = res.data || [];
-                renderCourseRows(cachedCourses);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function searchCourses() {
-            const q = document.getElementById("courseSearchInput").value.trim();
-            if (!q) return loadCourses();
-            try {
-                const res = await axios.get(`${API_BASE}/api/courses/search?keyword=${encodeURIComponent(q)}`);
-                renderCourseRows(res.data || []);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function openCourseModal(id = null) {
-            document.getElementById("courseIdInput").value = id || "";
-            if (id) {
-                const c = cachedCourses.find(item => item.id === id) || {};
-                document.getElementById("courseModalTitle").innerText = `Chỉnh Sửa Khóa Học #${id}`;
-                document.getElementById("courseTitleInput").value = c.title || "";
-                document.getElementById("courseDescInput").value = c.description || "";
-                document.getElementById("courseDurationInput").value = c.duration ?? 0;
-                document.getElementById("coursePriceInput").value = c.price ?? 0;
-            } else {
-                document.getElementById("courseModalTitle").innerText = "Thêm Khóa Học Mới";
-                document.getElementById("courseTitleInput").value = "";
-                document.getElementById("courseDescInput").value = "";
-                document.getElementById("courseDurationInput").value = 30;
-                document.getElementById("coursePriceInput").value = 299;
-            }
-            bootstrap.Modal.getOrCreateInstance(document.getElementById("courseModal")).show();
-        }
-
-        async function saveCourse() {
-            const id = document.getElementById("courseIdInput").value;
-            const payload = {
-                title: document.getElementById("courseTitleInput").value.trim(),
-                description: document.getElementById("courseDescInput").value.trim(),
-                duration: parseInt(document.getElementById("courseDurationInput").value || "0", 10),
-                price: parseFloat(document.getElementById("coursePriceInput").value || "0")
-            };
-            if (!payload.title) return showToast("Tên khóa học không được để trống", "warning");
-            try {
-                if (id) {
-                    await axios.put(`${API_BASE}/api/courses/${id}`, payload);
-                    showToast("Cập nhật khóa học thành công!", "success");
-                } else {
-                    await axios.post(`${API_BASE}/api/courses`, payload);
-                    showToast("Thêm khóa học mới thành công!", "success");
-                }
-                bootstrap.Modal.getInstance(document.getElementById("courseModal")).hide();
-                loadCourses();
-            } catch (err) {
-                showToast("Lỗi lưu khóa học: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
-            }
-        }
-
-        async function deleteCourse(id) {
-            if (!confirm(`Bạn có chắc muốn xóa khóa học #${id}?`)) return;
-            try {
-                await axios.delete(`${API_BASE}/api/courses/${id}`);
-                showToast("Đã xóa khóa học thành công!", "success");
-                loadCourses();
-            } catch (err) {
-                showToast("Lỗi khi xóa: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
-            }
-        }
-
-        // --- STUDENTS ---
-        function renderStudentRows(items) {
-            const tbody = document.getElementById("studentTableBody");
-            if (!items || items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có sinh viên nào (hoặc bạn cần đăng nhập để xem).</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = items.map(s => `
-                <tr>
-                    <td class="fw-bold">${s.id}</td>
-                    <td class="fw-semibold text-dark">${escapeHtml(s.fullName || s.name || 'N/A')}</td>
-                    <td>${escapeHtml(s.email || 'N/A')}</td>
-                    <td>${escapeHtml(s.phone || 'N/A')}</td>
-                    <td>${s.dob || 'N/A'}</td>
-                    <td><span class="badge bg-info-subtle text-info border border-info-subtle">${escapeHtml(s.department?.departmentName || 'Chưa phân khoa')}</span></td>
-                    <td class="text-end text-nowrap">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openStudentModal(${s.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteStudent(${s.id})"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadStudents() {
-            try {
-                const res = await axios.get(`${API_BASE}/api/students`);
-                cachedStudents = res.data || [];
-                renderStudentRows(cachedStudents);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function searchStudents() {
-            const q = document.getElementById("studentSearchInput").value.trim();
-            if (!q) return loadStudents();
-            try {
-                const res = await axios.get(`${API_BASE}/api/students/search?keyword=${encodeURIComponent(q)}`);
-                renderStudentRows(res.data || []);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function openStudentModal(id = null) {
-            const deptSelect = document.getElementById("studentDeptSelect");
-            deptSelect.innerHTML = '<option value="">-- Chưa phân khoa --</option>' +
-                cachedDepartments.map(d => `<option value="${d.departmentId}">${escapeHtml(d.departmentCode)} - ${escapeHtml(d.departmentName)}</option>`).join('');
-
-            document.getElementById("studentIdInput").value = id || "";
-            if (id) {
-                const s = cachedStudents.find(item => item.id === id) || {};
-                document.getElementById("studentModalTitle").innerText = `Chỉnh Sửa Sinh Viên #${id}`;
-                document.getElementById("studentNameInput").value = s.fullName || "";
-                document.getElementById("studentEmailInput").value = s.email || "";
-                document.getElementById("studentPhoneInput").value = s.phone || "";
-                document.getElementById("studentDobInput").value = s.dob || "";
-                document.getElementById("studentAddressInput").value = s.address || "";
-                deptSelect.value = s.department?.departmentId || "";
-            } else {
-                document.getElementById("studentModalTitle").innerText = "Thêm Sinh Viên Mới";
-                document.getElementById("studentNameInput").value = "";
-                document.getElementById("studentEmailInput").value = "";
-                document.getElementById("studentPhoneInput").value = "";
-                document.getElementById("studentDobInput").value = "";
-                document.getElementById("studentAddressInput").value = "";
-                deptSelect.value = "";
-            }
-            bootstrap.Modal.getOrCreateInstance(document.getElementById("studentModal")).show();
-        }
-
-        async function saveStudent() {
-            const id = document.getElementById("studentIdInput").value;
-            const deptVal = document.getElementById("studentDeptSelect").value;
-            const payload = {
-                fullName: document.getElementById("studentNameInput").value.trim(),
-                email: document.getElementById("studentEmailInput").value.trim(),
-                phone: document.getElementById("studentPhoneInput").value.trim(),
-                dob: document.getElementById("studentDobInput").value || null,
-                address: document.getElementById("studentAddressInput").value.trim(),
-                departmentId: deptVal ? parseInt(deptVal, 10) : null
-            };
-            if (!payload.fullName || !payload.email) return showToast("Vui lòng nhập họ tên và email", "warning");
-            try {
-                if (id) {
-                    await axios.put(`${API_BASE}/api/students/${id}`, payload);
-                    showToast("Cập nhật sinh viên thành công!", "success");
-                } else {
-                    await axios.post(`${API_BASE}/api/students`, payload);
-                    showToast("Thêm sinh viên mới thành công!", "success");
-                }
-                bootstrap.Modal.getInstance(document.getElementById("studentModal")).hide();
-                loadStudents();
-            } catch (err) {
-                showToast("Lỗi lưu sinh viên: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
-            }
-        }
-
-        async function deleteStudent(id) {
-            if (!confirm(`Bạn có chắc muốn xóa sinh viên #${id}?`)) return;
-            try {
-                await axios.delete(`${API_BASE}/api/students/${id}`);
-                showToast("Đã xóa sinh viên thành công!", "success");
-                loadStudents();
-            } catch (err) {
-                showToast("Lỗi khi xóa sinh viên: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
-            }
-        }
-
-        // --- DEPARTMENTS ---
-        function renderDeptRows(items) {
-            const tbody = document.getElementById("deptTableBody");
-            if (!items || items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có khoa nào.</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = items.map(d => `
-                <tr>
-                    <td class="fw-bold">${d.departmentId}</td>
-                    <td><span class="badge bg-primary">${escapeHtml(d.departmentCode)}</span></td>
-                    <td class="fw-semibold">${escapeHtml(d.departmentName)}</td>
-                    <td class="text-muted small">${escapeHtml(d.description || 'N/A')}</td>
-                    <td class="small text-muted">${d.createdAt || 'N/A'}</td>
-                    <td class="text-end text-nowrap">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openDeptModal(${d.departmentId})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDept(${d.departmentId})"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function loadDepartments() {
-            try {
-                const res = await axios.get(`${API_BASE}/api/departments`);
-                cachedDepartments = res.data || [];
-                renderDeptRows(cachedDepartments);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        function openDeptModal(id = null) {
-            document.getElementById("deptIdInput").value = id || "";
-            if (id) {
-                const d = cachedDepartments.find(item => item.departmentId === id) || {};
-                document.getElementById("deptModalTitle").innerText = `Chỉnh Sửa Khoa #${id}`;
-                document.getElementById("deptCodeInput").value = d.departmentCode || "";
-                document.getElementById("deptNameInput").value = d.departmentName || "";
-                document.getElementById("deptDescInput").value = d.description || "";
-            } else {
-                document.getElementById("deptModalTitle").innerText = "Thêm Khoa / Ngành Mới";
-                document.getElementById("deptCodeInput").value = "";
-                document.getElementById("deptNameInput").value = "";
-                document.getElementById("deptDescInput").value = "";
-            }
-            bootstrap.Modal.getOrCreateInstance(document.getElementById("deptModal")).show();
-        }
-
-        async function saveDept() {
-            const id = document.getElementById("deptIdInput").value;
-            const payload = {
-                departmentCode: document.getElementById("deptCodeInput").value.trim(),
-                departmentName: document.getElementById("deptNameInput").value.trim(),
-                description: document.getElementById("deptDescInput").value.trim()
-            };
-            if (!payload.departmentCode || !payload.departmentName) return showToast("Vui lòng nhập mã khoa và tên khoa", "warning");
-            try {
-                if (id) {
-                    await axios.put(`${API_BASE}/api/departments/${id}`, payload);
-                    showToast("Cập nhật khoa thành công!", "success");
-                } else {
-                    await axios.post(`${API_BASE}/api/departments`, payload);
-                    showToast("Thêm khoa mới thành công!", "success");
-                }
-                bootstrap.Modal.getInstance(document.getElementById("deptModal")).hide();
-                loadDepartments();
-            } catch (err) {
-                showToast("Lỗi lưu khoa: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
-            }
-        }
-
-        async function deleteDept(id) {
-            if (!confirm(`Bạn có chắc muốn xóa khoa #${id}?`)) return;
-            try {
-                await axios.delete(`${API_BASE}/api/departments/${id}`);
-                showToast("Đã xóa khoa thành công!", "success");
-                loadDepartments();
-            } catch (err) {
-                showToast("Lỗi khi xóa khoa: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
-            }
-        }
-
-        function openRegisterModal() {
-            bootstrap.Modal.getOrCreateInstance(document.getElementById("registerModal")).show();
-        }
-
-        async function handleRegister() {
-            const payload = {
-                username: document.getElementById("regUsername").value.trim(),
-                password: document.getElementById("regPassword").value.trim(),
-                fullName: document.getElementById("regFullName").value.trim(),
-                email: document.getElementById("regEmail").value.trim()
-            };
-            if (!payload.username || !payload.password) return showToast("Vui lòng nhập tên đăng nhập và mật khẩu", "warning");
-            try {
-                const res = await axios.post(`${API_BASE}/api/auth/register`, payload);
-                authToken = res.data.token;
-                currentUser = res.data;
-                localStorage.setItem("cms_auth_token", authToken);
-                localStorage.setItem("cms_user", JSON.stringify(currentUser));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-                bootstrap.Modal.getInstance(document.getElementById("registerModal")).hide();
-                updateAuthUI();
-                loadStudents();
-                showToast("Đăng ký & đăng nhập thành công!", "success");
-            } catch (err) {
-                showToast("Lỗi đăng ký: " + (err.response?.data?.message || err.message), "danger");
-            }
-        }
-
-        // --- DOCUMENTS (MINIO) ---
-        async function loadDocuments() {
-            const appId = document.getElementById("docAppId").value.trim();
-            if (!appId) return showToast("Vui lòng nhập mã hồ sơ (appId)!", "warning");
-            try {
-                const res = await axios.get(`${API_BASE}/api/documents/list?appId=${encodeURIComponent(appId)}`);
-                const tbody = document.getElementById("docTableBody");
-                if (!res.data || res.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy tài liệu cho mã hồ sơ: ${escapeHtml(appId)}</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = res.data.map(doc => `
-                    <tr>
-                        <td class="small font-monospace">${doc.id.substring(0, 8)}...</td>
-                        <td class="fw-semibold text-primary"><i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(doc.name)}</td>
-                        <td>${escapeHtml(doc.owner || 'N/A')}</td>
-                        <td>v${doc.version}</td>
-                        <td>${doc.deleted ? '<span class="badge bg-danger">Đã xóa</span>' : '<span class="badge bg-success">Active</span>'}</td>
-                        <td class="text-end">
-                            <a href="${API_BASE}/api/documents/download/${doc.id}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDoc('${doc.id}')"><i class="bi bi-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                console.error(err);
-                showToast("Lỗi tải tài liệu: MinIO có thể đang tắt.", "warning");
-            }
-        }
-
-        async function uploadDocument() {
-            const appId = document.getElementById("docAppId").value.trim();
-            const fileInput = document.getElementById("docFileInput");
-            if (!appId) return showToast("Vui lòng nhập mã hồ sơ (appId)!", "warning");
-            if (!fileInput.files || fileInput.files.length === 0) return showToast("Vui lòng chọn ít nhất 1 file!", "warning");
-
-            const formData = new FormData();
-            for (let i = 0; i < fileInput.files.length; i++) {
-                formData.append("files", fileInput.files[i]);
-            }
-            formData.append("appId", appId);
-
-            try {
-                await axios.post(`${API_BASE}/api/documents/upload`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-                showToast("Tải lên MinIO thành công!", "success");
-                fileInput.value = "";
-                loadDocuments();
-            } catch (err) {
-                showToast("Lỗi tải lên: " + (err.response?.data?.message || err.message), "danger");
-            }
-        }
-
-        async function deleteDoc(docId) {
-            if (!confirm("Bạn có chắc muốn xóa mềm tài liệu này?")) return;
-            try {
-                await axios.post(`${API_BASE}/api/documents/delete`, { id: docId });
-                showToast("Đã xóa mềm tài liệu thành công!", "success");
-                loadDocuments();
-            } catch (err) {
-                showToast("Lỗi khi xóa tài liệu: " + (err.response?.data?.message || err.message), "danger");
-            }
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        // Initialize data
-        window.addEventListener("DOMContentLoaded", () => {
+    async function handleRegister() {
+        const payload = {
+            username: document.getElementById("regUsername").value.trim(),
+            password: document.getElementById("regPassword").value.trim(),
+            fullName: document.getElementById("regFullName").value.trim(),
+            email: document.getElementById("regEmail").value.trim()
+        };
+        if (!payload.username || !payload.password) return showToast("Vui lòng nhập tên đăng nhập và mật khẩu", "warning");
+        try {
+            const res = await axios.post(`${API_BASE}/api/auth/register`, payload);
+            authToken = res.data.token;
+            currentUser = res.data;
+            localStorage.setItem("cms_auth_token", authToken);
+            localStorage.setItem("cms_user", JSON.stringify(currentUser));
+            axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+            bootstrap.Modal.getInstance(document.getElementById("registerModal")).hide();
             updateAuthUI();
+            refreshAllData();
+            showToast("Đăng ký & đăng nhập thành công!", "success");
+        } catch (err) {
+            showToast("Lỗi đăng ký: " + (err.response?.data?.message || err.message), "danger");
+        }
+    }
+
+    function logout() {
+        authToken = "";
+        currentUser = null;
+        localStorage.removeItem("cms_auth_token");
+        localStorage.removeItem("cms_user");
+        delete axios.defaults.headers.common['Authorization'];
+        updateAuthUI();
+        cachedStudents = [];
+        cachedEnrollments = [];
+        renderStudentRows([]);
+        renderEnrollmentRows([]);
+        showToast("Đã đăng xuất tài khoản", "info");
+    }
+
+    async function loadDashboardStats() {
+        try {
+            const res = await axios.get(`${API_BASE}/api/dashboard/stats`);
+            const d = res.data || {};
+            document.getElementById("kpiCourses").innerText = d.totalCourses ?? 0;
+            document.getElementById("kpiStudents").innerText = d.totalStudents ?? 0;
+            document.getElementById("kpiDepartments").innerText = d.totalDepartments ?? 0;
+            document.getElementById("kpiEnrollments").innerText = d.totalEnrollments ?? 0;
+            document.getElementById("kpiDocuments").innerText = d.activeDocuments ?? 0;
+            document.getElementById("kpiRevenue").innerText = `$${Number(d.totalEnrollmentRevenue || 0).toLocaleString()}`;
+        } catch (e) { console.error(e); }
+    }
+
+    // --- ENROLLMENTS ---
+    function renderEnrollmentRows(items) {
+        const tbody = document.getElementById("enrollTableBody");
+        if (!items || items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có lượt ghi danh (hoặc cần đăng nhập).</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = items.map(e => {
+            const badge = e.status === 'COMPLETED' ? 'bg-success' : e.status === 'DROPPED' ? 'bg-secondary' : 'bg-primary';
+            const dt = e.enrolledAt ? String(e.enrolledAt).replace('T', ' ').substring(0, 16) : '-';
+            return `
+                <tr>
+                    <td class="fw-bold">${e.id}</td>
+                    <td><div class="fw-semibold">${escapeHtml(e.studentName)}</div><div class="small text-muted">${escapeHtml(e.studentEmail || '')}</div></td>
+                    <td class="text-primary fw-semibold">${escapeHtml(e.courseTitle)}</td>
+                    <td style="min-width:130px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar" style="width:${e.progressPercent || 0}%"></div></div>
+                            <span class="small fw-semibold">${e.progressPercent || 0}%</span>
+                        </div>
+                    </td>
+                    <td><span class="badge ${badge}">${escapeHtml(e.status)}</span></td>
+                    <td class="small text-muted">${dt}</td>
+                    <td class="text-end text-nowrap">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openEnrollModal(${e.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteEnrollment(${e.id})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    async function loadEnrollments() {
+        try {
+            const res = await axios.get(`${API_BASE}/api/enrollments`);
+            cachedEnrollments = res.data || [];
+            renderEnrollmentRows(cachedEnrollments);
+        } catch (err) {
+            renderEnrollmentRows([]);
+        }
+    }
+
+    async function searchEnrollments() {
+        const q = document.getElementById("enrollSearchInput").value.trim();
+        if (!q) return loadEnrollments();
+        try {
+            const res = await axios.get(`${API_BASE}/api/enrollments/search?keyword=${encodeURIComponent(q)}`);
+            renderEnrollmentRows(res.data || []);
+        } catch (e) { console.error(e); }
+    }
+
+    function openEnrollModal(id = null) {
+        if (!cachedStudents.length) loadStudents();
+        if (!cachedCourses.length) loadCourses();
+        const sSel = document.getElementById("enrollStudentSelect");
+        const cSel = document.getElementById("enrollCourseSelect");
+        sSel.innerHTML = cachedStudents.map(s => `<option value="${s.id}">${escapeHtml(s.fullName)} (${escapeHtml(s.email)})</option>`).join('');
+        cSel.innerHTML = cachedCourses.map(c => `<option value="${c.id}">${escapeHtml(c.title)} ($${c.price})</option>`).join('');
+        document.getElementById("enrollIdInput").value = id || "";
+        if (id) {
+            const e = cachedEnrollments.find(item => item.id === id) || {};
+            document.getElementById("enrollModalTitle").innerText = `Cập Nhật Ghi Danh #${id}`;
+            sSel.value = e.studentId || "";
+            cSel.value = e.courseId || "";
+            document.getElementById("enrollStatusSelect").value = e.status || "ENROLLED";
+            document.getElementById("enrollProgressInput").value = e.progressPercent ?? 0;
+            document.getElementById("enrollNotesInput").value = e.notes || "";
+        } else {
+            document.getElementById("enrollModalTitle").innerText = "Ghi Danh Khóa Học Mới";
+            document.getElementById("enrollStatusSelect").value = "ENROLLED";
+            document.getElementById("enrollProgressInput").value = 0;
+            document.getElementById("enrollNotesInput").value = "";
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("enrollModal")).show();
+    }
+
+    async function saveEnrollment() {
+        const id = document.getElementById("enrollIdInput").value;
+        const payload = {
+            studentId: parseInt(document.getElementById("enrollStudentSelect").value || "0", 10),
+            courseId: parseInt(document.getElementById("enrollCourseSelect").value || "0", 10),
+            status: document.getElementById("enrollStatusSelect").value,
+            progressPercent: parseInt(document.getElementById("enrollProgressInput").value || "0", 10),
+            notes: document.getElementById("enrollNotesInput").value.trim()
+        };
+        if (!payload.studentId || !payload.courseId) return showToast("Cần chọn Sinh viên & Khóa học", "warning");
+        try {
+            if (id) {
+                await axios.put(`${API_BASE}/api/enrollments/${id}`, payload);
+                showToast("Cập nhật ghi danh thành công!", "success");
+            } else {
+                await axios.post(`${API_BASE}/api/enrollments`, payload);
+                showToast("Ghi danh thành công!", "success");
+            }
+            bootstrap.Modal.getInstance(document.getElementById("enrollModal")).hide();
+            loadEnrollments();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi lưu ghi danh: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
+        }
+    }
+
+    async function deleteEnrollment(id) {
+        if (!confirm(`Xóa lượt ghi danh #${id}?`)) return;
+        try {
+            await axios.delete(`${API_BASE}/api/enrollments/${id}`);
+            showToast("Đã xóa lượt ghi danh!", "success");
+            loadEnrollments();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi xóa: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
+        }
+    }
+
+    // --- COURSES (WITH PAGED + PRICE FILTER) ---
+    function renderCourseRows(items) {
+        const tbody = document.getElementById("courseTableBody");
+        if (!items || items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không có khóa học nào.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = items.map(c => `
+            <tr>
+                <td class="fw-bold">${c.id}</td>
+                <td class="text-primary fw-semibold">${escapeHtml(c.title)}</td>
+                <td class="text-muted small">${escapeHtml(c.description || 'N/A')}</td>
+                <td><span class="badge bg-secondary">${c.duration}h</span></td>
+                <td class="text-success fw-bold">$${c.price}</td>
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openCourseModal(${c.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse(${c.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function loadCourses(page = coursePage) {
+        try {
+            const res = await axios.get(`${API_BASE}/api/courses/paged?page=${page}&size=8&sortBy=id&direction=asc`);
+            const data = res.data;
+            cachedCourses = data?.content || [];
+            coursePage = data?.number ?? 0;
+            courseTotalPages = Math.max(1, data?.totalPages ?? 1);
+            document.getElementById("coursePageInfo").innerText = `Trang ${coursePage + 1} / ${courseTotalPages} (${data?.totalElements ?? cachedCourses.length} khóa học)`;
+            renderCourseRows(cachedCourses);
+        } catch (err) {
+            const res = await axios.get(`${API_BASE}/api/courses`);
+            cachedCourses = res.data || [];
+            renderCourseRows(cachedCourses);
+        }
+    }
+
+    function changeCoursePage(delta) {
+        const next = coursePage + delta;
+        if (next >= 0 && next < courseTotalPages) loadCourses(next);
+    }
+
+    async function searchCourses() {
+        const q = document.getElementById("courseSearchInput").value.trim();
+        if (!q) return loadCourses(0);
+        try {
+            const res = await axios.get(`${API_BASE}/api/courses/search?keyword=${encodeURIComponent(q)}`);
+            renderCourseRows(res.data || []);
+        } catch (e) { console.error(e); }
+    }
+
+    async function filterCoursesByPrice() {
+        const min = document.getElementById("courseMinPrice").value.trim();
+        const max = document.getElementById("courseMaxPrice").value.trim();
+        if (!min && !max) return loadCourses(0);
+        try {
+            const params = new URLSearchParams();
+            if (min) params.append("minPrice", min);
+            if (max) params.append("maxPrice", max);
+            const res = await axios.get(`${API_BASE}/api/courses/filter?${params.toString()}`);
+            renderCourseRows(res.data || []);
+        } catch (e) { console.error(e); }
+    }
+
+    function openCourseModal(id = null) {
+        document.getElementById("courseIdInput").value = id || "";
+        if (id) {
+            const c = cachedCourses.find(item => item.id === id) || {};
+            document.getElementById("courseModalTitle").innerText = `Chỉnh Sửa Khóa Học #${id}`;
+            document.getElementById("courseTitleInput").value = c.title || "";
+            document.getElementById("courseDescInput").value = c.description || "";
+            document.getElementById("courseDurationInput").value = c.duration ?? 0;
+            document.getElementById("coursePriceInput").value = c.price ?? 0;
+        } else {
+            document.getElementById("courseModalTitle").innerText = "Thêm Khóa Học Mới";
+            document.getElementById("courseTitleInput").value = "";
+            document.getElementById("courseDescInput").value = "";
+            document.getElementById("courseDurationInput").value = 30;
+            document.getElementById("coursePriceInput").value = 299;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("courseModal")).show();
+    }
+
+    async function saveCourse() {
+        const id = document.getElementById("courseIdInput").value;
+        const payload = {
+            title: document.getElementById("courseTitleInput").value.trim(),
+            description: document.getElementById("courseDescInput").value.trim(),
+            duration: parseInt(document.getElementById("courseDurationInput").value || "0", 10),
+            price: parseFloat(document.getElementById("coursePriceInput").value || "0")
+        };
+        if (!payload.title) return showToast("Tên khóa học không được để trống", "warning");
+        try {
+            if (id) {
+                await axios.put(`${API_BASE}/api/courses/${id}`, payload);
+                showToast("Cập nhật khóa học thành công!", "success");
+            } else {
+                await axios.post(`${API_BASE}/api/courses`, payload);
+                showToast("Thêm khóa học mới thành công!", "success");
+            }
+            bootstrap.Modal.getInstance(document.getElementById("courseModal")).hide();
             loadCourses();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi lưu khóa học: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
+        }
+    }
+
+    async function deleteCourse(id) {
+        if (!confirm(`Bạn có chắc muốn xóa khóa học #${id}?`)) return;
+        try {
+            await axios.delete(`${API_BASE}/api/courses/${id}`);
+            showToast("Đã xóa khóa học thành công!", "success");
+            loadCourses();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi khi xóa: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
+        }
+    }
+
+    // --- STUDENTS (WITH PAGED) ---
+    function renderStudentRows(items) {
+        const tbody = document.getElementById("studentTableBody");
+        if (!items || items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có sinh viên (hoặc cần đăng nhập).</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = items.map(s => `
+            <tr>
+                <td class="fw-bold">${s.id}</td>
+                <td class="fw-semibold text-dark">${escapeHtml(s.fullName || 'N/A')}</td>
+                <td>${escapeHtml(s.email || 'N/A')}</td>
+                <td>${escapeHtml(s.phone || 'N/A')}</td>
+                <td>${s.dob || 'N/A'}</td>
+                <td><span class="badge bg-info-subtle text-info border border-info-subtle">${escapeHtml(s.department?.departmentName || 'Chưa phân khoa')}</span></td>
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openStudentModal(${s.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteStudent(${s.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function loadStudents(page = studentPage) {
+        try {
+            const res = await axios.get(`${API_BASE}/api/students/paged?page=${page}&size=8&sortBy=id&direction=asc`);
+            const data = res.data;
+            cachedStudents = data?.content || [];
+            studentPage = data?.number ?? 0;
+            studentTotalPages = Math.max(1, data?.totalPages ?? 1);
+            document.getElementById("studentPageInfo").innerText = `Trang ${studentPage + 1} / ${studentTotalPages} (${data?.totalElements ?? cachedStudents.length} sinh viên)`;
+            renderStudentRows(cachedStudents);
+        } catch (err) {
+            renderStudentRows([]);
+        }
+    }
+
+    function changeStudentPage(delta) {
+        const next = studentPage + delta;
+        if (next >= 0 && next < studentTotalPages) loadStudents(next);
+    }
+
+    async function searchStudents() {
+        const q = document.getElementById("studentSearchInput").value.trim();
+        if (!q) return loadStudents(0);
+        try {
+            const res = await axios.get(`${API_BASE}/api/students/search?keyword=${encodeURIComponent(q)}`);
+            renderStudentRows(res.data || []);
+        } catch (e) { console.error(e); }
+    }
+
+    function openStudentModal(id = null) {
+        const deptSelect = document.getElementById("studentDeptSelect");
+        deptSelect.innerHTML = '<option value="">-- Chưa phân khoa --</option>' +
+            cachedDepartments.map(d => `<option value="${d.departmentId}">${escapeHtml(d.departmentCode)} - ${escapeHtml(d.departmentName)}</option>`).join('');
+        document.getElementById("studentIdInput").value = id || "";
+        if (id) {
+            const s = cachedStudents.find(item => item.id === id) || {};
+            document.getElementById("studentModalTitle").innerText = `Chỉnh Sửa Sinh Viên #${id}`;
+            document.getElementById("studentNameInput").value = s.fullName || "";
+            document.getElementById("studentEmailInput").value = s.email || "";
+            document.getElementById("studentPhoneInput").value = s.phone || "";
+            document.getElementById("studentDobInput").value = s.dob || "";
+            document.getElementById("studentAddressInput").value = s.address || "";
+            deptSelect.value = s.department?.departmentId || "";
+        } else {
+            document.getElementById("studentModalTitle").innerText = "Thêm Sinh Viên Mới";
+            document.getElementById("studentNameInput").value = "";
+            document.getElementById("studentEmailInput").value = "";
+            document.getElementById("studentPhoneInput").value = "";
+            document.getElementById("studentDobInput").value = "";
+            document.getElementById("studentAddressInput").value = "";
+            deptSelect.value = "";
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("studentModal")).show();
+    }
+
+    async function saveStudent() {
+        const id = document.getElementById("studentIdInput").value;
+        const deptVal = document.getElementById("studentDeptSelect").value;
+        const payload = {
+            fullName: document.getElementById("studentNameInput").value.trim(),
+            email: document.getElementById("studentEmailInput").value.trim(),
+            phone: document.getElementById("studentPhoneInput").value.trim(),
+            dob: document.getElementById("studentDobInput").value || null,
+            address: document.getElementById("studentAddressInput").value.trim(),
+            departmentId: deptVal ? parseInt(deptVal, 10) : null
+        };
+        if (!payload.fullName || !payload.email) return showToast("Vui lòng nhập họ tên và email", "warning");
+        try {
+            if (id) {
+                await axios.put(`${API_BASE}/api/students/${id}`, payload);
+                showToast("Cập nhật sinh viên thành công!", "success");
+            } else {
+                await axios.post(`${API_BASE}/api/students`, payload);
+                showToast("Thêm sinh viên mới thành công!", "success");
+            }
+            bootstrap.Modal.getInstance(document.getElementById("studentModal")).hide();
             loadStudents();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi lưu sinh viên: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
+        }
+    }
+
+    async function deleteStudent(id) {
+        if (!confirm(`Bạn có chắc muốn xóa sinh viên #${id}?`)) return;
+        try {
+            await axios.delete(`${API_BASE}/api/students/${id}`);
+            showToast("Đã xóa sinh viên thành công!", "success");
+            loadStudents();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi khi xóa sinh viên: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
+        }
+    }
+
+    // --- DEPARTMENTS ---
+    function renderDeptRows(items) {
+        const tbody = document.getElementById("deptTableBody");
+        if (!items || items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có khoa nào.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = items.map(d => `
+            <tr>
+                <td class="fw-bold">${d.departmentId}</td>
+                <td><span class="badge bg-primary">${escapeHtml(d.departmentCode)}</span></td>
+                <td class="fw-semibold">${escapeHtml(d.departmentName)}</td>
+                <td class="text-muted small">${escapeHtml(d.description || 'N/A')}</td>
+                <td class="small text-muted">${d.createdAt || 'N/A'}</td>
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openDeptModal(${d.departmentId})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDept(${d.departmentId})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function loadDepartments() {
+        try {
+            const res = await axios.get(`${API_BASE}/api/departments`);
+            cachedDepartments = res.data || [];
+            renderDeptRows(cachedDepartments);
+        } catch (err) { console.error(err); }
+    }
+
+    function openDeptModal(id = null) {
+        document.getElementById("deptIdInput").value = id || "";
+        if (id) {
+            const d = cachedDepartments.find(item => item.departmentId === id) || {};
+            document.getElementById("deptModalTitle").innerText = `Chỉnh Sửa Khoa #${id}`;
+            document.getElementById("deptCodeInput").value = d.departmentCode || "";
+            document.getElementById("deptNameInput").value = d.departmentName || "";
+            document.getElementById("deptDescInput").value = d.description || "";
+        } else {
+            document.getElementById("deptModalTitle").innerText = "Thêm Khoa / Ngành Mới";
+            document.getElementById("deptCodeInput").value = "";
+            document.getElementById("deptNameInput").value = "";
+            document.getElementById("deptDescInput").value = "";
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("deptModal")).show();
+    }
+
+    async function saveDept() {
+        const id = document.getElementById("deptIdInput").value;
+        const payload = {
+            departmentCode: document.getElementById("deptCodeInput").value.trim(),
+            departmentName: document.getElementById("deptNameInput").value.trim(),
+            description: document.getElementById("deptDescInput").value.trim()
+        };
+        if (!payload.departmentCode || !payload.departmentName) return showToast("Vui lòng nhập mã khoa và tên khoa", "warning");
+        try {
+            if (id) {
+                await axios.put(`${API_BASE}/api/departments/${id}`, payload);
+                showToast("Cập nhật khoa thành công!", "success");
+            } else {
+                await axios.post(`${API_BASE}/api/departments`, payload);
+                showToast("Thêm khoa mới thành công!", "success");
+            }
+            bootstrap.Modal.getInstance(document.getElementById("deptModal")).hide();
             loadDepartments();
-        });
-    </script>
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi lưu khoa: " + (err.response?.data?.message || "Cần quyền ADMIN / TEACHER"), "danger");
+        }
+    }
+
+    async function deleteDept(id) {
+        if (!confirm(`Bạn có chắc muốn xóa khoa #${id}?`)) return;
+        try {
+            await axios.delete(`${API_BASE}/api/departments/${id}`);
+            showToast("Đã xóa khoa thành công!", "success");
+            loadDepartments();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi khi xóa khoa: " + (err.response?.data?.message || "Cần quyền ADMIN"), "danger");
+        }
+    }
+
+    // --- DOCUMENTS ---
+    async function loadDocuments() {
+        const appId = document.getElementById("docAppId").value.trim();
+        if (!appId) return showToast("Vui lòng nhập mã hồ sơ (appId)!", "warning");
+        try {
+            const res = await axios.get(`${API_BASE}/api/documents/list?appId=${encodeURIComponent(appId)}`);
+            const tbody = document.getElementById("docTableBody");
+            if (!res.data || res.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy tài liệu cho mã hồ sơ: ${escapeHtml(appId)}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = res.data.map(doc => `
+                <tr>
+                    <td class="small font-monospace">${doc.id.substring(0, 8)}...</td>
+                    <td class="fw-semibold text-primary"><i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(doc.name)}</td>
+                    <td>${escapeHtml(doc.owner || 'N/A')}</td>
+                    <td>v${doc.version}</td>
+                    <td>${doc.deleted ? '<span class="badge bg-danger">Đã xóa</span>' : '<span class="badge bg-success">Active</span>'}</td>
+                    <td class="text-end">
+                        <a href="${API_BASE}/api/documents/download/${doc.id}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDoc('${doc.id}')"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        } catch (err) {
+            showToast("Lỗi tải tài liệu: MinIO có thể đang tắt.", "warning");
+        }
+    }
+
+    async function uploadDocument() {
+        const appId = document.getElementById("docAppId").value.trim();
+        const fileInput = document.getElementById("docFileInput");
+        if (!appId) return showToast("Vui lòng nhập mã hồ sơ (appId)!", "warning");
+        if (!fileInput.files || fileInput.files.length === 0) return showToast("Vui lòng chọn ít nhất 1 file!", "warning");
+        const formData = new FormData();
+        for (let i = 0; i < fileInput.files.length; i++) formData.append("files", fileInput.files[i]);
+        formData.append("appId", appId);
+        try {
+            await axios.post(`${API_BASE}/api/documents/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            showToast("Tải lên MinIO thành công!", "success");
+            fileInput.value = "";
+            loadDocuments();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi tải lên: " + (err.response?.data?.message || err.message), "danger");
+        }
+    }
+
+    async function deleteDoc(docId) {
+        if (!confirm("Bạn có chắc muốn xóa mềm tài liệu này?")) return;
+        try {
+            await axios.post(`${API_BASE}/api/documents/delete`, { id: docId });
+            showToast("Đã xóa mềm tài liệu thành công!", "success");
+            loadDocuments();
+            loadDashboardStats();
+        } catch (err) {
+            showToast("Lỗi khi xóa tài liệu: " + (err.response?.data?.message || err.message), "danger");
+        }
+    }
+
+    function refreshAllData() {
+        loadDashboardStats();
+        loadCourses(0);
+        loadStudents(0);
+        loadDepartments();
+        loadEnrollments();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        updateAuthUI();
+        refreshAllData();
+    });
+</script>
 </body>
 </html>

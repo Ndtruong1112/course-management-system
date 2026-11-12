@@ -11,7 +11,7 @@ echo   - 3. Hệ Thống Dự Án (Fine-tuned Model với Ngữ Cảnh Kiến Tr
 echo ======================================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0..\benchmark"
 python benchmark_comparison.py
 
 echo.
@@ -22,5 +22,5 @@ echo   2. bao_cao_truc_quan.html (Bảng điều khiển Trực quan & Biểu đ
 echo.
 echo   Đang tự động mở Báo cáo Trực quan trên Trình duyệt web...
 echo ======================================================================
-start "" "%~dp0bao_cao_truc_quan.html"
+start "" "%~dp0..\benchmark\bao_cao_truc_quan.html"
 pause

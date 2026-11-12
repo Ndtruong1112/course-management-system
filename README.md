@@ -46,29 +46,28 @@ Dự án gồm 2 trụ cột cốt lõi:
 
 ## 2. Tính năng nổi bật
 
-### 2.1. Nghiệp vụ Quản lý Khóa học, Sinh viên & Khoa Đào tạo
-* **Quản lý Khóa học**: Xem danh sách, xem chi tiết, tạo mới, tìm kiếm theo tên (JPQL Case-insensitive), lọc theo khoảng học phí (`minPrice`, `maxPrice`).
-* **Quản lý Sinh viên & Khoa trực thuộc**: Xem danh sách, thêm mới, cập nhật, xóa theo ID, tìm kiếm theo tên hoặc email, liên kết quan hệ `@ManyToOne` với Khoa đào tạo (`Department`).
-* **Quản lý Khoa / Ngành Đào tạo (Department)**: Quản lý danh mục Khoa qua Generic DAO (`IDepartmentDao`, `DepartmentDaoImpl`).
-* **Bảo mật & Phân quyền chuẩn Spring Security 6 + JWT**: Hỗ trợ đăng nhập, cấp phát token JWT HMAC-SHA256, phân quyền theo Role (`ADMIN`, `TEACHER`, `USER`).
-* **Mô hình Generic DAO**: `IGenericDao<Pk, Entity>` và `HibernatePaginationSortingDao<Pk, Entity>` cung cấp sẵn CRUD, Transactional, Pagination, Criteria & HQL dynamic queries.
-* **Cổng Quản trị Web UI Trực quan (`localhost:8080`)**: Giao diện Bootstrap 5 tích hợp sẵn Đăng nhập nhanh JWT, quản lý Khóa học, Sinh viên, Khoa và Tài liệu MinIO.
-* **Khởi tạo dữ liệu mẫu tự động (`DataInitializer`) & File SQL**: Tự động sinh dữ liệu mẫu khi chạy và cung cấp script `docs/database.sql`.
-* **DTO Pattern & Projections**: Tách biệt Entity CSDL và DTO truyền tải, map trực tiếp từ JPQL constructor expression (`SELECT new com.mkii...DTO(...)`).
-* **Xử lý ngoại lệ tập trung**: `@RestControllerAdvice` chuẩn hóa định dạng lỗi `ErrorResponse` (timestamp, status, error, message, path).
+### 2.1. Nghiệp vụ Quản lý Khóa học, Học viên, Khoa Đào tạo & Ghi danh
+* **Quản lý Khóa học (`/api/courses`)**: CRUD, phân trang phía server (`/paged`), tìm kiếm theo tên (HQL Case-insensitive), lọc theo khoảng học phí (`minPrice`, `maxPrice`).
+* **Quản lý Học viên & Khoa trực thuộc (`/api/students`, `/api/departments`)**: CRUD, tìm kiếm theo tên hoặc email, liên kết `@ManyToOne` với Khoa đào tạo (`Department`), mã hóa AES-256 tầng JPA (`AesEncryptConverter`) cho dữ liệu nhạy cảm.
+* **Quản lý Ghi danh (`/api/enrollments`)**: Ghi danh học viên vào khóa học, cập nhật tiến độ học tập (`progressPercent`, `status`) theo chuẩn Generic DAO (`IEnrollmentDao`, `EnrollmentDaoImpl`).
+* **Thống kê & Health Check (`/api/dashboard/stats`, `/api/dashboard/health`)**: Tổng hợp KPI thời gian thực (tổng khóa học, sinh viên, khoa, lượt ghi danh, tài liệu đang hoạt động).
+* **Quản lý Tài liệu & Versioning đa tầng MinIO S3 (`/api/documents`)**: Lưu file nhị phân lên MinIO, lưu metadata MySQL với khóa ngoại `APP_DETAIL_FK`, tự động đánh phiên bản (`version + 1`, bản cũ `active = false`), xóa mềm (`deleted = true`) và compensating rollback.
+* **Bảo mật & Phân quyền Spring Security 6 + JWT**: Hỗ trợ đăng nhập (`/api/auth/login`), cấp token JWT HMAC-SHA256, phân quyền Role (`ADMIN`, `TEACHER`, `LECTURER`, `USER`).
+* **Cổng Quản trị Web UI Trực quan (`localhost:8080`)**: Giao diện Dashboard Sidebar sáng rõ, bảng điều khiển KPI, phân trang server-side và lọc khóa học theo mức giá.
 
-### 2.2. Trợ lý Trợ Lý AI Nội Bộ Thông minh
-* **Fine-Tuning QLoRA 4-bit**: Huấn luyện trên GPU RTX 4050, loss giảm sâu từ **1.72 xuống 0.18**, lưu trữ tại `outputs/course-management-lora-adapter`.
-* **Chưng cất tri thức (Knowledge Distillation)**: Thư mục độc lập `distillation/` cho phép dùng mô hình AI lớn (Teacher Model) đọc toàn bộ 45+ file mã nguồn để sinh dataset chuyên sâu.
-* **Cơ chế Router Tự động**: Phân tích ý định người dùng (User Intent) để chọn đường truyền tối ưu (Local GPU vs. Cloud Delegation).
-* **Giao diện Web Hiện đại & Đấu trường So sánh (Arena)**: Web UI phong cách Tailwind CSS / Glassmorphism hỗ trợ 5 chế độ:
-  1. `🧠 Trợ Lý Dự Án (Hybrid Auto)`: Tự động phân luồng Local/Cloud.
-  2. `⚖️ So Sánh Model (Gốc vs Fine-tuned)`: So sánh hiệu quả của LoRA adapter trên cùng một base model.
-  3. `🏆 So Sánh Hệ Thống (Dự Án vs AI Chưa Context)`: Đặt hệ thống lên bàn cân với AI phổ thông bên ngoài (zero-context).
-  4. `📊 Đấu Trường 3 Chiều (Arena)`: So sánh đồng thời cả 3 thực thể trên 1 màn hình.
-  5. `⚡ 100% Local GPU`: Chạy offline trên GPU NVIDIA RTX 4050.
-* **Bộ Đánh Giá Kiến Trúc Tự Động (Architecture Audit Engine)**: Chấm điểm % tuân thủ 5 quy chuẩn khắt khe: Generic DAO (`HibernatePaginationSortingDao`), `EntityManager` HQL động, tránh bẫy `JpaRepository`, package `com.mkii.coursemanagementsystem`, và DTO Jakarta Validation.
-* **Báo Cáo Thực Nghiệm Khoa Học**: Tự động sinh báo cáo học thuật `BAO_CAO_SO_SANH_HIEU_QUA.md` và dashboard trực quan `bao_cao_truc_quan.html` với biểu đồ Chart.js (Radar 5 chiều & Bar Chart).
+### 2.2. Course Studio — Trợ Lý AI Nội Bộ Thông minh
+* **Fine-Tuning QLoRA 4-bit + RAG**: Huấn luyện `Qwen2.5-Coder-3B-Instruct` trên GPU RTX 4050 (Adapter lưu tại `outputs/course-management-lora-adapter` qua Git LFS), kết hợp `CodebaseRAG` (`chatbot/rag_engine.py`, nút `↻ RAG` làm mới nóng trên sidebar) và bộ nhớ hội thoại nhiều lượt.
+* **Chưng cất tri thức (Knowledge Distillation)**: Thư mục `distillation/` cho phép trích xuất toàn bộ ngữ cảnh codebase để sinh dataset chuyên sâu.
+* **Giao diện Web Studio 7 Chế độ (`http://localhost:7860`)**:
+  1. `Trợ Lý Kỹ Thuật (Hybrid)`: Tự động phân luồng Local GPU vs Cloud Gemini.
+  2. `100% Local GPU`: Chạy offline hoàn toàn trên GPU cục bộ.
+  3. `Cloud Gemini (1M Context)`: Ủy quyền Cloud với multi-model fallback (`gemini-3-flash-preview`, `gemini-3.5-flash`, `gemini-flash-lite-latest`, `gemini-2.5-flash`).
+  4. `So Sánh Mô Hình`: Base Model vs Fine-tuned + RAG ngay trên GPU.
+  5. `So Sánh Hệ Thống`: Dự Án (`LoRA + RAG`) vs AI Tiêu Chuẩn (Zero Context).
+  6. `Đấu Trường 3 Chiều`: Chạy tuần tự cả 3 thực thể và chấm điểm đồng bộ sau khi tất cả hoàn tất.
+  7. `So Sánh Với Claude`: Đối chiếu trực tiếp với Anthropic API hoặc dán câu trả lời từ Claude.ai.
+* **Bộ Đánh Giá Kiến Trúc Tự Động (`evaluate_architecture_compliance`)**: Chấm điểm đồng bộ sau khi hoàn tất phản hồi dựa trên Rubric phù hợp từng dạng bài (Module DAO, HQL Method, DTO Design, Q&A Nghiệp vụ).
+* **Kết quả kiểm thử thực nghiệm**: Backend đạt **64/64 Unit Tests** (`.\mvnw test`); đánh giá 10 câu hỏi đạt **9/10 (90.00%)** với `LoRA + RAG`; Benchmark 5 kịch bản đạt **100.0%** tuân thủ kiến trúc (so với **55.0%** Base Model chưa fine-tune).
 
 ---
 
@@ -132,69 +131,63 @@ Dự án gồm 2 trụ cột cốt lõi:
 
 ```text
 course-management-system/
-├── start_all.bat                                   # [1-Click] Khởi động Backend (8080) và Chatbot (7860) trực tiếp
-├── stop_all.bat                                    # Dừng toàn bộ tiến trình hệ thống an toàn
 ├── pom.xml                                         # Cấu hình Spring Boot & dependencies Maven
 ├── mvnw / mvnw.cmd                                 # Maven Wrapper
-├── .env                                            # [Bảo mật] Lưu API Keys (đã gitignore)
-├── .gitignore                                      # Loại trừ cache, adapter, venv, .env
-├── docker-compose.yml                              # Cấu hình Container hóa trọn gói (MySQL, MinIO, App, AI)
-├── Dockerfile                                      # Dockerfile đa tầng (Multi-stage) cho Backend
+├── Dockerfile / docker-compose.yml                 # Container hóa trọn bộ (MySQL, MinIO, Backend, AI)
+├── .env.example                                    # Mẫu cấu hình API Key & đường dẫn local model
+├── .gitattributes / .gitignore                     # Git LFS cho *.safetensors & loại trừ .env, target/
+│
+├── scripts/                                        # Tập lệnh vận hành 1-Click trên Windows
+│   ├── start_local.bat / stop_local.bat            # Khởi động/Dừng Backend (8080) & Chatbot (7860)
+│   ├── docker_up.bat / docker_down.bat             # Khởi chạy/Dừng stack Docker Compose
+│   ├── run_chatbot.bat                             # Chạy riêng Web Studio AI (Port 7860)
+│   └── run_benchmark.bat                           # Chạy benchmark & mở Dashboard trực quan
 │
 ├── src/                                            # Mã nguồn Backend Java 21 / Spring Boot 3
-│   ├── main/
-│   │   ├── java/com/mkii/coursemanagementsystem/
-│   │   │   ├── CourseManagementSystemApplication.java
-│   │   │   ├── common/                             # Constants & Global Exception Handler
-│   │   │   ├── dao/                                # Interface & Triển khai DAO
-│   │   │   ├── dto/                                # Request/Response DTOs & Validation
-│   │   │   ├── entity/                             # JPA Entities (Course, Student, Document)
-│   │   │   ├── hibernateDao/                       # HibernatePaginationSortingDao (Generic DAO)
-│   │   │   ├── repository/                         # Spring Data JPA Repositories
-│   │   │   ├── rest/                               # REST Controllers
-│   │   │   └── service/                            # Business Logic Layer & MinIO Storage
-│   │   └── resources/
-│   │       └── application.properties              # Cấu hình CSDL MySQL & MinIO S3
-│   └── test/
+│   ├── main/java/com/mkii/coursemanagementsystem/
+│   │   ├── common/                                 # Constants, Global Exception Handler, AES Converter
+│   │   ├── config/                                 # Security (JWT), DataInitializer, MinIO, OpenAPI
+│   │   ├── dao/                                    # Interfaces & DAO Impls (Course, Student, Enrollment, Document...)
+│   │   ├── dto/                                    # Request/Response DTOs & Jakarta Validation
+│   │   ├── entity/                                 # JPA Entities
+│   │   ├── hibernateDao/                           # HibernateGenericDao & HibernatePaginationSortingDao
+│   │   ├── rest/                                   # REST Controllers (Course, Student, Enrollment, Dashboard...)
+│   │   ├── service/                                # Business Logic Layer & MinIO Storage
+│   │   └── specification/                          # JPA Specification Dynamic Filtering
+│   ├── main/resources/
+│   │   ├── application.properties                  # Cấu hình MySQL, JWT & MinIO S3
+│   │   └── static/index.html                       # Cổng quản trị Web UI (Dashboard Sidebar)
+│   └── test/                                       # 64 Unit & Integration Tests
 │
-├── chatbot/                                        # Hệ sinh thái Trợ Lý AI Nội Bộ & Giao diện Web
-│   ├── web_app.py                                  # Web UI Flask Trợ Lý AI (SSE Streaming, Code Toolbar, 5 modes)
-│   ├── run_web.bat                                 # Script khởi chạy riêng Web Chatbot (Port 7860)
-│   ├── requirements.txt                            # Thư viện Python AI (Torch, Transformers, Peft...)
-│   └── 2_finetuned_model/
-│       └── chat.py                                 # Giao diện Chat CLI trên terminal
+├── chatbot/                                        # Trợ Lý AI Nội Bộ & Course Studio Web UI
+│   ├── web_app.py                                  # Flask SSE Web Studio (7 chế độ, multi-turn, đồng bộ điểm)
+│   ├── rag_engine.py                               # CodebaseRAG + Bộ chấm điểm kiến trúc (Rubric-aware)
+│   ├── Dockerfile / requirements.txt               # Đóng gói container & thư viện Python
+│   └── 1_base_model/ , 2_finetuned_model/          # Script CLI đối chiếu Base vs Fine-tuned
 │
-├── benchmark/                                      # Module Đánh giá Thực nghiệm Khoa học
-│   ├── benchmark_comparison.py                     # Script chạy 5 kịch bản benchmark tự động
-│   ├── chay_danh_gia_so_sanh.bat                   # 1-Click chạy benchmark & mở Dashboard
-│   ├── BAO_CAO_SO_SANH_HIEU_QUA.md                 # Báo cáo học thuật nghiệm thu
-│   ├── bao_cao_truc_quan.html                      # Bảng điều khiển trực quan (Chart.js Radar & Bar)
-│   └── README.md                                   # Hướng dẫn chi tiết module benchmark
+├── training/                                       # Pipeline Huấn luyện & Đánh giá QLoRA
+│   ├── generate_dataset.py / dataset.jsonl         # Sinh dữ liệu từ 95 tệp mã nguồn + docs
+│   ├── train_local.py                              # QLoRA 4-bit (NF4, Attention + MLP) trên GPU 6GB
+│   ├── evaluate_model.py / eval_report.json        # Đánh giá 10 câu hỏi (LoRA Only vs LoRA + RAG)
+│   ├── test_model.py / clean_vram.py               # Kiểm thử nhanh & giải phóng VRAM
+│   └── Course_Management_AI_Colab.ipynb            # Notebook huấn luyện trên Colab
 │
-├── training/                                       # Module Huấn luyện & Đánh giá AI LoRA
-│   ├── train_local.py                              # Huấn luyện QLoRA 4-bit (NF4) trên GPU RTX 4050
-│   ├── generate_dataset.py                         # Tự động sinh tập dữ liệu từ 45+ file codebase
-│   ├── test_model.py                               # Kiểm thử mô hình với ngân hàng câu hỏi
-│   ├── evaluate_model.py                           # Đánh giá tỷ lệ tuân thủ kiến trúc tự động
-│   ├── clean_vram.py                               # Công cụ dọn dẹp và giải phóng VRAM GPU
-│   ├── dataset.jsonl                               # Tập dữ liệu Q&A kiến trúc chuẩn hóa
-│   ├── eval_report.json                            # Báo cáo chi tiết kết quả đánh giá tự động
-│   ├── Course_Management_AI_Colab.ipynb            # Jupyter Notebook huấn luyện trên Google Colab
-│   └── README.md                                   # Hướng dẫn chi tiết pipeline huấn luyện
+├── benchmark/                                      # Kiểm thử Thực nghiệm 5 Kịch bản (TC-01..TC-05)
+│   ├── benchmark_comparison.py                     # So sánh External Zero-Context, Base GPU, Project LoRA+RAG
+│   ├── BAO_CAO_SO_SANH_HIEU_QUA.md                 # Báo cáo nghiệm thu Markdown
+│   └── bao_cao_truc_quan.html                      # Dashboard Chart.js (Radar & Bar)
 │
-├── distillation/                                   # Module Chưng cất Tri thức (Knowledge Distillation)
-│   ├── 1_export_codebase_context.py               # Quét & đóng gói mã nguồn thành markdown
-│   ├── codebase_context.md                         # Toàn bộ ngữ cảnh kiến trúc dự án (45 files)
-│   ├── 2_teacher_prompt.md                         # Prompt chuẩn cho AI lớn (Teacher Model)
-│   ├── 3_import_distilled_data.py                  # Nhập & chuẩn hóa dữ liệu chưng cất
-│   └── README.md                                   # Hướng dẫn quy trình chưng cất tri thức
+├── distillation/                                   # Chưng cất Tri thức từ Teacher Model
+│   ├── 1_export_codebase_context.py                # Đóng gói ngữ cảnh codebase
+│   ├── 2_teacher_prompt.md                         # Prompt sinh dữ liệu cho Teacher LLM
+│   └── 3_import_distilled_data.py                  # Chuẩn hóa vào training/dataset.jsonl
 │
-├── docs/                                           # Tài liệu Dự án & Kiểm thử API
-│   ├── Course Management System - Full APIs.postman_collection.json # Bộ Postman collection đầy đủ
-│   └── README.md                                   # Hướng dẫn sử dụng & import Postman
+├── docs/                                           # Tài liệu API, CSDL & Lịch sử rà soát
+│   ├── Course Management System - Full APIs.postman_collection.json
+│   ├── openapi.json / database.sql / BAO_CAO_LOI.md
+│   └── README.md
 │
-└── outputs/                                        # Trọng số huấn luyện
-    └── course-management-lora-adapter/             # LoRA Adapter sau khi fine-tune (Adapter weights)
+└── outputs/course-management-lora-adapter/         # Trọng số LoRA Adapter chính thức (Git LFS)
 ```
 
 ---
@@ -226,7 +219,7 @@ Nếu máy tính đã cài đặt **Docker Desktop**, bạn có thể khởi ch�
 docker compose up -d --build
 
 # Hoặc nhấp đúp chuột vào file tiện ích:
-docker_start.bat
+scripts\docker_up.bat
 ```
 
 **Các cổng dịch vụ sau khi khởi chạy:**
@@ -240,7 +233,7 @@ docker_start.bat
 ```powershell
 docker compose down
 # Hoặc nhấp đúp chuột vào:
-docker_stop.bat
+scripts\docker_down.bat
 ```
 
 ---
@@ -270,18 +263,20 @@ docker_stop.bat
    GEMINI_API_KEY=your_gemini_api_key_here
    ```
 2. **Khởi chạy**:
-   * Nhấp đúp chuột vào file: **`chatbot/run_web.bat`**
+   * Nhấp đúp chuột vào file: **`scripts/run_chatbot.bat`** (hoặc chạy trọn bộ Backend + AI qua **`scripts/start_local.bat`**)
    * Hoặc mở terminal gõ:
      ```powershell
      python chatbot/web_app.py
      ```
 3. Truy cập giao diện tại trình duyệt: **`http://localhost:7860`**
-4. Trải nghiệm các chế độ:
-   * **🧠 Trợ Lý Dự Án (Hybrid)**: Tự động nhận diện câu hỏi để điều phối giữa Local GPU và Cloud.
-   * **⚖️ So Sánh Model (Gốc vs Fine-tuned)**: Chạy song song mô hình gốc (Base Qwen) và mô hình sau khi gắn adapter LoRA.
-   * **🏆 So Sánh Hệ Thống (Dự Án vs AI Chưa Context)**: Đặt hệ thống lên bàn cân đối đầu với AI ngoài thị trường (Zero Context).
-   * **📊 Đấu Trường 3 Chiều**: So sánh đồng thời cả 3 thực thể trên cùng 1 màn hình kèm checklist chấm điểm.
-   * **⚡ 100% Local GPU**: Chạy hoàn toàn trên GPU RTX 4050 của máy, không cần internet.
+4. Trải nghiệm 7 chế độ trên Course Studio:
+   * **Trợ Lý Kỹ Thuật (Hybrid)**: Tự động nhận diện câu hỏi để điều phối giữa Local GPU và Cloud Gemini.
+   * **100% Local GPU**: Chạy hoàn toàn trên GPU RTX 4050 của máy, không cần internet.
+   * **Cloud Gemini (1M Context)**: Sinh mã nguồn lớn với context codebase + multi-model fallback.
+   * **So Sánh Mô Hình (Base vs Fine-tuned)**: Chạy song song mô hình gốc và mô hình sau khi gắn adapter LoRA.
+   * **So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)**: Đối chiếu hệ thống dự án với AI phổ thông bên ngoài (Zero Context).
+   * **Đấu Trường 3 Chiều**: So sánh đồng thời 3 luồng kèm chấm điểm đồng bộ sau khi cả 3 hoàn tất.
+   * **So Sánh Với Claude**: Đối chiếu trực tiếp qua Anthropic API hoặc dán câu trả lời từ Claude.ai.
 
 ---
 
@@ -297,7 +292,7 @@ python chatbot/2_finetuned_model/chat.py
 ### 6.4. Chạy Đánh giá Thực nghiệm Khoa học (Benchmark Arena)
 
 Để chạy bộ kiểm thử khoa học 5 tình huống thực tế và tự động xuất báo cáo so sánh:
-* Nhấp đúp chuột vào file: **`benchmark/chay_danh_gia_so_sanh.bat`**
+* Nhấp đúp chuột vào file: **`scripts/run_benchmark.bat`**
 * Hoặc chạy lệnh trên terminal:
   ```powershell
   python benchmark/benchmark_comparison.py
@@ -443,7 +438,6 @@ curl -X GET "http://localhost:8080/api/courses/filter?minPrice=100&maxPrice=600"
 
 ---
 
-## 10. Tác giả
+## 10. Tác giả & Repository
 
-* **Sinh viên / Lập trình viên**: [@MKII3184](https://github.com/MKII3184)
-* **Repository**: [course-management-system-](https://github.com/MKII3184/course-management-system-)
+* **GitHub Repository**: [Ndtruong1112/course-management-system](https://github.com/Ndtruong1112/course-management-system)

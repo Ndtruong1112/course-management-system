@@ -11,7 +11,7 @@ Thư mục này chứa toàn bộ công cụ kiểm thử tự động, tập c�
 ## 📁 Cấu trúc thư mục
 
 * `benchmark_comparison.py`: Script tự động thực thi 5 bài kiểm thử kiến trúc cốt lõi, chấm điểm 5 tiêu chí tự động và đo lường thời gian phản hồi.
-* `chay_danh_gia_so_sanh.bat`: Script khởi chạy benchmark nhanh chỉ với 1 click, tự động mở bảng điều khiển trực quan sau khi hoàn tất.
+* `../scripts/run_benchmark.bat`: Script khởi chạy benchmark nhanh chỉ với 1 click, tự động mở bảng điều khiển trực quan sau khi hoàn tất.
 * `BAO_CAO_SO_SANH_HIEU_QUA.md`: Báo cáo học thuật chi tiết phục vụ nghiệm thu đề tài/đồ án.
 * `bao_cao_truc_quan.html`: Dashboard trực quan hiển thị biểu đồ Radar 5 chiều và Bar Chart phân tích tuân thủ kiến trúc.
 
@@ -19,9 +19,9 @@ Thư mục này chứa toàn bộ công cụ kiểm thử tự động, tập c�
 
 ## 🚀 Cách chạy benchmark
 
-Từ thư mục này:
+Từ thư mục gốc dự án:
 ```bash
-python benchmark_comparison.py
+python benchmark/benchmark_comparison.py
 ```
-Hoặc nhấp đúp chạy file `chay_danh_gia_so_sanh.bat`.
+Hoặc nhấp đúp chạy file `scripts/run_benchmark.bat`.
 Báo cáo HTML trực quan cũng có thể được xem trực tiếp từ giao diện Chatbot tại: `http://localhost:7860/benchmark-report`.

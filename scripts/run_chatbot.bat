@@ -7,7 +7,7 @@ echo   KHỞI ĐỘNG GIAO DIỆN CHATBOT (BASE MODEL vs FINE-TUNED MODEL)
 echo ======================================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0..\chatbot"
 
 REM Giai phong port 7860 neu dang bi chiem dung
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :7860 ^| findstr LISTENING') do (

@@ -8,7 +8,7 @@ echo   DANG DUNG TOAN BO HE THONG CONTAINER DOCKER
 echo ======================================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 REM Tu dong nap duong dan Docker vao phien lam viec
 where docker >nul 2>&1

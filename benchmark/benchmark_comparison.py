@@ -58,12 +58,30 @@ SYSTEM_INSTRUCTION_BASE_MODEL = (
     "You are an unadapted AI coding assistant. Answer the user prompt directly with standard Java Spring Boot conventions in Vietnamese."
 )
 
-CLOUD_MODELS = ['gemini-2.5-flash']
+CLOUD_MODELS = [
+    'gemini-3-flash-preview',
+    'gemini-3.5-flash',
+    'gemini-flash-lite-latest',
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+]
 CLAUDE_MODELS = ['claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-sonnet-4-20250514']
 
 
+def _extract_gemini_text(obj):
+    chunks = []
+    for cand in obj.get("candidates", []):
+        for part in cand.get("content", {}).get("parts", []):
+            if part.get("thought"):
+                continue
+            txt = part.get("text")
+            if txt:
+                chunks.append(txt)
+    return "".join(chunks)
+
+
 def call_external_zero_context(user_prompt):
-    """Gọi External AI Zero-Context thật (ưu tiên Anthropic Claude nếu có key, ngược lại Gemini 2.5 Flash)."""
+    """Gọi External AI Zero-Context thật (ưu tiên Anthropic Claude nếu có key, ngược lại Gemini Flash fallback)."""
     start_time = time.time()
     if anthropic_api_key:
         headers = {
@@ -97,15 +115,16 @@ def call_external_zero_context(user_prompt):
     prompt = f"{SYSTEM_INSTRUCTION_GENERAL}\n\n[USER QUESTION]:\n{user_prompt}"
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 1200, 'temperature': 0.2}
+        'generationConfig': {'maxOutputTokens': 4096, 'temperature': 0.2}
     }
     for m in CLOUD_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={gemini_api_key}"
         try:
-            res = requests.post(url, json=payload, timeout=25)
+            res = requests.post(url, json=payload, timeout=30)
             if res.status_code == 200:
-                text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                return text, round(time.time() - start_time, 2), f"Gemini ({m} Zero-Context)"
+                text = _extract_gemini_text(res.json())
+                if text:
+                    return text, round(time.time() - start_time, 2), f"Gemini ({m} Zero-Context)"
         except Exception:
             continue
 
@@ -171,12 +190,23 @@ def call_local_qwen(user_prompt, use_adapter=True, use_rag=False):
         inputs = inputs.to("cuda")
 
     start_time = time.time()
+    gen_kwargs = dict(
+        **inputs,
+        max_new_tokens=1000 if use_adapter else 900,
+        min_new_tokens=100,
+        do_sample=False,
+        temperature=None,
+        top_p=None,
+        top_k=None,
+        repetition_penalty=1.1,
+        pad_token_id=_local_tokenizer.eos_token_id,
+    )
     with torch.inference_mode():
         if _has_adapter and not use_adapter:
             with _local_model.disable_adapter():
-                outputs = _local_model.generate(**inputs, max_new_tokens=900, do_sample=False, repetition_penalty=1.1, pad_token_id=_local_tokenizer.eos_token_id)
+                outputs = _local_model.generate(**gen_kwargs)
         else:
-            outputs = _local_model.generate(**inputs, max_new_tokens=1000, do_sample=False, repetition_penalty=1.1, pad_token_id=_local_tokenizer.eos_token_id)
+            outputs = _local_model.generate(**gen_kwargs)
 
     elapsed = round(time.time() - start_time, 2)
     ans = _local_tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()

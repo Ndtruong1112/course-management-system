@@ -249,7 +249,12 @@ class CodebaseRAG:
         body_lines = []
         for raw in content.splitlines():
             s = raw.strip()
-            if s.startswith("import ") or s.startswith("private static final Logger"):
+            if (
+                s.startswith("import ")
+                or s.startswith("private static final Logger")
+                or s.startswith("logger.info(")
+                or s.startswith("logger.debug(")
+            ):
                 continue
             if s == "" and (not body_lines or body_lines[-1] == ""):
                 continue
@@ -286,25 +291,28 @@ class CodebaseRAG:
             for t in toks:
                 if t in l_lower:
                     sc += 2
-            if want_version and any(k in l_lower for k in ("setactive(false)", "++versioncount", "tăng số phiên bản", "createdocumentwithnewversion", "setactive(")):
-                sc += 30
+            if want_version and any(
+                k in l_lower
+                for k in ("++versioncount", "setversion(++", "setactive(false)", "createdocumentwithnewversion", "tăng số phiên bản")
+            ):
+                sc += 45
             if want_soft_delete and any(k in l_lower for k in ("setdeleted(true)", "soft deleting", "public string delete(map")):
-                sc += 30
+                sc += 35
             if want_query and any(k in l_lower for k in ("searchby", "findbypricerange", "findbyhql")):
                 sc += 18
             line_scores.append(sc)
 
-        # Slide window over rest_lines maximizing total keyword hits
+        # Slide compact window over rest_lines maximizing total keyword hits
         best_start = 0
         best_score = -1
-        window_size = 22
+        window_size = 16
         for i in range(len(rest_lines)):
             win_sc = sum(line_scores[i:i + window_size])
             if win_sc > best_score:
                 best_score = win_sc
                 best_start = i
 
-        win_start = max(0, best_start - 3)
+        win_start = max(0, best_start - 1)
         remaining_budget = max(250, per_file_limit - len(header_text) - 20)
         chosen = []
         cur_len = 0
@@ -366,17 +374,26 @@ def evaluate_architecture_compliance(text, prompt=""):
     tailored to the prompt task type (Module DAO, DAO HQL Method, DTO Design, or Codebase Q&A).
     """
     task_type, task_label = classify_eval_task(prompt)
-    if not text:
+    text_lower = (text or "").lower()
+    err_markers = (
+        "lỗi kết nối máy chủ cloud ai",
+        "không thể kết nối đến máy chủ",
+        "lỗi: chưa cấu hình api key",
+        "lỗi: chưa cấu hình gemini_api_key",
+        "⚠️ không thể kết nối",
+        "⚠️ lỗi cloud api",
+    )
+    if not text or any(m in text_lower for m in err_markers):
+        is_err = bool(text) and any(m in text_lower for m in err_markers)
         return {
             "score": 0,
             "passed_count": 0,
             "total": 5,
+            "api_error": is_err,
             "task_type": task_type,
-            "task_label": task_label,
+            "task_label": "Lỗi kết nối Cloud API (không chấm điểm)" if is_err else task_label,
             "criteria": [],
         }
-
-    text_lower = text.lower()
     avoids_jpa_repo = (
         "extends jparepository" not in text_lower
         and "extends crudrepository" not in text_lower

@@ -6,10 +6,10 @@ Thư mục này lưu trữ tài liệu kỹ thuật, sơ đồ kiến trúc và 
 
 ## 📁 Danh sách tệp
 
-* `Course Management System - Full APIs.postman_collection.json`: Toàn bộ các API RESTful của hệ thống Course Management đã được cấu hình sẵn môi trường, bao gồm:
-  - **Quản lý Khóa học (Courses)**: CRUD, Tìm kiếm phân trang, Lọc khoảng giá (`minPrice`, `maxPrice`).
-  - **Quản lý Học viên (Students)**: CRUD, Tìm kiếm theo tên / email, Validation đầu vào.
-  - **Quản lý Tài liệu & Lưu trữ (MinIO S3)**: Upload/Download tài liệu đính kèm.
+* `Course Management System - Full APIs.postman_collection.json`: Toàn bộ các API RESTful của hệ thống Course Management (Courses, Students, Departments, Enrollments, Documents MinIO, Dashboard, Auth JWT).
+* `openapi.json`: Đặc tả OpenAPI 3.0 cho toàn bộ endpoint REST.
+* `database.sql`: Script khởi tạo lược đồ cơ sở dữ liệu MySQL mẫu.
+* `BAO_CAO_LOI.md`: Tài liệu lưu trữ đợt rà soát hệ thống lịch sử (2026-10-31).
 
 ---
 

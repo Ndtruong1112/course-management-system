@@ -2,10 +2,12 @@ package com.mkii.coursemanagementsystem.config;
 
 import com.mkii.coursemanagementsystem.dao.ICourseDao;
 import com.mkii.coursemanagementsystem.dao.IDepartmentDao;
+import com.mkii.coursemanagementsystem.dao.IEnrollmentDao;
 import com.mkii.coursemanagementsystem.dao.IStudentDao;
 import com.mkii.coursemanagementsystem.dao.IUserDao;
 import com.mkii.coursemanagementsystem.entity.Course;
 import com.mkii.coursemanagementsystem.entity.Department;
+import com.mkii.coursemanagementsystem.entity.Enrollment;
 import com.mkii.coursemanagementsystem.entity.Student;
 import com.mkii.coursemanagementsystem.entity.User;
 import org.slf4j.Logger;
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -26,17 +30,20 @@ public class DataInitializer implements CommandLineRunner {
     private final IUserDao userDao;
     private final ICourseDao courseDao;
     private final IStudentDao studentDao;
+    private final IEnrollmentDao enrollmentDao;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(IDepartmentDao departmentDao,
                            IUserDao userDao,
                            ICourseDao courseDao,
                            IStudentDao studentDao,
+                           IEnrollmentDao enrollmentDao,
                            PasswordEncoder passwordEncoder) {
         this.departmentDao = departmentDao;
         this.userDao = userDao;
         this.courseDao = courseDao;
         this.studentDao = studentDao;
+        this.enrollmentDao = enrollmentDao;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -111,6 +118,43 @@ public class DataInitializer implements CommandLineRunner {
                     .department(qtkd)
                     .build());
             logger.info("-> Đã khởi tạo 3 sinh viên mẫu có gắn Khoa thành công.");
+        }
+
+        // 5. Khởi tạo Lượt ghi danh mẫu (Enrollments)
+        if (enrollmentDao.getCount() == 0) {
+            List<Student> students = studentDao.getAll();
+            List<Course> courses = courseDao.getAll();
+            if (!students.isEmpty() && !courses.isEmpty()) {
+                enrollmentDao.save(Enrollment.builder()
+                        .student(students.get(0))
+                        .course(courses.get(0))
+                        .status("ENROLLED")
+                        .progressPercent(65)
+                        .enrolledAt(LocalDateTime.now().minusDays(14))
+                        .notes("Theo sát tiến độ tuần 4")
+                        .build());
+                if (courses.size() > 1) {
+                    enrollmentDao.save(Enrollment.builder()
+                            .student(students.get(0))
+                            .course(courses.get(1))
+                            .status("COMPLETED")
+                            .progressPercent(100)
+                            .enrolledAt(LocalDateTime.now().minusDays(45))
+                            .notes("Hoàn thành xuất sắc bài thực hành QLoRA")
+                            .build());
+                }
+                if (students.size() > 1) {
+                    enrollmentDao.save(Enrollment.builder()
+                            .student(students.get(1))
+                            .course(courses.get(0))
+                            .status("ENROLLED")
+                            .progressPercent(40)
+                            .enrolledAt(LocalDateTime.now().minusDays(7))
+                            .notes("Đang học phần Hibernate Pagination")
+                            .build());
+                }
+                logger.info("-> Đã khởi tạo lượt ghi danh mẫu thành công.");
+            }
         }
 
         logger.info("======================================================================");

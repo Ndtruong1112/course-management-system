@@ -64,9 +64,9 @@ for rel_path, content in scanned_files.items():
     filename = os.path.basename(rel_path)
     clean_name = os.path.splitext(filename)[0]
 
-    truncated_content = content[:2000]
-    if len(content) > 2000:
-        truncated_content += "\n// ... [Các phương thức còn lại tiếp tục theo logic tương tự] ..."
+    truncated_content = content[:4200]
+    if len(content) > 4200:
+        truncated_content += "\n// ... [Phần còn lại tiếp tục theo cùng kiến trúc] ..."
 
     add_sample(
         system_role,
@@ -75,7 +75,7 @@ for rel_path, content in scanned_files.items():
         f"```java\n{truncated_content}\n```\n\n"
         f"**Phân tích kỹ thuật của {clean_name}:**\n"
         f"- Nằm trong package: `{os.path.dirname(rel_path)}`.\n"
-        f"- Sử dụng các annotation chuẩn Java 21 / Spring Boot / Jakarta Persistence để đảm bảo an toàn kiểu dữ liệu và tối ưu hiệu năng."
+        f"- Tuân thủ Java 21, Spring Boot 3, Jakarta Persistence và kiến trúc Hibernate Generic DAO của dự án."
     )
 
 # ==============================================================================
@@ -579,56 +579,449 @@ add_sample(
 
 add_sample(
     system_role,
-    "Viết Module Đăng ký Khóa học gồm Enrollment Entity liên kết Student-Course và EnrollmentDaoImpl kế thừa HibernatePaginationSortingDao",
-    "Dưới đây là mã nguồn chuẩn cho Module **Enrollment** trong package `com.mkii.coursemanagementsystem`:\n\n"
+    "Viết Module Quản lý Ghi danh (Enrollment) gồm Enrollment Entity, IEnrollmentDao và EnrollmentDaoImpl kế thừa HibernatePaginationSortingDao",
+    "Dưới đây là mã nguồn chuẩn `com.mkii.coursemanagementsystem` cho Module **Enrollment**:\n\n"
     "```java\n"
     "package com.mkii.coursemanagementsystem.entity;\n\n"
     "import jakarta.persistence.*;\n"
     "import lombok.*;\n"
     "import java.time.LocalDateTime;\n\n"
     "@Entity\n"
-    "@Table(name = \"enrollments\", indexes = {\n"
-    "    @Index(name = \"idx_enroll_student\", columnList = \"student_id\"),\n"
-    "    @Index(name = \"idx_enroll_course\", columnList = \"course_id\")\n"
+    "@Table(name = \"enrollments\", uniqueConstraints = {\n"
+    "    @UniqueConstraint(name = \"uk_enrollment_student_course\", columnNames = {\"student_id\", \"course_id\"})\n"
+    "}, indexes = {\n"
+    "    @Index(name = \"idx_enrollment_student\", columnList = \"student_id\"),\n"
+    "    @Index(name = \"idx_enrollment_course\", columnList = \"course_id\")\n"
     "})\n"
     "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "@EqualsAndHashCode(onlyExplicitlyIncluded = true)\n"
     "public class Enrollment {\n"
     "    @Id\n"
     "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    @EqualsAndHashCode.Include\n"
     "    private Long id;\n\n"
-    "    @ManyToOne(fetch = FetchType.LAZY)\n"
+    "    @ManyToOne(fetch = FetchType.EAGER, optional = false)\n"
     "    @JoinColumn(name = \"student_id\", nullable = false)\n"
     "    private Student student;\n\n"
-    "    @ManyToOne(fetch = FetchType.LAZY)\n"
+    "    @ManyToOne(fetch = FetchType.EAGER, optional = false)\n"
     "    @JoinColumn(name = \"course_id\", nullable = false)\n"
     "    private Course course;\n\n"
-    "    @Column(nullable = false, length = 30)\n"
+    "    @Column(nullable = false, length = 20)\n"
     "    private String status;\n\n"
+    "    @Column(name = \"progress_percent\", nullable = false)\n"
+    "    private Integer progressPercent;\n\n"
+    "    @Column(name = \"enrolled_at\", nullable = false)\n"
     "    private LocalDateTime enrolledAt;\n"
     "}\n"
     "```\n\n"
     "```java\n"
     "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.IEnrollmentDao;\n"
     "import com.mkii.coursemanagementsystem.entity.Enrollment;\n"
     "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
     "import jakarta.persistence.EntityManager;\n"
     "import org.springframework.stereotype.Repository;\n"
-    "import java.util.List;\n"
-    "import java.util.Map;\n\n"
+    "import java.util.List;\n\n"
     "@Repository\n"
-    "public class EnrollmentDaoImpl extends HibernatePaginationSortingDao<Long, Enrollment> {\n"
+    "public class EnrollmentDaoImpl extends HibernatePaginationSortingDao<Long, Enrollment> implements IEnrollmentDao {\n"
     "    public EnrollmentDaoImpl(EntityManager entityManager) {\n"
     "        super(Enrollment.class, entityManager);\n"
     "    }\n\n"
+    "    @Override\n"
     "    public List<Enrollment> findByStudentId(Long studentId) {\n"
+    "        String hql = \"SELECT e FROM Enrollment e WHERE e.student.id = :studentId ORDER BY e.enrolledAt DESC\";\n"
+    "        return getEntityManager().createQuery(hql, Enrollment.class)\n"
+    "                .setParameter(\"studentId\", studentId)\n"
+    "                .getResultList();\n"
+    "    }\n"
+    "}\n"
+    "```\n\n"
+    "**Điểm lưu ý:** Constructor của DAO Impl chỉ nhận `EntityManager` và gọi `super(Enrollment.class, entityManager);`, tuyệt đối không dùng `JpaRepository`."
+)
+
+# ==============================================================================
+# 4B. BÀI TẬP PHƯƠNG THỨC HQL, RAG-GROUNDED CODEGEN & QUY CHUẨN CHUYÊN SÂU
+# ==============================================================================
+rag_sys = (
+    "Bạn là Kiến trúc sư Phần mềm Cao cấp chuyên gia Spring Boot 3 và Java 21 cho dự án Course Management System (`com.mkii.coursemanagementsystem`).\n"
+    "Nhiệm vụ của bạn là viết mã nguồn Java và giải thích kiến trúc tuân thủ 100% chuẩn mực của dự án:\n"
+    "1. Entity JPA: Sử dụng Jakarta Persistence (@Entity, @Table, @Id, @GeneratedValue, Lombok @Getter, @Setter, @Builder).\n"
+    "2. Tầng DAO: Kế thừa HibernatePaginationSortingDao<Pk, Entity> với constructor super(Entity.class, entityManager), dùng EntityManager / findByHql(), không dùng JpaRepository.\n"
+    "3. Tầng Service & REST: Tách Interface/Impl, DTO Pattern (RequestDTO với Jakarta Validation, ResponseDTO), MinIO + Soft Delete + Versioning chuẩn."
+)
+
+# 1) Phương thức HQL cụ thể trong DAO (rèn cú pháp hoàn chỉnh, không cụt giữa constructor)
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nViết phương thức tìm kiếm khóa học theo khoảng thời lượng `findByDurationRange(Integer minDuration, Integer maxDuration)` trong `CourseDaoImpl` sử dụng `EntityManager` và HQL.\n\n"
+    "[TÀI LIỆU THAM KHẢO TỪ CODEBASE DỰ ÁN - BÁM SÁT PACKAGE, CLASS, FIELD THẬT]\n"
+    "// File: src/main/java/com/mkii/coursemanagementsystem/dao/impl/CourseDaoImpl.java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "@Repository\n"
+    "public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> implements ICourseDao {\n"
+    "    public CourseDaoImpl(EntityManager entityManager) {\n"
+    "        super(Course.class, entityManager);\n"
+    "    }\n}",
+    "Dưới đây là phần cài đặt đầy đủ phương thức `findByDurationRange` trong `CourseDaoImpl` tuân thủ chuẩn Hibernate Generic DAO và `EntityManager`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.ICourseDao;\n"
+    "import com.mkii.coursemanagementsystem.entity.Course;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n\n"
+    "import java.util.List;\n"
+    "import java.util.Map;\n\n"
+    "@Repository\n"
+    "public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> implements ICourseDao {\n\n"
+    "    public CourseDaoImpl(EntityManager entityManager) {\n"
+    "        super(Course.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public List<Course> findByDurationRange(Integer minDuration, Integer maxDuration) {\n"
+    "        String hql = \"SELECT c FROM Course c WHERE c.duration BETWEEN :minDuration AND :maxDuration ORDER BY c.duration ASC\";\n"
     "        return findByHql(\n"
-    "            \"SELECT e FROM Enrollment e WHERE e.student.id = :studentId ORDER BY e.enrolledAt DESC\",\n"
-    "            Map.of(\"studentId\", studentId)\n"
+    "                hql,\n"
+    "                Map.of(\"minDuration\", minDuration, \"maxDuration\", maxDuration)\n"
     "        );\n"
+    "    }\n"
+    "}\n"
+    "```\n\n"
+    "**Giải thích:** Sử dụng `super(Course.class, entityManager)` đúng chuẩn dự án, truyền câu truy vấn HQL có tham số `:minDuration`, `:maxDuration` qua `findByHql` (được `HibernateGenericDao` ủy quyền cho `EntityManager.createQuery`), không dùng `JpaRepository`."
+)
+
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nViết phương thức lọc lượt ghi danh theo trạng thái và tiến độ tối thiểu `findByStatusAndMinProgress(String status, Integer minProgress)` trong `EnrollmentDaoImpl` sử dụng `EntityManager` và HQL.",
+    "Dưới đây là mã nguồn phương thức `findByStatusAndMinProgress` trong `EnrollmentDaoImpl`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.IEnrollmentDao;\n"
+    "import com.mkii.coursemanagementsystem.entity.Enrollment;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class EnrollmentDaoImpl extends HibernatePaginationSortingDao<Long, Enrollment> implements IEnrollmentDao {\n\n"
+    "    public EnrollmentDaoImpl(EntityManager entityManager) {\n"
+    "        super(Enrollment.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public List<Enrollment> findByStatusAndMinProgress(String status, Integer minProgress) {\n"
+    "        String hql = \"SELECT e FROM Enrollment e WHERE e.status = :status AND e.progressPercent >= :minProgress ORDER BY e.enrolledAt DESC\";\n"
+    "        return getEntityManager().createQuery(hql, Enrollment.class)\n"
+    "                .setParameter(\"status\", status)\n"
+    "                .setParameter(\"minProgress\", minProgress)\n"
+    "                .getResultList();\n"
     "    }\n"
     "}\n"
     "```"
 )
+
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nViết phương thức truy vấn lọc khóa học theo mức giá tối đa và từ khóa tiêu đề `searchByTitleAndMaxPrice(String keyword, Double maxPrice)` trong `CourseDaoImpl` sử dụng `EntityManager` và HQL.",
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.entity.Course;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> implements ICourseDao {\n\n"
+    "    public CourseDaoImpl(EntityManager entityManager) {\n"
+    "        super(Course.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public List<Course> searchByTitleAndMaxPrice(String keyword, Double maxPrice) {\n"
+    "        String hql = \"SELECT c FROM Course c WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) AND c.price <= :maxPrice ORDER BY c.price ASC\";\n"
+    "        return getEntityManager().createQuery(hql, Course.class)\n"
+    "                .setParameter(\"keyword\", keyword == null ? \"\" : keyword.trim())\n"
+    "                .setParameter(\"maxPrice\", maxPrice)\n"
+    "                .getResultList();\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+# 2) RAG-grounded DTO design (chống nhầm file DTO tham khảo thành code đã nộp)
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nThiết kế lớp `AssignmentRequestDTO` với đầy đủ validation Jakarta (`@NotBlank`, `@NotNull`, `@Min`, `@Max`) và `AssignmentResponseDTO` để tách biệt tầng REST và Entity.\n\n"
+    "[TÀI LIỆU THAM KHẢO TỪ CODEBASE DỰ ÁN - BÁM SÁT PACKAGE, CLASS, FIELD THẬT]\n"
+    "// File: src/main/java/com/mkii/coursemanagementsystem/dto/CourseRequestDTO.java\n"
+    "package com.mkii.coursemanagementsystem.dto;\n"
+    "@Data @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class CourseRequestDTO { @NotBlank private String title; }",
+    "Dưới đây là mã nguồn hoàn chỉnh cho `AssignmentRequestDTO` và `AssignmentResponseDTO` trong package `com.mkii.coursemanagementsystem.dto`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dto;\n\n"
+    "import jakarta.validation.constraints.*;\n"
+    "import lombok.*;\n\n"
+    "@Data\n"
+    "@NoArgsConstructor\n"
+    "@AllArgsConstructor\n"
+    "@Builder\n"
+    "public class AssignmentRequestDTO {\n"
+    "    @NotNull(message = \"courseId không được để trống\")\n"
+    "    private Long courseId;\n\n"
+    "    @NotBlank(message = \"Tiêu đề bài tập không được để trống\")\n"
+    "    @Size(max = 200, message = \"Tiêu đề tối đa 200 ký tự\")\n"
+    "    private String title;\n\n"
+    "    @NotNull(message = \"Điểm tối đa không được để trống\")\n"
+    "    @Min(value = 1, message = \"Điểm tối đa phải >= 1\")\n"
+    "    @Max(value = 100, message = \"Điểm tối đa <= 100\")\n"
+    "    private Integer maxScore;\n"
+    "}\n"
+    "```\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dto;\n\n"
+    "import lombok.*;\n\n"
+    "@Data\n"
+    "@NoArgsConstructor\n"
+    "@AllArgsConstructor\n"
+    "@Builder\n"
+    "public class AssignmentResponseDTO {\n"
+    "    private Long id;\n"
+    "    private Long courseId;\n"
+    "    private String title;\n"
+    "    private Integer maxScore;\n"
+    "}\n"
+    "```"
+)
+
+# 3) RAG-grounded Soft Delete & Module Generation
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nTriển khai cơ chế xóa mềm (Soft Delete) cho Department entity và DepartmentDaoImpl bằng cách cập nhật deleted=true thay vì xóa cứng khỏi cơ sở dữ liệu.\n\n"
+    "[TÀI LIỆU THAM KHẢO TỪ CODEBASE DỰ ÁN - BÁM SÁT PACKAGE, CLASS, FIELD THẬT]\n"
+    "// File: src/main/java/com/mkii/coursemanagementsystem/dao/impl/DepartmentDaoImpl.java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "@Repository\n"
+    "public class DepartmentDaoImpl extends HibernatePaginationSortingDao<Long, Department> implements IDepartmentDao {\n"
+    "    public DepartmentDaoImpl(EntityManager entityManager) {\n"
+    "        super(Department.class, entityManager);\n"
+    "    }\n"
+    "}\n\n"
+    "[HƯỚNG DẪN TRẢ LỜI]: Nếu yêu cầu bảo viết/thiết kế class hoặc phương thức, hãy xuất đầy đủ code Java hoàn chỉnh (gồm package, imports, annotations, class/method) chuẩn theo tài liệu tham khảo trên.",
+    "Dưới đây là mã nguồn đầy đủ để nâng cấp cơ chế Xóa Mềm (**Soft Delete**) cho `Department` và `DepartmentDaoImpl` chuẩn kiến trúc `com.mkii.coursemanagementsystem`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.entity;\n\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n"
+    "import org.hibernate.annotations.SQLDelete;\n"
+    "import org.hibernate.annotations.Where;\n\n"
+    "@Entity\n"
+    "@Table(name = \"departments\")\n"
+    "@SQLDelete(sql = \"UPDATE departments SET deleted = true WHERE id = ?\")\n"
+    "@Where(clause = \"deleted = false\")\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class Department {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n\n"
+    "    @Column(nullable = false, unique = true, length = 100)\n"
+    "    private String name;\n\n"
+    "    @Builder.Default\n"
+    "    @Column(nullable = false)\n"
+    "    private Boolean deleted = false;\n"
+    "}\n"
+    "```\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.IDepartmentDao;\n"
+    "import com.mkii.coursemanagementsystem.entity.Department;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n\n"
+    "@Repository\n"
+    "public class DepartmentDaoImpl extends HibernatePaginationSortingDao<Long, Department> implements IDepartmentDao {\n"
+    "    public DepartmentDaoImpl(EntityManager entityManager) {\n"
+    "        super(Department.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public void softDeleteById(Long id) {\n"
+    "        String hql = \"UPDATE Department d SET d.deleted = true WHERE d.id = :id\";\n"
+    "        getEntityManager().createQuery(hql)\n"
+    "                .setParameter(\"id\", id)\n"
+    "                .executeUpdate();\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public void delete(Long id) {\n"
+    "        deleteByPk(id);\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nTriển khai cơ chế xóa mềm (Soft Delete) cho Entity `Course` và `CourseDaoImpl` bằng cờ `deleted = true` kết hợp `@SQLDelete` và phương thức `deleteByPk`.",
+    "Dưới đây là triển khai cơ chế Xóa Mềm (**Soft Delete**) chuẩn kiến trúc `com.mkii.coursemanagementsystem`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.entity;\n\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n"
+    "import org.hibernate.annotations.SQLDelete;\n"
+    "import org.hibernate.annotations.Where;\n\n"
+    "@Entity\n"
+    "@Table(name = \"courses\")\n"
+    "@SQLDelete(sql = \"UPDATE courses SET deleted = true WHERE id = ?\")\n"
+    "@Where(clause = \"deleted = false\")\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "public class Course {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    private Long id;\n\n"
+    "    @Column(nullable = false, length = 255)\n"
+    "    private String title;\n\n"
+    "    @Builder.Default\n"
+    "    @Column(nullable = false)\n"
+    "    private Boolean deleted = false;\n"
+    "}\n"
+    "```\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.ICourseDao;\n"
+    "import com.mkii.coursemanagementsystem.entity.Course;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n\n"
+    "@Repository\n"
+    "public class CourseDaoImpl extends HibernatePaginationSortingDao<Long, Course> implements ICourseDao {\n"
+    "    public CourseDaoImpl(EntityManager entityManager) {\n"
+    "        super(Course.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public void softDeleteById(Long id) {\n"
+    "        Course entity = get(id);\n"
+    "        if (entity != null) {\n"
+    "            entity.setDeleted(true);\n"
+    "            super.update(entity);\n"
+    "        }\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public void delete(Long id) {\n"
+    "        deleteByPk(id);\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+add_sample(
+    rag_sys,
+    "[YÊU CẦU]:\nTạo module Quản lý Phòng học (Classroom) gồm `Classroom` Entity và `ClassroomDaoImpl` theo đúng kiến trúc của Course Management System.",
+    "Dưới đây là mã nguồn hoàn chỉnh cho Module `Classroom` theo chuẩn `com.mkii.coursemanagementsystem`:\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.entity;\n\n"
+    "import jakarta.persistence.*;\n"
+    "import lombok.*;\n\n"
+    "@Entity\n"
+    "@Table(name = \"classrooms\", indexes = {\n"
+    "    @Index(name = \"idx_classroom_code\", columnList = \"room_code\", unique = true)\n"
+    "})\n"
+    "@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder\n"
+    "@EqualsAndHashCode(onlyExplicitlyIncluded = true)\n"
+    "public class Classroom {\n"
+    "    @Id\n"
+    "    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
+    "    @EqualsAndHashCode.Include\n"
+    "    private Long id;\n\n"
+    "    @Column(name = \"room_code\", nullable = false, unique = true, length = 30)\n"
+    "    private String roomCode;\n\n"
+    "    @Column(nullable = false)\n"
+    "    private Integer capacity;\n"
+    "}\n"
+    "```\n\n"
+    "```java\n"
+    "package com.mkii.coursemanagementsystem.dao.impl;\n\n"
+    "import com.mkii.coursemanagementsystem.dao.IClassroomDao;\n"
+    "import com.mkii.coursemanagementsystem.entity.Classroom;\n"
+    "import com.mkii.coursemanagementsystem.hibernateDao.HibernatePaginationSortingDao;\n"
+    "import jakarta.persistence.EntityManager;\n"
+    "import org.springframework.stereotype.Repository;\n"
+    "import java.util.List;\n\n"
+    "@Repository\n"
+    "public class ClassroomDaoImpl extends HibernatePaginationSortingDao<Long, Classroom> implements IClassroomDao {\n"
+    "    public ClassroomDaoImpl(EntityManager entityManager) {\n"
+    "        super(Classroom.class, entityManager);\n"
+    "    }\n\n"
+    "    @Override\n"
+    "    public List<Classroom> findByMinCapacity(Integer minCapacity) {\n"
+    "        String hql = \"SELECT r FROM Classroom r WHERE r.capacity >= :minCapacity ORDER BY r.capacity ASC\";\n"
+    "        return getEntityManager().createQuery(hql, Classroom.class)\n"
+    "                .setParameter(\"minCapacity\", minCapacity)\n"
+    "                .getResultList();\n"
+    "    }\n"
+    "}\n"
+    "```"
+)
+
+# 4) Kiến trúc lưu trữ MinIO vs MySQL metadata, Versioning & Security
+add_sample(
+    rag_sys,
+    "Giải thích chi tiết cách Course Management System phân tách nơi lưu file nhị phân vật lý và dữ liệu quản lý tài liệu (`Document`, `MinioStorageService`).",
+    "Trong **Course Management System** (`com.mkii.coursemanagementsystem`):\n"
+    "- **File nhị phân vật lý** (PDF, DOCX, XLSX, PNG, JPG) được tải lên và lưu trực tiếp trên **MinIO S3 Object Storage** thông qua `MinioStorageService` (bucket `minio.bucket-name`).\n"
+    "- **Cơ sở dữ liệu quan hệ MySQL** (bảng `tbl_document` / `documents` ánh xạ bởi entity `Document`) lưu phần **metadata** quản lý gồm: `id`, `name`, `path` (object key trên MinIO), `appId` (cột khóa ngoại `APP_DETAIL_FK`), `version`, `active`, `deleted`, `owner`.\n"
+    "- Khi xóa tài liệu, hệ thống thực hiện **xóa mềm** (`deleted = true`, `active = false`) thay vì xóa cứng bản ghi."
+)
+
+add_sample(
+    rag_sys,
+    "Trong `DocumentServiceImpl`, quy trình đánh số phiên bản (versioning) hoạt động ra sao khi tải lên một tài liệu trùng tên trong cùng `appId`?",
+    "Trong `DocumentServiceImpl.createDocument` và `createDocumentWithNewVersion`:\n"
+    "1. Lần upload đầu tiên cho `(name, appId)`: tài liệu mới được tạo với `version = 1.0`, `active = true`, `deleted = false`.\n"
+    "2. Khi upload trùng tên trong cùng `appId` (tìm thấy qua `documentDao.getDocumentName(originalFilename, appId)`):\n"
+    "   - Bản ghi cũ bị vô hiệu hóa bằng `documentDetail.setActive(false)` và cập nhật qua `documentDao.update(documentDetail)`.\n"
+    "   - Bản ghi mới giữ `active = true` và tăng số phiên bản lên **+ 1** (`Double versionCount = documentDetail.getVersion() != null ? documentDetail.getVersion() : 1.0; doc.setVersion(++versionCount);`), tức từ `1.0` lên `2.0`, `3.0`...\n"
+    "3. Nếu quá trình lưu DB lỗi sau khi upload MinIO, `DocumentServiceImpl` thực hiện rollback bù trừ bằng `minioStorageService.delete(path)`."
+)
+
+add_sample(
+    rag_sys,
+    "Hệ thống sử dụng cơ chế bảo mật nào cho API và dữ liệu nhạy cảm của Sinh viên?",
+    "Hệ thống áp dụng **2 lớp bảo mật**:\n"
+    "1. **Spring Security + Stateless JWT (`SecurityConfig`, `JwtTokenProvider`, `JwtAuthenticationFilter`)**: Bảo vệ API theo vai trò (`ADMIN`, `TEACHER`, `LECTURER`, `USER`). Public các route `/api/auth/**`, `/api/dashboard/**`, GET `/api/courses/**`, GET `/api/departments/**`; các thao tác PII sinh viên, ghi danh (`/api/enrollments/**`), tài liệu (`/api/documents/**`) yêu cầu JWT hợp lệ.\n"
+    "2. **Mã hóa AES-256 ở tầng JPA (`AesEncryptConverter`, `AESUtil`)**: Tự động mã hóa/giải mã dữ liệu nhạy cảm khi lưu xuống MySQL qua `AttributeConverter`."
+)
+
+add_sample(
+    rag_sys,
+    "Tóm tắt các quy chuẩn bắt buộc khi thiết kế một Module Entity + Generic DAO mới (ví dụ `Tutor` hoặc `Mentor`) trong dự án Course Management System.",
+    "Khi bổ sung module mới vào `com.mkii.coursemanagementsystem`, mọi lớp phải tuân thủ 5 nguyên tắc:\n"
+    "1. **Package gốc**: Entity đặt trong `com.mkii.coursemanagementsystem.entity`, DAO interface trong `com.mkii.coursemanagementsystem.dao`, DAO impl trong `com.mkii.coursemanagementsystem.dao.impl`.\n"
+    "2. **Entity JPA + Lombok**: Dùng `jakarta.persistence.*` (`@Entity`, `@Table`, `@Id`, `@GeneratedValue(strategy = GenerationType.IDENTITY)`, `@Index`) và Lombok (`@Getter`, `@Setter`, `@NoArgsConstructor`, `@AllArgsConstructor`, `@Builder`). Hỗ trợ xóa mềm bằng `@SQLDelete`, `@Where(clause = \"deleted = false\")` và cờ `deleted = false`.\n"
+    "3. **Generic DAO**: Interface `I<Name>Dao extends IPaginationSortingDao<Long, <Name>>`; lớp Impl kế thừa `HibernatePaginationSortingDao<Long, <Name>>` với constructor `public <Name>DaoImpl(EntityManager entityManager) { super(<Name>.class, entityManager); }`.\n"
+    "4. **Truy vấn động**: Dùng `findByHql(...)` hoặc `getEntityManager().createQuery(...)` với named parameters (`:param`), không dùng `Spring Data JpaRepository`.\n"
+    "5. **DTO Pattern**: Tách `RequestDTO` (có `@NotBlank`, `@NotNull`, `@Min`, `@Size`) và `ResponseDTO` trong `com.mkii.coursemanagementsystem.dto`."
+)
+
+# Scan Markdown reference docs (.agents/skills/cms-standards/references/*.md + README.md)
+docs_to_learn = [os.path.join(base_dir, "README.md")]
+refs_dir = os.path.join(base_dir, ".agents", "skills", "cms-standards", "references")
+if os.path.isdir(refs_dir):
+    for fn in sorted(os.listdir(refs_dir)):
+        if fn.endswith(".md"):
+            docs_to_learn.append(os.path.join(refs_dir, fn))
+
+for md_path in docs_to_learn:
+    if not os.path.exists(md_path):
+        continue
+    rel_md = os.path.relpath(md_path, base_dir).replace("\\", "/")
+    try:
+        with open(md_path, "r", encoding="utf-8", errors="ignore") as f:
+            md_text = f.read().strip()
+        if md_text:
+            add_sample(
+                rag_sys,
+                f"Tóm tắt các quy chuẩn kiến trúc và hướng dẫn kỹ thuật cốt lõi được định nghĩa trong `{rel_md}`.",
+                md_text[:2800]
+            )
+    except Exception:
+        pass
 
 # ==============================================================================
 # 5. XUẤT RA DATASET.JSONL MỚI
