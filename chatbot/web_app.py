@@ -897,19 +897,221 @@ HTML_TEMPLATE = r"""
         </div>
 
         <!-- Sticky Bottom Input Box -->
-        <div class="px-6 py-3 border-t border-slate-200 bg-white flex-shrink-0">
+        <div class="px-6 py-3 border-t border-slate-200 bg-white flex-shrink-0 relative">
+
+            <!-- POPUP MENU CHỨC NĂNG (Action Hub Popup) -->
+            <div id="action-menu-popup"
+                 class="hidden absolute bottom-full mb-3 left-6 right-6 sm:right-auto sm:left-6 sm:w-[620px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col text-xs transition-all duration-150 animate-in fade-in"
+                 style="max-height: 520px;">
+                <!-- Header -->
+                <div class="px-4 py-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-md bg-indigo-500/30 border border-indigo-400/30 flex items-center justify-center text-xs">⚡</span>
+                        <div>
+                            <h4 class="font-bold text-xs text-white flex items-center gap-1.5">
+                                <span>Menu Chức Năng Hệ Thống</span>
+                                <span class="text-[10px] font-normal text-indigo-300 bg-indigo-900/60 px-1.5 py-0.2 rounded border border-indigo-500/30">Course Studio Actions</span>
+                            </h4>
+                            <p class="text-[10px] text-slate-300">Chọn chế độ xử lý AI hoặc tiện ích hệ thống (Chế độ đối chiếu nằm ở nút [⚖️ Đối Chiếu])</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeActionMenu()" class="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition cursor-pointer" title="Đóng menu (ESC)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Search & Category Filter Bar -->
+                <div class="p-3 bg-slate-50/80 border-b border-slate-200 space-y-2">
+                    <div class="relative">
+                        <input id="action-search-input" type="text"
+                               placeholder="🔍 Tìm nhanh chế độ hoặc công cụ (gõ: hybrid, local, cloud, swagger, rag...)"
+                               class="w-full text-xs pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                               oninput="handleActionSearch(event)"
+                               onkeydown="handleActionMenuKey(event)">
+                        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+
+                    <!-- Category Tabs -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto text-[11px] quick-scroll pt-0.5">
+                        <button type="button" onclick="filterActionCategory('all')" id="tab-cat-all" class="cat-tab px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium shadow-2xs cursor-pointer transition">
+                            Tất cả (<span id="count-cat-all">0</span>)
+                        </button>
+                        <button type="button" onclick="filterActionCategory('modes')" id="tab-cat-modes" class="cat-tab px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium cursor-pointer transition">
+                            ⚡ Chế Độ AI (<span id="count-cat-modes">0</span>)
+                        </button>
+                        <button type="button" onclick="filterActionCategory('tools')" id="tab-cat-tools" class="cat-tab px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium cursor-pointer transition">
+                            🛠️ Công Cụ (<span id="count-cat-tools">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Items List -->
+                <div id="action-items-container" class="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-[320px] bg-slate-50/40">
+                    <!-- Action items rendered dynamically by JavaScript -->
+                </div>
+
+                <!-- Footer Tips -->
+                <div class="px-3 py-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
+                    <span class="flex items-center gap-1">
+                        <span class="font-bold text-slate-700">Mẹo:</span>
+                        <span>Click để chuyển chế độ hoặc mở công cụ • Gợi ý code đã ghim ở thanh trên cùng</span>
+                    </span>
+                    <span class="text-slate-400">Gõ <kbd class="px-1 py-0.5 bg-white border border-slate-200 rounded font-mono text-[9px]">ESC</kbd> để đóng</span>
+                </div>
+            </div>
+
+            <!-- POPUP MENU ĐỐI CHIẾU & ĐÁNH GIÁ (Comparison Modes Popup) -->
+            <div id="compare-menu-popup"
+                 class="hidden absolute bottom-full mb-3 left-6 sm:left-24 w-full sm:w-[460px] max-w-[95vw] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col text-xs transition-all duration-150 animate-in fade-in"
+                 style="max-height: 480px;">
+                <!-- Header -->
+                <div class="px-4 py-3 bg-gradient-to-r from-amber-700 via-orange-800 to-amber-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-md bg-white/20 border border-white/20 flex items-center justify-center text-xs">⚖️</span>
+                        <div>
+                            <h4 class="font-bold text-xs text-white flex items-center gap-1.5">
+                                <span>Đối Chiếu &amp; Đánh Giá Kiến Trúc</span>
+                            </h4>
+                            <p class="text-[10px] text-amber-100">Chọn chế độ so sánh chất lượng mã nguồn giữa các mô hình AI</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeCompareMenu()" class="text-amber-200 hover:text-white p-1 rounded-md hover:bg-white/10 transition cursor-pointer" title="Đóng menu (ESC)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- 4 Options from the screenshot -->
+                <div class="p-2 space-y-1.5 bg-slate-50/60 overflow-y-auto max-h-[360px]">
+                    
+                    <!-- Option 1: So Sánh Mô Hình -->
+                    <div id="cmp-opt-compare_models" onclick="selectCompareMode('compare_models')"
+                         class="cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/60 transition cursor-pointer">
+                        <div class="flex items-start gap-2.5 min-w-0 pr-2">
+                            <span class="text-base p-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/60 flex-shrink-0">⚖️</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-slate-900 group-hover:text-amber-950 text-xs">So Sánh Mô Hình</span>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded border bg-purple-50 text-purple-700 border-purple-200 font-medium">Offline GPU</span>
+                                </div>
+                                <div class="text-[11px] font-medium text-slate-600 mt-0.5">Base vs Fine-tuned GPU</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Chạy đối chiếu 2 mô hình cục bộ trên GPU RTX 4050 và tự động chấm điểm tuân thủ Generic DAO.</p>
+                            </div>
+                        </div>
+                        <div class="cmp-check hidden text-emerald-600 font-bold text-xs flex-shrink-0 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                            ✓ Đang chọn
+                        </div>
+                    </div>
+
+                    <!-- Option 2: So Sánh Hệ Thống -->
+                    <div id="cmp-opt-compare_system" onclick="selectCompareMode('compare_system')"
+                         class="cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/60 transition cursor-pointer">
+                        <div class="flex items-start gap-2.5 min-w-0 pr-2">
+                            <span class="text-base p-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/60 flex-shrink-0">📋</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-slate-900 group-hover:text-blue-950 text-xs">So Sánh Hệ Thống</span>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded border bg-blue-50 text-blue-700 border-blue-200 font-medium">Hệ Thống vs Chuẩn</span>
+                                </div>
+                                <div class="text-[11px] font-medium text-slate-600 mt-0.5">Dự án vs AI Tiêu chuẩn</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Đối chiếu Hệ Thống Dự Án (LoRA + RAG) với AI Tiêu Chuẩn Bên Ngoài (Zero Context).</p>
+                            </div>
+                        </div>
+                        <div class="cmp-check hidden text-emerald-600 font-bold text-xs flex-shrink-0 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                            ✓ Đang chọn
+                        </div>
+                    </div>
+
+                    <!-- Option 3: Đấu Trường 3 Chiều -->
+                    <div id="cmp-opt-compare_arena" onclick="selectCompareMode('compare_arena')"
+                         class="cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/60 transition cursor-pointer">
+                        <div class="flex items-start gap-2.5 min-w-0 pr-2">
+                            <span class="text-base p-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200/60 flex-shrink-0">📊</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-slate-900 group-hover:text-indigo-950 text-xs">Đấu Trường 3 Chiều</span>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded border bg-indigo-50 text-indigo-700 border-indigo-200 font-medium">3 Luồng Song Song</span>
+                                </div>
+                                <div class="text-[11px] font-medium text-slate-600 mt-0.5">Đối chiếu 3 luồng song song</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5">3 luồng AI cùng sinh mã nguồn đồng thời: AI Tiêu Chuẩn, Base Model GPU và Fine-tuned LoRA+RAG GPU.</p>
+                            </div>
+                        </div>
+                        <div class="cmp-check hidden text-emerald-600 font-bold text-xs flex-shrink-0 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                            ✓ Đang chọn
+                        </div>
+                    </div>
+
+                    <!-- Option 4: So Sánh Với Claude -->
+                    <div id="cmp-opt-compare_claude" onclick="selectCompareMode('compare_claude')"
+                         class="cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/60 transition cursor-pointer">
+                        <div class="flex items-start gap-2.5 min-w-0 pr-2">
+                            <span class="text-base p-1.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-200/60 flex-shrink-0">🤖</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-slate-900 group-hover:text-orange-950 text-xs">So Sánh Với Claude</span>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded border bg-orange-50 text-orange-700 border-orange-200 font-medium">API / Paste Test</span>
+                                </div>
+                                <div class="text-[11px] font-medium text-slate-600 mt-0.5">Chấm điểm kiến trúc trực tiếp</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Đối chiếu chất lượng với Claude (qua API hoặc paste kết quả) và chấm điểm tự động theo 5 tiêu chí.</p>
+                            </div>
+                        </div>
+                        <div class="cmp-check hidden text-emerald-600 font-bold text-xs flex-shrink-0 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                            ✓ Đang chọn
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="px-3 py-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 flex items-center justify-between">
+                    <span>💡 Click để kích hoạt chế độ đối chiếu tương ứng</span>
+                    <span class="text-slate-400">ESC để đóng</span>
+                </div>
+            </div>
+
+            <!-- Chat Form with Action Button Inside -->
             <form id="chat-form" onsubmit="handleSend(event)" class="relative flex items-center">
-                <textarea id="user-input" rows="1" placeholder="Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng)"
-                          class="w-full bg-slate-50 hover:bg-white focus:bg-white text-slate-800 placeholder-slate-400 rounded-xl pl-4 pr-24 py-3 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm resize-none transition"
-                          onkeydown="handleKeyDown(event)"></textarea>
+                
+                <!-- Cặp Nút Chức Năng & Đối Chiếu Nằm Trong Khung Chat -->
+                <div class="absolute left-2.5 top-2.5 z-10 flex items-center gap-1.5">
+                    <!-- Nút 1: Chức Năng (Tác vụ kiến trúc, prompt, công cụ) -->
+                    <button type="button" id="btn-action-menu" onclick="toggleActionMenu(event)"
+                            title="Bấm để mở danh sách chức năng (Phím tắt: /)"
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shadow-2xs text-xs font-semibold cursor-pointer select-none">
+                        <span class="text-xs">⚡</span>
+                        <span class="hidden sm:inline">Chức năng</span>
+                        <svg id="action-menu-chevron" class="w-3.5 h-3.5 text-indigo-500 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Nút 2: Đối Chiếu & Đánh Giá (cạnh nút Chức Năng) -->
+                    <button type="button" id="btn-compare-menu" onclick="toggleCompareMenu(event)"
+                            title="Chọn chế độ Đối Chiếu & Đánh Giá (So sánh Mô hình, Hệ thống, Đấu trường, Claude)"
+                            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition shadow-2xs text-xs font-semibold cursor-pointer select-none">
+                        <span id="compare-menu-icon" class="text-xs">⚖️</span>
+                        <span id="compare-menu-label" class="inline">
+                            <span class="hidden sm:inline lg:hidden">Đối Chiếu</span>
+                            <span class="hidden lg:inline">Đối Chiếu &amp; Đánh Giá</span>
+                        </span>
+                        <svg id="compare-menu-chevron" class="w-3.5 h-3.5 text-amber-600 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <textarea id="user-input" rows="1" placeholder="Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng, gõ / để mở chức năng)"
+                          class="w-full bg-slate-50 hover:bg-white focus:bg-white text-slate-800 placeholder-slate-400 rounded-xl pl-24 sm:pl-52 lg:pl-[290px] pr-24 py-3 border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm resize-none transition"
+                          onkeydown="handleKeyDown(event)" oninput="handleInput(event)"></textarea>
+
                 <button type="submit" id="send-btn"
                         class="absolute right-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
                     <span>Gửi</span>
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </button>
             </form>
+
             <div class="flex justify-between items-center text-[11px] text-slate-400 px-1 mt-1.5">
-                <span>Nhấn <strong>Enter</strong> để gửi, <strong>Shift + Enter</strong> để xuống dòng.</span>
+                <span>Nhấn <strong>Enter</strong> để gửi, <strong>Shift + Enter</strong> xuống dòng, gõ <strong>/</strong> để mở menu chức năng.</span>
                 <span>Tự động tối ưu hóa kiến trúc</span>
             </div>
         </div>
@@ -995,6 +1197,9 @@ HTML_TEMPLATE = r"""
                 }
             });
 
+            // Đồng bộ trạng thái nút & thẻ Đối Chiếu & Đánh Giá
+            updateCompareMenuUI(mode);
+
             const headerTitle = document.getElementById('header-mode-title');
             if (headerTitle) headerTitle.textContent = modeTitles[mode] || mode;
 
@@ -1012,10 +1217,123 @@ HTML_TEMPLATE = r"""
             showToast(`Chế độ: ${modeTitles[mode] || mode}`, "✓");
         }
 
+        const compareModesList = ['compare_models', 'compare_system', 'compare_arena', 'compare_claude'];
+        const compareShortTitles = {
+            'compare_models': 'So Sánh Model',
+            'compare_system': 'So Sánh Hệ Thống',
+            'compare_arena': 'Đấu Trường 3 Chiều',
+            'compare_claude': 'So Sánh Claude'
+        };
+
+        function updateCompareMenuUI(mode) {
+            const compareBtn = document.getElementById('btn-compare-menu');
+            const compareIcon = document.getElementById('compare-menu-icon');
+            const compareLabel = document.getElementById('compare-menu-label');
+            if (compareBtn && compareIcon && compareLabel) {
+                if (compareModesList.includes(mode)) {
+                    compareBtn.className = "flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 ring-2 ring-amber-400/40 transition shadow-2xs text-xs font-bold cursor-pointer select-none";
+                    compareIcon.textContent = modeIcons[mode] || '⚖️';
+                    compareLabel.innerHTML = `<span>${compareShortTitles[mode] || modeTitles[mode]}</span>`;
+                } else {
+                    compareBtn.className = "flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition shadow-2xs text-xs font-semibold cursor-pointer select-none";
+                    compareIcon.textContent = '⚖️';
+                    compareLabel.innerHTML = `<span class="hidden sm:inline lg:hidden">Đối Chiếu</span><span class="hidden lg:inline">Đối Chiếu &amp; Đánh Giá</span>`;
+                }
+            }
+
+            compareModesList.forEach(m => {
+                const card = document.getElementById(`cmp-opt-${m}`);
+                if (!card) return;
+                const check = card.querySelector('.cmp-check');
+                if (m === mode) {
+                    card.className = "cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-amber-50/90 border border-amber-300 ring-1 ring-amber-400/40 shadow-xs transition cursor-pointer";
+                    if (check) check.classList.remove('hidden');
+                } else {
+                    card.className = "cmp-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/50 transition cursor-pointer";
+                    if (check) check.classList.add('hidden');
+                }
+            });
+        }
+
+        function toggleCompareMenu(e) {
+            if (e) e.stopPropagation();
+            const popup = document.getElementById('compare-menu-popup');
+            if (!popup) return;
+            if (popup.classList.contains('hidden')) {
+                closeActionMenu();
+                openCompareMenu();
+            } else {
+                closeCompareMenu();
+            }
+        }
+
+        function openCompareMenu() {
+            const popup = document.getElementById('compare-menu-popup');
+            const chevron = document.getElementById('compare-menu-chevron');
+            const btn = document.getElementById('btn-compare-menu');
+            if (!popup) return;
+
+            popup.classList.remove('hidden');
+            if (chevron) chevron.classList.add('rotate-180');
+            if (btn) {
+                btn.classList.add('bg-amber-100', 'border-amber-300', 'ring-2', 'ring-amber-400/40');
+            }
+            updateCompareMenuUI(currentMode);
+        }
+
+        function closeCompareMenu() {
+            const popup = document.getElementById('compare-menu-popup');
+            const chevron = document.getElementById('compare-menu-chevron');
+            const btn = document.getElementById('btn-compare-menu');
+            if (!popup) return;
+
+            popup.classList.add('hidden');
+            if (chevron) chevron.classList.remove('rotate-180');
+            if (btn && !compareModesList.includes(currentMode)) {
+                btn.classList.remove('bg-amber-100', 'border-amber-300', 'ring-2', 'ring-amber-400/40');
+            }
+        }
+
+        function selectCompareMode(mode) {
+            setMode(mode);
+            closeCompareMenu();
+            const el = document.getElementById('user-input');
+            if (el) el.focus();
+        }
+
         function handleKeyDown(e) {
+            if (e.key === 'Escape') {
+                closeActionMenu();
+                closeCompareMenu();
+                return;
+            }
+            if (e.key === '/' && (e.target.value === '' || e.target.value === '/')) {
+                closeCompareMenu();
+                setTimeout(() => openActionMenu(''), 10);
+                return;
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                closeActionMenu();
+                closeCompareMenu();
                 handleSend(e);
+            }
+        }
+
+        function handleInput(e) {
+            const val = e.target.value;
+            if (val.startsWith('/')) {
+                const query = val.slice(1).trim();
+                const popup = document.getElementById('action-menu-popup');
+                if (popup && popup.classList.contains('hidden')) {
+                    openActionMenu(query);
+                } else {
+                    const searchInput = document.getElementById('action-search-input');
+                    if (searchInput) {
+                        searchInput.value = query;
+                        filterActions(query, currentActionCategory);
+                    }
+                }
             }
         }
 
@@ -1026,6 +1344,348 @@ HTML_TEMPLATE = r"""
             el.focus();
             showToast(`Đã chọn gợi ý`, "✓");
             handleSend();
+        }
+
+        // ======================================================================
+        // ACTION HUB / IN-CHAT FUNCTION MENU REGISTRY & HANDLERS
+        // ======================================================================
+        const CMS_ACTIONS = [
+            // --- Chế Độ Xử Lý AI (Modes) ---
+            {
+                id: 'mode_hybrid',
+                category: 'modes',
+                categoryLabel: 'Chế Độ AI',
+                title: 'Trợ Lý Kỹ Thuật (Hybrid Auto)',
+                desc: 'Tự động phối hợp Local GPU RTX 4050 và Cloud 1M Tokens Context',
+                mode: 'hybrid',
+                icon: '⚡',
+                badge: 'Chuyển Mode',
+                badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+                keywords: 'hybrid auto tro ly ky thuat local cloud che do mode'
+            },
+            {
+                id: 'mode_local',
+                category: 'modes',
+                categoryLabel: 'Chế Độ AI',
+                title: '100% Local GPU (Offline RTX 4050)',
+                desc: 'Chạy hoàn toàn trên GPU cục bộ với Qwen-3B + LoRA Adapter và RAG Codebase',
+                mode: 'local',
+                icon: '💻',
+                badge: 'Chuyển Mode',
+                badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                keywords: 'local gpu offline rtx 4050 qwen lora qlora che do mode'
+            },
+            {
+                id: 'mode_cloud',
+                category: 'modes',
+                categoryLabel: 'Chế Độ AI',
+                title: 'Cloud Gemini (1M Context)',
+                desc: 'Sinh kiến trúc quy mô lớn với context sâu 1 triệu tokens',
+                mode: 'cloud',
+                icon: '☁️',
+                badge: 'Chuyển Mode',
+                badgeColor: 'bg-sky-50 text-sky-700 border-sky-200',
+                keywords: 'cloud gemini 1m context token quy mo lon che do mode'
+            },
+
+            // --- Công Cụ & Báo Cáo ---
+            {
+                id: 'tool_benchmark_report',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Mở Báo Cáo Nghiệm Thu Trực Quan',
+                desc: 'Xem báo cáo HTML trực quan với biểu đồ đánh giá đối chiếu hiệu năng mô hình',
+                toolFn: () => window.open('/benchmark-report', '_blank'),
+                icon: '📈',
+                badge: 'Mở Báo Cáo',
+                badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                keywords: 'bao cao nghiem thu truc quan html chart benchmark so sanh'
+            },
+            {
+                id: 'tool_swagger',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Swagger API Documentation',
+                desc: 'Tài liệu OpenAPI và giao diện tương tác REST API Spring Boot (cổng 8080)',
+                toolFn: () => window.open('http://localhost:8080/swagger-ui/index.html', '_blank'),
+                icon: '📜',
+                badge: 'Swagger :8080',
+                badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                keywords: 'swagger api docs rest openapi endpoints backend 8080'
+            },
+            {
+                id: 'tool_web_manager',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Web Quản Lý CMS',
+                desc: 'Mở giao diện quản lý khóa học, sinh viên, dashboard thống kê (cổng 8080)',
+                toolFn: () => window.open('http://localhost:8080', '_blank'),
+                icon: '🌐',
+                badge: 'Web App :8080',
+                badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+                keywords: 'web quan ly cms admin dashboard course student 8080'
+            },
+            {
+                id: 'tool_refresh_rag',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Cập Nhật Chỉ Mục RAG Codebase',
+                desc: 'Quét lại toàn bộ file mã nguồn Java, Config, DTO của dự án vào bộ nhớ RAG',
+                toolFn: () => refreshRagIndex(),
+                icon: '↻',
+                badge: 'Quét RAG',
+                badgeColor: 'bg-sky-50 text-sky-700 border-sky-200',
+                keywords: 'cap nhat rag index scan quet lai codebase vector'
+            },
+            {
+                id: 'tool_new_session',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Tạo Phiên Làm Việc Mới',
+                desc: 'Lưu phiên làm việc hiện tại và bắt đầu phiên hỏi đáp mới sạch sẽ',
+                toolFn: () => createNewSession(),
+                icon: '📝',
+                badge: 'Phiên Mới',
+                badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
+                keywords: 'tao phien moi new session clear reset'
+            },
+            {
+                id: 'tool_clear_screen',
+                category: 'tools',
+                categoryLabel: 'Công Cụ & Báo Cáo',
+                title: 'Làm Mới Màn Hình Chat',
+                desc: 'Xóa sạch các tin nhắn đang hiển thị trên màn hình chat hiện tại',
+                toolFn: () => clearChat(),
+                icon: '🧹',
+                badge: 'Xóa Màn Hình',
+                badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+                keywords: 'lam moi man hinh clear chat xoa man hinh'
+            }
+        ];
+
+        let currentActionCategory = 'all';
+
+        function toggleActionMenu(e) {
+            if (e) e.stopPropagation();
+            const popup = document.getElementById('action-menu-popup');
+            if (popup.classList.contains('hidden')) {
+                openActionMenu();
+            } else {
+                closeActionMenu();
+            }
+        }
+
+        function openActionMenu(initialQuery = '') {
+            closeCompareMenu();
+            const popup = document.getElementById('action-menu-popup');
+            const chevron = document.getElementById('action-menu-chevron');
+            const btn = document.getElementById('btn-action-menu');
+            if (!popup) return;
+
+            popup.classList.remove('hidden');
+            if (chevron) chevron.classList.add('rotate-180');
+            if (btn) {
+                btn.classList.add('bg-indigo-100', 'text-indigo-800', 'border-indigo-300');
+            }
+
+            const searchInput = document.getElementById('action-search-input');
+            if (searchInput) {
+                searchInput.value = initialQuery;
+                setTimeout(() => searchInput.focus(), 50);
+            }
+            filterActions(initialQuery, currentActionCategory);
+        }
+
+        function closeActionMenu() {
+            const popup = document.getElementById('action-menu-popup');
+            const chevron = document.getElementById('action-menu-chevron');
+            const btn = document.getElementById('btn-action-menu');
+            if (!popup) return;
+
+            popup.classList.add('hidden');
+            if (chevron) chevron.classList.remove('rotate-180');
+            if (btn) {
+                btn.classList.remove('bg-indigo-100', 'text-indigo-800', 'border-indigo-300');
+            }
+
+            const inputEl = document.getElementById('user-input');
+            if (inputEl && inputEl.value === '/') {
+                inputEl.value = '';
+            }
+        }
+
+        function filterActionCategory(cat) {
+            currentActionCategory = cat;
+            ['all', 'modes', 'tools'].forEach(c => {
+                const tab = document.getElementById(`tab-cat-${c}`);
+                if (!tab) return;
+                if (c === cat) {
+                    tab.className = "cat-tab px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium shadow-2xs cursor-pointer transition";
+                } else {
+                    tab.className = "cat-tab px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 font-medium cursor-pointer transition";
+                }
+            });
+
+            const searchInput = document.getElementById('action-search-input');
+            const query = searchInput ? searchInput.value.trim() : '';
+            filterActions(query, cat);
+        }
+
+        function handleActionSearch(e) {
+            const query = e.target.value.trim();
+            filterActions(query, currentActionCategory);
+        }
+
+        function filterActions(query, category) {
+            const q = query.toLowerCase();
+            const filtered = CMS_ACTIONS.filter(item => {
+                const matchCat = (category === 'all' || item.category === category);
+                if (!matchCat) return false;
+                if (!q) return true;
+                return item.title.toLowerCase().includes(q) ||
+                       item.desc.toLowerCase().includes(q) ||
+                       item.badge.toLowerCase().includes(q) ||
+                       item.keywords.toLowerCase().includes(q);
+            });
+
+            // Update badge counts
+            const countAll = CMS_ACTIONS.filter(i => !q || i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.keywords.toLowerCase().includes(q)).length;
+            const countModes = CMS_ACTIONS.filter(i => i.category === 'modes' && (!q || i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.keywords.toLowerCase().includes(q))).length;
+            const countTools = CMS_ACTIONS.filter(i => i.category === 'tools' && (!q || i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.keywords.toLowerCase().includes(q))).length;
+
+            const elAll = document.getElementById('count-cat-all');
+            const elModes = document.getElementById('count-cat-modes');
+            const elTools = document.getElementById('count-cat-tools');
+            if (elAll) elAll.textContent = countAll;
+            if (elModes) elModes.textContent = countModes;
+            if (elTools) elTools.textContent = countTools;
+
+            renderActionList(filtered);
+        }
+
+        function renderActionList(items) {
+            const container = document.getElementById('action-items-container');
+            if (!container) return;
+
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center text-slate-400 text-xs">
+                        <span class="text-2xl block mb-1">🔍</span>
+                        <p class="font-semibold text-slate-600">Không tìm thấy chức năng phù hợp</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Thử tìm với: <code>claude</code>, <code>gpu</code>, <code>arena</code>, <code>swagger</code>, <code>rag</code>, <code>phiên mới</code></p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map((item, idx) => {
+                const isCode = item.category === 'code';
+                const isMode = item.category === 'modes';
+                const isTool = item.category === 'tools';
+
+                let rightActionsHtml = '';
+                if (isCode) {
+                    rightActionsHtml = `
+                        <div class="flex items-center gap-1 flex-shrink-0" onclick="event.stopPropagation()">
+                            <button type="button" title="Chèn vào ô chat để chỉnh sửa trước khi gửi"
+                                    onclick="insertActionPrompt('${item.id}')"
+                                    class="text-[10px] px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 rounded-md border border-slate-200 hover:border-slate-300 font-medium transition cursor-pointer">
+                                ✏️ Chèn
+                            </button>
+                            <button type="button" title="Gửi ngay câu lệnh này"
+                                    onclick="executeAction('${item.id}')"
+                                    class="text-[10px] px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer">
+                                <span>Gửi</span>
+                                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        </div>
+                    `;
+                } else if (isMode) {
+                    rightActionsHtml = `
+                        <button type="button" onclick="executeAction('${item.id}')"
+                                class="text-[10px] px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer flex-shrink-0">
+                            <span>Chuyển</span>
+                            <span class="text-xs">→</span>
+                        </button>
+                    `;
+                } else {
+                    rightActionsHtml = `
+                        <button type="button" onclick="executeAction('${item.id}')"
+                                class="text-[10px] px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-md font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer flex-shrink-0">
+                            <span>Mở</span>
+                            <span class="text-xs">↗</span>
+                        </button>
+                    `;
+                }
+
+                return `
+                    <div class="action-card group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-xs transition cursor-pointer"
+                         onclick="executeAction('${item.id}')" data-id="${item.id}" data-index="${idx}">
+                        <div class="flex items-start gap-2.5 min-w-0 pr-2">
+                            <span class="text-base p-1.5 rounded-lg bg-slate-100 group-hover:bg-white border border-slate-200/80 flex-shrink-0">
+                                ${item.icon}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-slate-900 group-hover:text-indigo-950 text-xs">${item.title}</span>
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded border ${item.badgeColor} font-medium">${item.badge}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">${item.desc}</p>
+                            </div>
+                        </div>
+                        ${rightActionsHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function executeAction(id) {
+            const item = CMS_ACTIONS.find(a => a.id === id);
+            if (!item) return;
+
+            if (item.category === 'code') {
+                closeActionMenu();
+                fillPrompt(item.prompt);
+            } else if (item.category === 'modes') {
+                closeActionMenu();
+                setMode(item.mode);
+                const el = document.getElementById('user-input');
+                if (el) el.focus();
+            } else if (item.category === 'tools') {
+                closeActionMenu();
+                if (typeof item.toolFn === 'function') {
+                    item.toolFn();
+                }
+            }
+        }
+
+        function insertActionPrompt(id) {
+            const item = CMS_ACTIONS.find(a => a.id === id);
+            if (!item || !item.prompt) return;
+
+            const el = document.getElementById('user-input');
+            if (!el) return;
+            el.value = item.prompt;
+            closeActionMenu();
+            el.focus();
+            el.setSelectionRange(item.prompt.length, item.prompt.length);
+            showToast(`Đã chèn câu lệnh vào ô chat để chỉnh sửa`, "✏️");
+        }
+
+        function handleActionMenuKey(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeActionMenu();
+                const el = document.getElementById('user-input');
+                if (el) el.focus();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const firstCard = document.querySelector('.action-card');
+                if (firstCard) {
+                    const id = firstCard.getAttribute('data-id');
+                    executeAction(id);
+                }
+            }
         }
 
         let chatHistory = [];
@@ -1781,8 +2441,28 @@ HTML_TEMPLATE = r"""
                 .replace(/'/g, "&#039;");
         }
 
+        document.addEventListener('click', (e) => {
+            const popup = document.getElementById('action-menu-popup');
+            const btn = document.getElementById('btn-action-menu');
+            if (popup && !popup.classList.contains('hidden')) {
+                if (!popup.contains(e.target) && !btn.contains(e.target)) {
+                    closeActionMenu();
+                }
+            }
+
+            const cmpPopup = document.getElementById('compare-menu-popup');
+            const cmpBtn = document.getElementById('btn-compare-menu');
+            if (cmpPopup && !cmpPopup.classList.contains('hidden')) {
+                if (!cmpPopup.contains(e.target) && !cmpBtn.contains(e.target)) {
+                    closeCompareMenu();
+                }
+            }
+        });
+
         window.addEventListener('DOMContentLoaded', () => {
             renderHistorySidebar();
+            filterActions('', 'all');
+            updateCompareMenuUI(currentMode);
         });
     </script>
 </body>

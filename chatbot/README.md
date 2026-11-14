@@ -31,10 +31,20 @@ Sau đó mở trình duyệt web và truy cập địa chỉ:
 👉 **`http://localhost:7860`**
 
 ### Các tính năng trên giao diện Web:
-1. **Chế độ "⚡ So sánh Song song (A/B)"**: Bạn chỉ cần gõ 1 câu hỏi, giao diện sẽ chia làm 2 cột hiển thị đồng thời câu trả lời của **Base Model** và **Fine-tuned Model** để thấy rõ sự khác biệt.
-2. **Chế độ "🚀 Chỉ Fine-tuned"**: Chỉ chat với mô hình đã học codebase.
-3. **Chế độ "🌐 Chỉ Base Model"**: Chỉ chat với mô hình gốc ngoài Internet.
-4. **Nút gợi ý câu hỏi nhanh (Quick Prompts)**: Click 1 chạm để hỏi ngay các câu hỏi kinh điển về `SearchCriteria`, sinh code DAO mới, hoặc giải thích MinIO versioning.
+1. **Thanh Gợi Ý Sinh Mã Nguồn (Quick Prompts - Ghim cố định ở thanh trên cùng)**:
+   - Ghim sẵn 8 bài toán sinh mã nguồn kiến trúc kinh điển: `Module Giảng Viên`, `Dynamic HQL DAO`, `DTO & Validation`, `Lưu trữ MinIO`, `Đăng Ký Khóa Học`, `Lọc Đa Tiêu Chí`, `Bảo Mật & Phân Quyền`, `Scaffold Dự Án Mới`. Click 1 chạm là tự động điền và kích hoạt.
+2. **Bộ Đôi Nút Điều Khiển Tích Hợp Ngay Trong Khung Chat (In-Chat Dual Action Buttons)**:
+   - **Nút "⚡ Chức năng"**: Bấm vào nút (hoặc gõ phím `/`) để mở menu popup gồm **9 tính năng chuyên biệt** (tách biệt hoàn toàn, không trùng lặp):
+     - ⚡ **Chế Độ Xử Lý AI (3 chế độ)**: Hybrid Auto, 100% Local GPU RTX 4050, Cloud Gemini 1M Context.
+     - 🛠️ **Công Cụ Hệ Thống (6 tiện ích)**: Mở báo cáo nghiệm thu trực quan (`/benchmark-report`), Swagger API Docs (`:8080`), Web quản lý CMS (`:8080`), Quét lại RAG Codebase, Tạo phiên mới, Làm mới màn hình.
+     - Hỗ trợ tìm kiếm tức thì, phím tắt **ESC** để đóng, **Enter** để chọn nhanh.
+   - **Nút "⚖️ Đối Chiếu & Đánh Giá" (Nằm ngay cạnh nút Chức năng)**: Bấm vào để trồi lên menu chọn nhanh 4 chế độ so sánh:
+     - ⚖️ **So Sánh Mô Hình**: Base vs Fine-tuned QLoRA GPU (chạy 100% offline RTX 4050).
+     - 📋 **So Sánh Hệ Thống**: Hệ thống dự án (LoRA + RAG) vs AI Tiêu chuẩn bên ngoài (Zero-Context).
+     - 📊 **Đấu Trường 3 Chiều**: Chạy song song 3 luồng AI cùng lúc.
+     - 🤖 **So Sánh Với Claude**: Đối chiếu trực tiếp với Claude và tự động chấm điểm tuân thủ kiến trúc 5 tiêu chí.
+     - Nút tự động đổi tên và hiển thị huy hiệu theo chế độ so sánh đang kích hoạt (`So Sánh Model`, `So Sánh Hệ Thống`, `Đấu Trường 3 Chiều`, `So Sánh Claude`).
+3. **Chế độ "⚡ So sánh Song song (A/B) & Đấu trường 3 chiều"**: Gõ 1 câu hỏi, giao diện chia cột hiển thị đồng thời câu trả lời của Base Model, Fine-tuned Model và Cloud AI/Claude để đối chiếu kiến trúc tự động với scorecard 5 tiêu chí.
 
 ---
 

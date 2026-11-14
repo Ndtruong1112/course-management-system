@@ -30,6 +30,7 @@ echo   DA KHOI DONG XONG 2 CUA SO RIENG BIET:
 echo   - Cua so 1: Backend Java (http://localhost:8080/api/courses)
 echo   - Cua so 2: Chatbot AI   (http://localhost:7860)
 echo.
-echo   * Trinh duyet web se tu dong bat len tab Chatbot trong vai giay!
+echo   * Trinh duyet web dang tu dong mo giao dien Chatbot AI...
 echo ======================================================================
-ping 127.0.0.1 -n 3 > nul
+timeout /t 5 /nobreak >nul 2>&1 || ping 127.0.0.1 -n 6 >nul
+start http://localhost:7860
