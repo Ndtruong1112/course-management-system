@@ -444,11 +444,11 @@ def call_cloud_gemini_stream(user_message, history=None):
             continue
 
     if not yielded_any:
-        # Fallback 1: OpenRouter DeepSeek V3 nếu có cấu hình
+        # Fallback 1: OpenRouter Free Models nếu có cấu hình
         if openrouter_api_key:
             prompt_or = _build_cloud_project_prompt(user_message, history=history)
             yielded_or = False
-            for chunk in call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"):
+            for chunk in call_openrouter_stream(prompt_or, model="openrouter/free"):
                 yielded_or = True
                 yield chunk
             if yielded_or:
@@ -508,8 +508,8 @@ def call_claude_stream(user_message, api_key="", system_prompt=SYSTEM_INSTRUCTIO
     yield "⚠️ Không thể kết nối Anthropic Claude API với API Key đã cung cấp."
 
 
-def call_openrouter_stream(user_message, system_prompt=None, model="deepseek/deepseek-chat", history=None):
-    """Streaming từ OpenRouter API (mặc định DeepSeek-V3, fallback openrouter/free)."""
+def call_openrouter_stream(user_message, system_prompt=None, model="openrouter/free", history=None):
+    """Streaming từ OpenRouter API (100% Free models: openrouter/free, nemotron-3-ultra, etc.)."""
     key = (openrouter_api_key or os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not key:
         yield "⚠️ Chưa cấu hình OPENROUTER_API_KEY trong file .env."
@@ -533,7 +533,18 @@ def call_openrouter_stream(user_message, system_prompt=None, model="deepseek/dee
                 messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": user_message})
 
-    models_to_try = [model] if model == "openrouter/free" else [model, "openrouter/free"]
+    # Danh sách các mô hình 100% Miễn Phí trên OpenRouter ($0.00 / prompt, $0.00 / completion)
+    free_candidates = [
+        model,
+        "openrouter/free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "nvidia/nemotron-3.5-lightning:free"
+    ]
+    models_to_try = []
+    for m in free_candidates:
+        if m and m not in models_to_try:
+            models_to_try.append(m)
+
     for m in models_to_try:
         payload = {
             "model": m,
@@ -615,10 +626,10 @@ def call_cloud_general_ai_stream(user_message, claude_key=""):
             yield chunk
         return
 
-    # Nếu có OpenRouter API Key -> Dùng DeepSeek-V3 làm đối trọng chuẩn cực kỳ xuất sắc!
+    # Nếu có OpenRouter API Key -> Dùng OpenRouter Free Router (100% Free $0.00)
     if openrouter_api_key:
         yielded_or = False
-        for chunk in call_openrouter_stream(user_message, system_prompt=SYSTEM_INSTRUCTION_GENERAL, model="deepseek/deepseek-chat"):
+        for chunk in call_openrouter_stream(user_message, system_prompt=SYSTEM_INSTRUCTION_GENERAL, model="openrouter/free"):
             yielded_or = True
             yield chunk
         if yielded_or:
@@ -801,13 +812,13 @@ HTML_TEMPLATE = r"""
                     </button>
                     <button type="button" onclick="setMode('openrouter')" id="btn-openrouter"
                             class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
-                        <span class="text-sm">🚀</span>
+                        <span class="text-sm">🌐</span>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between">
-                                <div class="font-semibold text-slate-800">DeepSeek V3 (OpenRouter)</div>
-                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 font-semibold border border-purple-200">Cloud SOTA</span>
+                                <div class="font-semibold text-slate-800">Cloud Free AI (OpenRouter)</div>
+                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">100% Free</span>
                             </div>
-                            <div class="text-[10px] text-slate-500 truncate">DeepSeek-V3 + RAG Codebase</div>
+                            <div class="text-[10px] text-slate-500 truncate">Free Router &amp; Nemotron 550B</div>
                         </div>
                     </button>
                 </div>
@@ -1197,7 +1208,7 @@ HTML_TEMPLATE = r"""
         const modeDescriptions = {
             'hybrid': 'Chế độ <strong>Hybrid Auto</strong>: Tác vụ chuyên sâu chạy Local GPU + RAG Codebase; tác vụ kiến trúc lớn tự động chuyển Cloud 1M Context.',
             'local': 'Chế độ <strong>100% Local GPU</strong>: Chạy hoàn toàn Offline trên GPU RTX 4050 kết hợp QLoRA Adapter và truy xuất mã nguồn thật (RAG).',
-            'openrouter': 'Chế độ <strong>DeepSeek V3 (Cloud OpenRouter)</strong>: Mô hình lập trình SOTA mã nguồn mở hàng đầu thế giới kết hợp ngữ cảnh RAG Codebase của dự án.',
+            'openrouter': 'Chế độ <strong>Cloud Free AI (OpenRouter)</strong>: Mô hình hoàn toàn miễn phí ($0.00) qua OpenRouter Free Router kết hợp NVIDIA Nemotron 550B Ultra và ngữ cảnh RAG Codebase.',
             'cloud': 'Chế độ <strong>Google Gemini Cloud (1M Tokens Context)</strong>: Sử dụng Cloud Gemini với ngữ cảnh codebase thật của dự án.',
             'compare_models': 'Chế độ <strong>So Sánh Mô Hình (Gốc vs Fine-tuned + RAG)</strong>: Cả 2 mô hình chạy CỤC BỘ trên GPU RTX 4050 và chấm điểm kiến trúc tự động.',
             'compare_system': 'Chế độ <strong>So Sánh Hệ Thống</strong>: Đối chiếu Hệ Thống Dự Án (LoRA + RAG) với AI Tiêu Chuẩn Bên Ngoài (Zero Context).',
@@ -1208,7 +1219,7 @@ HTML_TEMPLATE = r"""
         const modeTitles = {
             'hybrid': 'Trợ Lý Kỹ Thuật (Hybrid Auto)',
             'local': '100% Local GPU (Offline RTX 4050)',
-            'openrouter': 'DeepSeek V3 (OpenRouter Cloud)',
+            'openrouter': 'Cloud Free AI (OpenRouter 100% Free)',
             'cloud': 'Cloud Gemini (1M Context)',
             'compare_models': 'So Sánh Mô Hình (Gốc vs Fine-tuned)',
             'compare_system': 'So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)',
@@ -1219,7 +1230,7 @@ HTML_TEMPLATE = r"""
         const modeIcons = {
             'hybrid': '⚡',
             'local': '💻',
-            'openrouter': '🚀',
+            'openrouter': '🌐',
             'cloud': '☁️',
             'compare_models': '⚖️',
             'compare_system': '📋',
@@ -1230,7 +1241,7 @@ HTML_TEMPLATE = r"""
         const modePlaceholders = {
             'hybrid': 'Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng)',
             'local': '[100% Local GPU] Nhập yêu cầu viết Entity, Generic DAO, HQL động...',
-            'openrouter': '[DeepSeek V3] Nhập bài toán lập trình hoặc yêu cầu kỹ thuật...',
+            'openrouter': '[100% Free AI] Nhập bài toán lập trình hoặc yêu cầu kỹ thuật...',
             'cloud': '[Cloud Gemini] Nhập yêu cầu thiết kế toàn bộ hệ thống lớn nhiều module...',
             'compare_models': '[So Sánh Mô Hình] Nhập bài toán để đối chiếu Model Gốc vs Fine-tuned + RAG...',
             'compare_system': '[So Sánh Hệ Thống] Nhập bài toán để so sánh Hệ Thống Dự Án vs AI Tiêu Chuẩn...',
@@ -1463,13 +1474,13 @@ HTML_TEMPLATE = r"""
                 id: 'mode_openrouter',
                 category: 'modes',
                 categoryLabel: 'Chế Độ AI',
-                title: 'DeepSeek V3 (Cloud OpenRouter)',
-                desc: 'Mô hình coding SOTA mã nguồn mở qua OpenRouter API + RAG Codebase',
+                title: 'Cloud Free AI (OpenRouter 100% Free)',
+                desc: 'Mô hình đám mây 100% miễn phí ($0.00) qua OpenRouter Free Router & Nemotron 550B + RAG',
                 mode: 'openrouter',
-                icon: '🚀',
-                badge: 'Chuyển Mode',
-                badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
-                keywords: 'deepseek v3 openrouter cloud coding rag sota che do mode'
+                icon: '🌐',
+                badge: '100% Free',
+                badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                keywords: 'free openrouter nemotron cloud coding rag mien phi 0 dong che do mode'
             },
 
             // --- Công Cụ & Báo Cáo ---
@@ -2723,11 +2734,11 @@ def chat_stream():
 
             if mode == "openrouter":
                 _, cloud_rag_files = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
-                badge = "🚀 DeepSeek-V3 via OpenRouter (Ngữ Cảnh Codebase RAG)"
+                badge = "🌐 Cloud Free AI (OpenRouter Free Router • 100% Free • RAG)"
                 source = "openrouter_direct"
                 yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': cloud_rag_files})}\n\n"
                 prompt_or = _build_cloud_project_prompt(user_message, history=chat_history)
-                for chunk in call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"):
+                for chunk in call_openrouter_stream(prompt_or, model="openrouter/free"):
                     buf_single.append(chunk)
                     yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
                 elapsed = round(time.time() - start_time, 2)
@@ -2810,14 +2821,14 @@ def chat():
         if mode == "openrouter":
             prompt_or = _build_cloud_project_prompt(user_message)
             start_t = time.time()
-            chunks = list(call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"))
+            chunks = list(call_openrouter_stream(prompt_or, model="openrouter/free"))
             ans = "".join(chunks)
             elapsed = round(time.time() - start_t, 2)
             return jsonify({
                 "answer": ans,
                 "elapsed": elapsed,
                 "source": "openrouter_direct",
-                "badge": "🚀 DeepSeek-V3 via OpenRouter (Ngữ Cảnh Codebase RAG)"
+                "badge": "🌐 Cloud Free AI (OpenRouter Free Router • 100% Free • RAG)"
             })
 
         if mode == "compare_system":
