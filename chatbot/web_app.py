@@ -25,7 +25,7 @@ chatbot_dir = os.path.dirname(os.path.abspath(__file__))
 if chatbot_dir not in sys.path:
     sys.path.insert(0, chatbot_dir)
 
-from rag_engine import CodebaseRAG, evaluate_architecture_compliance
+from rag_engine import CodebaseRAG, evaluate_architecture_compliance, is_casual_message
 
 root_dir = os.path.dirname(chatbot_dir)
 lora_dir = os.path.join(root_dir, "outputs", "course-management-lora-adapter")
@@ -141,6 +141,16 @@ def init_local_model():
 threading.Thread(target=init_local_model, daemon=True).start()
 
 # Prompts
+SYSTEM_INSTRUCTION_CHAT = (
+    "Bạn là Trợ lý Kỹ thuật AI chuyên trách kiến trúc dự án Course Management System (Java 21, Spring Boot 3, Hibernate Generic DAO, MinIO).\n"
+    "Người dùng đang gửi câu chào hỏi hoặc trò chuyện xã giao tự nhiên.\n"
+    "HƯỚNG DẪN TRẢ LỜI:\n"
+    "1. Chào lại thân thiện, lịch sự và ngắn gọn (trong khoảng 2 - 4 câu).\n"
+    "2. Giới thiệu ngắn bạn là Trợ lý Studio của dự án Course Management System.\n"
+    "3. Nêu 2-3 gợi ý bạn có thể hỗ trợ (như: sinh mã nguồn Entity, Generic DAO, DTO Validation, viết truy vấn Dynamic HQL, tích hợp MinIO, đối chiếu so sánh mô hình AI...).\n"
+    "4. TUYỆT ĐỐI KHÔNG tự tiện sinh mã nguồn Java dài dòng hay viết code khi người dùng chưa yêu cầu viết code."
+)
+
 SYSTEM_INSTRUCTION_PROJECT = (
     "Bạn là Kiến trúc sư Phần mềm Cao cấp chuyên gia Spring Boot 3 và Java 21 cho dự án Course Management System.\n"
     "Nhiệm vụ của bạn là viết mã nguồn Java tuân thủ 100% các chuẩn mực kiến trúc cốt lõi của dự án:\n"
@@ -151,7 +161,8 @@ SYSTEM_INSTRUCTION_PROJECT = (
     "   - Bắt buộc áp dụng kiến trúc Hibernate Generic DAO tùy biến kế thừa HibernatePaginationSortingDao thay cho Spring Data JpaRepository.\n"
     "3. Tầng Service & Controller: Tách rõ Interface/Impl, sử dụng DTO Pattern (RequestDTO với Jakarta Validation, ResponseDTO).\n"
     "4. Quy chuẩn Package: Bắt buộc đặt trong package com.mkii.coursemanagementsystem (entity, dao, dao.impl, dto, service.impl, rest).\n"
-    "5. Viết mã nguồn Java đầy đủ, chi tiết, kèm giải thích ngắn gọn, sẵn sàng copy vào dự án."
+    "5. Viết mã nguồn Java đầy đủ, chi tiết, kèm giải thích ngắn gọn, sẵn sàng copy vào dự án.\n"
+    "6. ĐIỀU KIỆN ÁP DỤNG: Chỉ sinh mã nguồn và thực thi các chuẩn mực trên khi người dùng yêu cầu viết code hoặc hỏi bài toán kỹ thuật. Nếu người dùng chỉ chào hỏi hoặc trò chuyện, hãy trả lời thân thiện, ngắn gọn và hỏi người dùng cần hỗ trợ module nào."
 )
 
 SYSTEM_INSTRUCTION_GENERAL = (
@@ -185,10 +196,13 @@ def _normalize_history(history, max_turns=4, max_chars=550):
 
 
 def format_prompt(user_message, use_rag=True, rag_context=None, history=None):
-    if use_rag:
+    if is_casual_message(user_message):
+        system_content = SYSTEM_INSTRUCTION_CHAT
+        final_user_content = user_message
+    elif use_rag:
         system_content = (
             SYSTEM_INSTRUCTION_PROJECT
-            + "\n6. Bám sát tên class, field, package trong tài liệu tham khảo codebase bên dưới; không bịa tên class hoặc field không có."
+            + "\n7. Bám sát tên class, field, package trong tài liệu tham khảo codebase bên dưới; không bịa tên class hoặc field không có."
         )
         if rag_context is None:
             rag_context, _ = retrieve_rag_for_query(user_message, top_k=3, max_chars=1800)
@@ -368,6 +382,14 @@ def _format_cloud_error(status_code=None, detail=""):
 
 
 def _build_cloud_project_prompt(user_message, history=None):
+    if is_casual_message(user_message):
+        hist_items = _normalize_history(history, max_turns=2, max_chars=400)
+        hist_block = ""
+        if hist_items:
+            lines = [f"- {'Người dùng' if m['role'] == 'user' else 'Trợ lý'}: {m['content']}" for m in hist_items]
+            hist_block = "\n\n[LỊCH SỬ GẦN ĐÂY]:\n" + "\n".join(lines)
+        return f"{SYSTEM_INSTRUCTION_CHAT}{hist_block}\n\n[LỜI NHẮN TỪ NGƯỜI DÙNG]:\n{user_message}"
+
     rag_block, _ = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
     hist_items = _normalize_history(history, max_turns=4, max_chars=800)
     hist_block = ""
@@ -2412,7 +2434,7 @@ HTML_TEMPLATE = r"""
         }
 
         function renderEvalScorecard(ev) {
-            if (!ev) return '';
+            if (!ev || ev.is_chat || ev.total === 0) return '';
             if (ev.api_error) {
                 return `
                     <div class="rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">

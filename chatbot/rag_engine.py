@@ -337,11 +337,38 @@ class CodebaseRAG:
         return block, files
 
 
+def is_casual_message(prompt=""):
+    """Phát hiện các câu chào hỏi, hỏi thăm, cảm ơn hoặc trò chuyện không yêu cầu viết code."""
+    p = (prompt or "").lower().strip()
+    if not p:
+        return True
+    clean = "".join(c for c in p if c.isalnum() or c.isspace()).strip()
+    words = clean.split()
+    casual_exact = {
+        "xin chào", "xin chao", "chào", "chao", "chào bạn", "chao ban", "chào em", "chao em",
+        "chào bot", "chao bot", "hi", "hello", "hey", "alo", "hola",
+        "bạn là ai", "ban la ai", "bạn có thể làm gì", "ban co the lam gi",
+        "bạn làm được gì", "ban lam duoc gi", "bạn là ai thế", "ban la ai the",
+        "giới thiệu", "gioi thieu", "giới thiệu bản thân", "gioi thieu ban than",
+        "cảm ơn", "cam on", "thank you", "thanks", "ok", "oke", "tạm biệt", "tam biet", "bye"
+    }
+    if clean in casual_exact:
+        return True
+    code_keywords = ("viết", "tạo", "code", "dao", "entity", "dto", "service", "controller", "hql", "jpa", "minio", "lớp", "class", "phương thức", "method", "test", "so sánh")
+    if len(words) <= 3 and any(clean.startswith(w) for w in ("chào", "chao", "xin chào", "xin chao", "hi", "hello", "hey")):
+        if not any(k in clean for k in code_keywords):
+            return True
+    return False
+
+
 def classify_eval_task(prompt=""):
     """Phân loại bài toán theo prompt để chọn Rubric chấm điểm chính xác nhất."""
     p = (prompt or "").lower().strip()
     if not p:
         return "dao_module", "Chuẩn Kiến Trúc Enterprise (DAO + Entity)"
+
+    if is_casual_message(p):
+        return "casual_chat", "Trò chuyện & Chào hỏi"
 
     has_dto_kw = any(k in p for k in ("requestdto", "responsedto", "dto", "validation", "@valid", "@notblank", "@notnull"))
     has_dao_kw = any(k in p for k in ("dao", "entitymanager", "hql", "hibernate", "soft delete", "xóa mềm", "findbypricerange", "searchby"))
@@ -374,6 +401,18 @@ def evaluate_architecture_compliance(text, prompt=""):
     tailored to the prompt task type (Module DAO, DAO HQL Method, DTO Design, or Codebase Q&A).
     """
     task_type, task_label = classify_eval_task(prompt)
+    if task_type == "casual_chat":
+        return {
+            "score": 100,
+            "passed_count": 0,
+            "total": 0,
+            "api_error": False,
+            "task_type": "casual_chat",
+            "task_label": "Trò chuyện & Chào hỏi",
+            "criteria": [],
+            "is_chat": True
+        }
+
     text_lower = (text or "").lower()
     err_markers = (
         "lỗi kết nối máy chủ cloud ai",
