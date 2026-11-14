@@ -36,15 +36,21 @@ rag_engine = CodebaseRAG(root_dir)
 gemini_api_key = ""
 openai_api_key = ""
 anthropic_api_key = ""
+openrouter_api_key = ""
 if os.path.exists(env_path):
     with open(env_path, "r", encoding="utf-8") as f:
         for line in f:
+            line = line.strip()
             if line.startswith("GEMINI_API_KEY="):
-                gemini_api_key = line.split("=", 1)[1].strip()
+                gemini_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
             elif line.startswith("OPENAI_API_KEY="):
-                openai_api_key = line.split("=", 1)[1].strip()
+                openai_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
             elif line.startswith("ANTHROPIC_API_KEY="):
-                anthropic_api_key = line.split("=", 1)[1].strip()
+                anthropic_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif line.startswith("OPENROUTER_API_KEY="):
+                openrouter_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+
+openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", openrouter_api_key)
 
 # Base model đọc từ adapter_config.json hoặc thư mục sharded
 base_model_id = "Qwen/Qwen2.5-Coder-3B-Instruct"
@@ -71,6 +77,7 @@ has_cuda = torch.cuda.is_available()
 gpu_name = torch.cuda.get_device_name(0) if has_cuda else "CPU (Không có GPU)"
 print(f"Thiết bị Local: {gpu_name}")
 print(f"Cloud Gemini Key: {'Đã cấu hình' if gemini_api_key else 'Chưa có'}")
+print(f"OpenRouter Key: {'Đã cấu hình (DeepSeek-V3 / Free Models)' if openrouter_api_key else 'Chưa có'}")
 
 # Nạp Tokenizer
 tokenizer = None
@@ -437,6 +444,15 @@ def call_cloud_gemini_stream(user_message, history=None):
             continue
 
     if not yielded_any:
+        # Fallback 1: OpenRouter DeepSeek V3 nếu có cấu hình
+        if openrouter_api_key:
+            prompt_or = _build_cloud_project_prompt(user_message, history=history)
+            yielded_or = False
+            for chunk in call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"):
+                yielded_or = True
+                yield chunk
+            if yielded_or:
+                return
         text, _ = call_cloud_gemini(user_message, history=history)
         yield text
 
@@ -492,6 +508,76 @@ def call_claude_stream(user_message, api_key="", system_prompt=SYSTEM_INSTRUCTIO
     yield "⚠️ Không thể kết nối Anthropic Claude API với API Key đã cung cấp."
 
 
+def call_openrouter_stream(user_message, system_prompt=None, model="deepseek/deepseek-chat", history=None):
+    """Streaming từ OpenRouter API (mặc định DeepSeek-V3, fallback openrouter/free)."""
+    key = (openrouter_api_key or os.environ.get("OPENROUTER_API_KEY") or "").strip()
+    if not key:
+        yield "⚠️ Chưa cấu hình OPENROUTER_API_KEY trong file .env."
+        return
+
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "HTTP-Referer": "http://localhost:7860",
+        "X-Title": "Course Management Studio",
+        "Content-Type": "application/json"
+    }
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    if history:
+        for turn in _normalize_history(history):
+            role = "user" if turn.get("role") == "user" else "assistant"
+            content = turn.get("content", "").strip()
+            if content:
+                messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": user_message})
+
+    models_to_try = [model] if model == "openrouter/free" else [model, "openrouter/free"]
+    for m in models_to_try:
+        payload = {
+            "model": m,
+            "messages": messages,
+            "stream": True,
+            "max_tokens": 4096,
+            "temperature": 0.2
+        }
+        try:
+            res = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                stream=True,
+                timeout=35
+            )
+            if res.status_code == 200:
+                yielded = False
+                for raw_line in res.iter_lines():
+                    if not raw_line:
+                        continue
+                    line_str = raw_line.decode("utf-8", errors="ignore")
+                    if line_str.startswith("data:"):
+                        chunk_str = line_str[5:].strip()
+                        if chunk_str == "[DONE]":
+                            break
+                        try:
+                            evt = json.loads(chunk_str)
+                            choices = evt.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yielded = True
+                                    yield content
+                        except Exception:
+                            pass
+                if yielded:
+                    return
+        except Exception:
+            continue
+    yield "⚠️ Không thể kết nối OpenRouter API hoặc mô hình đang bận. Vui lòng thử lại sau."
+
+
 def call_cloud_general_ai(user_message):
     """Mô phỏng AI tiêu chuẩn bên ngoài (Cloud AI - Zero Context Chưa Biết Dự Án)"""
     if not gemini_api_key:
@@ -522,12 +608,21 @@ def call_cloud_general_ai(user_message):
     return _format_cloud_error(last_status), round(elapsed, 2)
 
 def call_cloud_general_ai_stream(user_message, claude_key=""):
-    """Streaming từ External Zero-Context AI (ưu tiên Claude API nếu có key, ngược lại dùng Gemini Zero-Context)"""
+    """Streaming từ External Zero-Context AI (ưu tiên Claude API nếu có key, hoặc OpenRouter DeepSeek-V3, ngược lại dùng Gemini Zero-Context)"""
     effective_claude_key = (claude_key or anthropic_api_key or "").strip()
     if effective_claude_key:
         for chunk in call_claude_stream(user_message, api_key=effective_claude_key, system_prompt=SYSTEM_INSTRUCTION_GENERAL):
             yield chunk
         return
+
+    # Nếu có OpenRouter API Key -> Dùng DeepSeek-V3 làm đối trọng chuẩn cực kỳ xuất sắc!
+    if openrouter_api_key:
+        yielded_or = False
+        for chunk in call_openrouter_stream(user_message, system_prompt=SYSTEM_INSTRUCTION_GENERAL, model="deepseek/deepseek-chat"):
+            yielded_or = True
+            yield chunk
+        if yielded_or:
+            return
 
     if not gemini_api_key:
         yield "Lỗi: Chưa cấu hình API Key trong file .env"
@@ -704,49 +799,21 @@ HTML_TEMPLATE = r"""
                             <div class="text-[10px] text-slate-500 truncate">Sinh dự án quy mô lớn</div>
                         </div>
                     </button>
-                </div>
-            </div>
-
-            <!-- Nhóm 2: Đối Chiếu & Đánh Giá -->
-            <div>
-                <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Đối Chiếu & Đánh Giá</p>
-                <div class="space-y-0.5">
-                    <button type="button" onclick="setMode('compare_models')" id="btn-compare_models"
+                    <button type="button" onclick="setMode('openrouter')" id="btn-openrouter"
                             class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
-                        <span class="text-sm">⚖️</span>
+                        <span class="text-sm">🚀</span>
                         <div class="flex-1 min-w-0">
-                            <div class="font-semibold text-slate-800">So Sánh Mô Hình</div>
-                            <div class="text-[10px] text-slate-500 truncate">Base vs Fine-tuned GPU</div>
-                        </div>
-                    </button>
-                    <button type="button" onclick="setMode('compare_system')" id="btn-compare_system"
-                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
-                        <span class="text-sm">📋</span>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-semibold text-slate-800">So Sánh Hệ Thống</div>
-                            <div class="text-[10px] text-slate-500 truncate">Dự án vs AI Tiêu chuẩn</div>
-                        </div>
-                    </button>
-                    <button type="button" onclick="setMode('compare_arena')" id="btn-compare_arena"
-                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
-                        <span class="text-sm">📊</span>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-semibold text-slate-800">Đấu Trường 3 Chiều</div>
-                            <div class="text-[10px] text-slate-500 truncate">Đối chiếu 3 luồng song song</div>
-                        </div>
-                    </button>
-                    <button type="button" onclick="setMode('compare_claude')" id="btn-compare_claude"
-                            class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center gap-2.5 btn-mode-inactive cursor-pointer">
-                        <span class="text-sm">🤖</span>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-semibold text-slate-800">So Sánh Với Claude</div>
-                            <div class="text-[10px] text-slate-500 truncate">Chấm điểm kiến trúc trực tiếp</div>
+                            <div class="flex items-center justify-between">
+                                <div class="font-semibold text-slate-800">DeepSeek V3 (OpenRouter)</div>
+                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 font-semibold border border-purple-200">Cloud SOTA</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 truncate">DeepSeek-V3 + RAG Codebase</div>
                         </div>
                     </button>
                 </div>
             </div>
 
-            <!-- Nhóm 3: Lịch Sử Phiên Hỏi Đáp -->
+            <!-- Nhóm 2: Lịch Sử Phiên Hỏi Đáp -->
             <div>
                 <div class="px-2 flex items-center justify-between mb-1.5">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lịch Sử Phiên</p>
@@ -1126,9 +1193,11 @@ HTML_TEMPLATE = r"""
         const defaultWelcomeHtml = document.getElementById('chat-box').innerHTML;
 
         const SERVER_HAS_CLAUDE_KEY = {{ 'true' if has_claude_key else 'false' }};
+        const SERVER_HAS_OPENROUTER_KEY = {{ 'true' if has_openrouter_key else 'false' }};
         const modeDescriptions = {
             'hybrid': 'Chế độ <strong>Hybrid Auto</strong>: Tác vụ chuyên sâu chạy Local GPU + RAG Codebase; tác vụ kiến trúc lớn tự động chuyển Cloud 1M Context.',
             'local': 'Chế độ <strong>100% Local GPU</strong>: Chạy hoàn toàn Offline trên GPU RTX 4050 kết hợp QLoRA Adapter và truy xuất mã nguồn thật (RAG).',
+            'openrouter': 'Chế độ <strong>DeepSeek V3 (Cloud OpenRouter)</strong>: Mô hình lập trình SOTA mã nguồn mở hàng đầu thế giới kết hợp ngữ cảnh RAG Codebase của dự án.',
             'cloud': 'Chế độ <strong>Google Gemini Cloud (1M Tokens Context)</strong>: Sử dụng Cloud Gemini với ngữ cảnh codebase thật của dự án.',
             'compare_models': 'Chế độ <strong>So Sánh Mô Hình (Gốc vs Fine-tuned + RAG)</strong>: Cả 2 mô hình chạy CỤC BỘ trên GPU RTX 4050 và chấm điểm kiến trúc tự động.',
             'compare_system': 'Chế độ <strong>So Sánh Hệ Thống</strong>: Đối chiếu Hệ Thống Dự Án (LoRA + RAG) với AI Tiêu Chuẩn Bên Ngoài (Zero Context).',
@@ -1139,6 +1208,7 @@ HTML_TEMPLATE = r"""
         const modeTitles = {
             'hybrid': 'Trợ Lý Kỹ Thuật (Hybrid Auto)',
             'local': '100% Local GPU (Offline RTX 4050)',
+            'openrouter': 'DeepSeek V3 (OpenRouter Cloud)',
             'cloud': 'Cloud Gemini (1M Context)',
             'compare_models': 'So Sánh Mô Hình (Gốc vs Fine-tuned)',
             'compare_system': 'So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)',
@@ -1149,6 +1219,7 @@ HTML_TEMPLATE = r"""
         const modeIcons = {
             'hybrid': '⚡',
             'local': '💻',
+            'openrouter': '🚀',
             'cloud': '☁️',
             'compare_models': '⚖️',
             'compare_system': '📋',
@@ -1159,6 +1230,7 @@ HTML_TEMPLATE = r"""
         const modePlaceholders = {
             'hybrid': 'Nhập câu hỏi hoặc yêu cầu tạo chức năng... (Shift+Enter để xuống dòng)',
             'local': '[100% Local GPU] Nhập yêu cầu viết Entity, Generic DAO, HQL động...',
+            'openrouter': '[DeepSeek V3] Nhập bài toán lập trình hoặc yêu cầu kỹ thuật...',
             'cloud': '[Cloud Gemini] Nhập yêu cầu thiết kế toàn bộ hệ thống lớn nhiều module...',
             'compare_models': '[So Sánh Mô Hình] Nhập bài toán để đối chiếu Model Gốc vs Fine-tuned + RAG...',
             'compare_system': '[So Sánh Hệ Thống] Nhập bài toán để so sánh Hệ Thống Dự Án vs AI Tiêu Chuẩn...',
@@ -1186,7 +1258,7 @@ HTML_TEMPLATE = r"""
 
         function setMode(mode) {
             currentMode = mode;
-            ['hybrid', 'local', 'cloud', 'compare_models', 'compare_system', 'compare_arena', 'compare_claude'].forEach(m => {
+            ['hybrid', 'local', 'openrouter', 'cloud', 'compare_models', 'compare_system', 'compare_arena', 'compare_claude'].forEach(m => {
                 const btn = document.getElementById(`btn-${m}`);
                 if (btn) {
                     if (m === mode) {
@@ -1386,6 +1458,18 @@ HTML_TEMPLATE = r"""
                 badge: 'Chuyển Mode',
                 badgeColor: 'bg-sky-50 text-sky-700 border-sky-200',
                 keywords: 'cloud gemini 1m context token quy mo lon che do mode'
+            },
+            {
+                id: 'mode_openrouter',
+                category: 'modes',
+                categoryLabel: 'Chế Độ AI',
+                title: 'DeepSeek V3 (Cloud OpenRouter)',
+                desc: 'Mô hình coding SOTA mã nguồn mở qua OpenRouter API + RAG Codebase',
+                mode: 'openrouter',
+                icon: '🚀',
+                badge: 'Chuyển Mode',
+                badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+                keywords: 'deepseek v3 openrouter cloud coding rag sota che do mode'
             },
 
             // --- Công Cụ & Báo Cáo ---
@@ -2472,7 +2556,12 @@ HTML_TEMPLATE = r"""
 
 @app.route("/")
 def index():
-    return render_template_string(HTML_TEMPLATE, has_claude_key=bool(anthropic_api_key), rag_count=len(rag_engine.docs))
+    return render_template_string(
+        HTML_TEMPLATE,
+        has_claude_key=bool(anthropic_api_key),
+        has_openrouter_key=bool(openrouter_api_key),
+        rag_count=len(rag_engine.docs)
+    )
 
 
 @app.route("/api/rag/refresh", methods=["POST"])
@@ -2629,10 +2718,24 @@ def chat_stream():
                 yield f"data: {json.dumps({'type': 'all_done', 'total_elapsed': round(time.time() - start_time, 2)})}\n\n"
                 return
 
-            # 5. CHẾ ĐỘ ĐƠN LẺ: LOCAL, CLOUD, HOẶC HYBRID
+            # 5. CHẾ ĐỘ ĐƠN LẺ: LOCAL, OPENROUTER, CLOUD, HOẶC HYBRID
+            buf_single = []
+
+            if mode == "openrouter":
+                _, cloud_rag_files = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
+                badge = "🚀 DeepSeek-V3 via OpenRouter (Ngữ Cảnh Codebase RAG)"
+                source = "openrouter_direct"
+                yield f"data: {json.dumps({'type': 'single_start', 'badge': badge, 'source': source, 'rag_files': cloud_rag_files})}\n\n"
+                prompt_or = _build_cloud_project_prompt(user_message, history=chat_history)
+                for chunk in call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"):
+                    buf_single.append(chunk)
+                    yield f"data: {json.dumps({'type': 'single_chunk', 'chunk': chunk})}\n\n"
+                elapsed = round(time.time() - start_time, 2)
+                yield f"data: {json.dumps({'type': 'single_done', 'elapsed': elapsed, 'eval': evaluate_architecture_compliance(''.join(buf_single), user_message)})}\n\n"
+                return
+
             is_heavy = is_heavy_task(user_message)
             use_cloud = (mode == "cloud") or (mode == "hybrid" and (is_heavy or not local_ready))
-            buf_single = []
 
             if use_cloud:
                 _, cloud_rag_files = retrieve_rag_for_query(user_message, top_k=5, max_chars=5000)
@@ -2702,6 +2805,19 @@ def chat():
                 "elapsed": elapsed,
                 "source": "cloud_delegated",
                 "badge": "🌐 Google Gemini Cloud (Ngữ Cảnh Kiến Trúc Codebase • 1M Context)"
+            })
+
+        if mode == "openrouter":
+            prompt_or = _build_cloud_project_prompt(user_message)
+            start_t = time.time()
+            chunks = list(call_openrouter_stream(prompt_or, model="deepseek/deepseek-chat"))
+            ans = "".join(chunks)
+            elapsed = round(time.time() - start_t, 2)
+            return jsonify({
+                "answer": ans,
+                "elapsed": elapsed,
+                "source": "openrouter_direct",
+                "badge": "🚀 DeepSeek-V3 via OpenRouter (Ngữ Cảnh Codebase RAG)"
             })
 
         if mode == "compare_system":
