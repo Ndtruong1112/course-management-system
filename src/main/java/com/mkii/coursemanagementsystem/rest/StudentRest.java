@@ -59,6 +59,12 @@ public interface StudentRest {
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "name", required = false) String name);
 
+    @GetMapping("/search-paged")
+    ResponseEntity<Page<StudentResponseDTO>> searchStudentsPaged(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size);
+
     @GetMapping("/spec-search")
     ResponseEntity<List<StudentResponseDTO>> searchStudentsBySpecification(@RequestParam String search);
 

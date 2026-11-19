@@ -63,6 +63,11 @@ public class EnrollmentRestImpl implements EnrollmentRest {
     }
 
     @Override
+    public ResponseEntity<Page<EnrollmentResponseDTO>> searchPaged(String keyword, int page, int size) {
+        return ResponseEntity.ok(enrollmentService.searchPaged(keyword, page, size));
+    }
+
+    @Override
     public ResponseEntity<Page<EnrollmentResponseDTO>> getAllPaged(int page, int size, String sortBy, String direction) {
         return ResponseEntity.ok(enrollmentService.getAllPaged(page, size, sortBy, direction));
     }

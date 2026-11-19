@@ -1,6 +1,7 @@
 package com.mkii.coursemanagementsystem.rest.impl;
 
 import com.mkii.coursemanagementsystem.common.exception.BadRequestException;
+import com.mkii.coursemanagementsystem.common.MessageConstants;
 import com.mkii.coursemanagementsystem.common.exception.ResourceNotFoundException;
 import com.mkii.coursemanagementsystem.dao.IUserDao;
 import com.mkii.coursemanagementsystem.dto.auth.AuthResponse;
@@ -69,10 +70,14 @@ public class AuthRestImpl implements AuthRest {
 
     @Override
     public ResponseEntity<AuthResponse> register(@Valid RegisterRequest request) {
-        logger.info("Registering new user: {}", request.getUsername());
+        String username = request.getUsername().trim();
+        if (username.length() < 3 || username.length() > 50) {
+            throw new BadRequestException(MessageConstants.USERNAME_INVALID);
+        }
+        logger.info("Registering new user: {}", username);
 
-        if (userDao.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username đã tồn tại: " + request.getUsername());
+        if (userDao.existsByUsername(username)) {
+            throw new BadRequestException("Username đã tồn tại: " + username);
         }
 
         if (request.getEmail() != null && userDao.existsByEmail(request.getEmail())) {
@@ -83,7 +88,7 @@ public class AuthRestImpl implements AuthRest {
         String role = "USER";
 
         User user = User.builder()
-                .username(request.getUsername().trim())
+                .username(username)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
                 .fullName(request.getFullName())
@@ -94,7 +99,7 @@ public class AuthRestImpl implements AuthRest {
 
         // Auto login after registration
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(username, request.getPassword())
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);

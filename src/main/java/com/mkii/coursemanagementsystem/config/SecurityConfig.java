@@ -110,6 +110,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
                 .requestMatchers(HttpMethod.PUT, "/api/students/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
                 .requestMatchers(HttpMethod.DELETE, "/api/students/**").hasRole("ADMIN")
+                // Hồ sơ sinh viên và ghi danh chứa dữ liệu cá nhân; chưa có liên kết USER -> Student để kiểm tra chủ sở hữu.
+                .requestMatchers(HttpMethod.GET, "/api/students", "/api/students/**", "/api/enrollments", "/api/enrollments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                .requestMatchers(HttpMethod.HEAD, "/api/students", "/api/students/**", "/api/enrollments", "/api/enrollments/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
+                // Tài liệu nội bộ chỉ dành cho nhân sự; xóa yêu cầu quyền quản trị.
+                .requestMatchers(HttpMethod.POST, "/api/documents/delete").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/documents/**").hasRole("ADMIN")
+                .requestMatchers("/api/documents", "/api/documents/**").hasAnyRole("ADMIN", "TEACHER", "LECTURER")
                 // Mọi thao tác khác (kể cả GET sinh viên PII, GET/POST tài liệu nội bộ) bắt buộc phải đăng nhập (A3, A4)
                 .anyRequest().authenticated()
             );

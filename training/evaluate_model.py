@@ -1,5 +1,10 @@
 import os
 import sys
+
+# The legacy keyword-only report is historical and must not be regenerated as accuracy.
+if __name__ == "__main__":
+    print("Đánh giá cũ dựa trên từ khóa đã ngừng sử dụng. Hãy chạy: python benchmark/evaluate.py run")
+    raise SystemExit(2)
 import json
 import time
 import torch

@@ -11,6 +11,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,6 +88,22 @@ public class CourseServiceImpl implements CourseService {
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CourseResponseDTO> browse(String keyword, Double minPrice, Double maxPrice, int page, int size) {
+        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("id"));
+        Specification<Course> spec = (root, query, builder) -> {
+            List<Predicate> terms = new ArrayList<>();
+            if (keyword != null && !keyword.isBlank()) {
+                terms.add(builder.like(builder.lower(root.get("title")), "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%"));
+            }
+            if (minPrice != null) terms.add(builder.ge(root.get("price"), minPrice));
+            if (maxPrice != null) terms.add(builder.le(root.get("price"), maxPrice));
+            return builder.and(terms.toArray(Predicate[]::new));
+        };
+        return courseDao.findAll(spec, pageable).map(this::mapToDTO);
     }
 
     @Override

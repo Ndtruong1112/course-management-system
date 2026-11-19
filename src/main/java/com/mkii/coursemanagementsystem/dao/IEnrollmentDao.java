@@ -2,6 +2,7 @@ package com.mkii.coursemanagementsystem.dao;
 
 import com.mkii.coursemanagementsystem.entity.Enrollment;
 
+import org.springframework.data.domain.Page;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,8 @@ public interface IEnrollmentDao extends IPaginationSortingDao<Long, Enrollment> 
     List<Enrollment> findByCourseId(Long courseId);
 
     List<Enrollment> searchByKeyword(String keyword);
+
+    Page<Enrollment> searchByKeywordPaged(String keyword, int page, int size);
 
     Map<String, Long> countGroupByStatus();
 

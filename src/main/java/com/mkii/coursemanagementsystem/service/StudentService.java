@@ -21,6 +21,8 @@ public interface StudentService {
 
     List<StudentResponseDTO> searchByKeyword(String keyword);
 
+    Page<StudentResponseDTO> searchPaged(String keyword, int page, int size);
+
     StudentResponseDTO getByEmail(String email);
 
     StudentResponseDTO getByField(String field, Object value);

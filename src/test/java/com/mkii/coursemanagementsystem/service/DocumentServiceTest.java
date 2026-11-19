@@ -11,6 +11,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +35,49 @@ class DocumentServiceTest {
 
     @InjectMocks
     private DocumentServiceImpl documentService;
+
+    @Test
+    void downloadStreamsAndClosesInputWithoutBufferingEntireFile() throws Exception {
+        class TrackedInput extends ByteArrayInputStream {
+            boolean closed;
+            TrackedInput(byte[] data) { super(data); }
+            @Override public void close() throws IOException { closed = true; super.close(); }
+        }
+        var input = new TrackedInput("file-content".getBytes(StandardCharsets.UTF_8));
+        when(minioStorageService.openDownload("folder/test.pdf")).thenReturn(input);
+        var response = documentService.download("folder/test.pdf");
+        verify(minioStorageService, never()).openDownload(anyString());
+        var output = new ByteArrayOutputStream();
+        response.getBody().writeTo(output);
+        assertEquals("file-content", output.toString(StandardCharsets.UTF_8));
+        assertTrue(input.closed);
+        verify(minioStorageService).openDownload("folder/test.pdf");
+    }
+
+    @Test
+    void downloadReadsLargeObjectInBoundedChunks() throws Exception {
+        class GeneratedInput extends InputStream {
+            long remaining = 32L * 1024 * 1024;
+            int largestRead;
+            boolean closed;
+            @Override public int read() { if (remaining == 0) return -1; remaining--; return 0; }
+            @Override public int read(byte[] bytes, int offset, int length) {
+                if (remaining == 0) return -1;
+                largestRead = Math.max(largestRead, length);
+                int count = (int) Math.min(length, remaining);
+                remaining -= count;
+                return count;
+            }
+            @Override public void close() { closed = true; }
+        }
+        var input = new GeneratedInput();
+        when(minioStorageService.openDownload("large.bin")).thenReturn(input);
+        var response = documentService.download("large.bin");
+        response.getBody().writeTo(OutputStream.nullOutputStream());
+        assertEquals(0, input.remaining);
+        assertTrue(input.largestRead <= 65536, "Must not allocate a buffer proportional to file size");
+        assertTrue(input.closed);
+    }
 
     @Test
     void testCreateWithValidFileExtension() {

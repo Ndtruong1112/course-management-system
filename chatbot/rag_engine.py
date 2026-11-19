@@ -6,8 +6,8 @@ from collections import Counter
 class CodebaseRAG:
     """
     Lightweight local Retrieval-Augmented Generation (RAG) engine indexing the real Java/Spring Boot
-    codebase under src/main so both Local Qwen-3B + LoRA and Cloud models answer with exact facts
-    and zero hallucination.
+    codebase under src/main to provide relevant reference material to local and cloud models.
+    Retrieval cannot guarantee correctness; generated answers still require verification.
     """
 
     def __init__(self, root_dir):
@@ -39,7 +39,7 @@ class CodebaseRAG:
             rel_path = os.path.relpath(app_props, self.root_dir).replace("\\", "/")
             try:
                 with open(app_props, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read().strip()
+                    content = self._redact_config_secrets(f.read()).strip()
                 if content:
                     self.docs.append(self._build_doc(rel_path, "application.properties", content, is_doc=False))
             except Exception:
@@ -69,6 +69,19 @@ class CodebaseRAG:
                 pass
 
         return len(self.docs)
+
+    @staticmethod
+    def _redact_config_secrets(content):
+        """Keep configuration names searchable without indexing their secret values."""
+        lines = []
+        for line in content.splitlines():
+            key, separator, _ = line.partition("=")
+            if separator and not key.lstrip().startswith(("#", "!")) and re.search(
+                    r"password|secret|token|(?:access|api|aes)[._-]?key", key, re.IGNORECASE):
+                lines.append(f"{key}=[REDACTED]")
+            else:
+                lines.append(line)
+        return "\n".join(lines)
 
     @staticmethod
     def _split_markdown_sections(md_text):
@@ -207,6 +220,9 @@ class CodebaseRAG:
                 else:
                     if "metadata" in doc["content_lower"] and ("cơ sở dữ liệu" in q_lower or "nhị phân" in q_lower or "vật lý" in q_lower or "minio" in q_lower):
                         score += 20.0
+                    if ("metadata" in q_lower and any(term in q_lower for term in ("lưu", "ở đâu", "storage"))
+                            and all(term in doc["content_lower"] for term in ("metadata", "minio", "mysql"))):
+                        score += 60.0
             # De-prioritize boilerplate constant/main files unless directly referenced
             if doc["class_lower"] in ("messageconstants", "coursemanagementsystemapplication") and doc["class_lower"] not in q_lower:
                 score -= 10.0
@@ -422,8 +438,8 @@ def evaluate_architecture_compliance(text, prompt=""):
         "⚠️ không thể kết nối",
         "⚠️ lỗi cloud api",
     )
-    if not text or any(m in text_lower for m in err_markers):
-        is_err = bool(text) and any(m in text_lower for m in err_markers)
+    if not text or text_lower.strip().startswith("⚠") or any(m in text_lower for m in err_markers):
+        is_err = bool(text) and (text_lower.strip().startswith("⚠") or any(m in text_lower for m in err_markers))
         return {
             "score": 0,
             "passed_count": 0,

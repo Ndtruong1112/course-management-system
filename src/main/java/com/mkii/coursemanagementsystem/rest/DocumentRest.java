@@ -3,6 +3,7 @@ package com.mkii.coursemanagementsystem.rest;
 import com.mkii.coursemanagementsystem.entity.Document;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,10 +18,10 @@ public interface DocumentRest {
             @RequestParam("appId") String appId);
 
     @GetMapping("/download")
-    ResponseEntity<byte[]> downloadDocumentByPath(@RequestParam("filePath") String filePath);
+    ResponseEntity<StreamingResponseBody> downloadDocumentByPath(@RequestParam("filePath") String filePath);
 
     @GetMapping("/download/{id}")
-    ResponseEntity<byte[]> downloadDocumentById(@PathVariable String id);
+    ResponseEntity<StreamingResponseBody> downloadDocumentById(@PathVariable String id);
 
     @PostMapping("/delete")
     ResponseEntity<String> deleteDocument(@RequestBody Map<String, String> id);

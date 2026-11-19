@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -164,27 +165,25 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public ResponseEntity<byte[]> download(String filePath) {
+    public ResponseEntity<StreamingResponseBody> download(String filePath) {
         logger.info("Downloading document by filePath: {}", filePath);
         if (filePath == null || filePath.trim().isEmpty()) {
             throw new BadRequestException("Đường dẫn file không được để trống.");
         }
 
-        byte[] data = minioStorageService.download(filePath);
         String filename = FilenameUtils.getName(filePath);
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFilename + "\"")
-                .body(data);
+                .body(streamDocument(filePath));
     }
 
     @Override
-    public ResponseEntity<byte[]> downloadById(String id) {
+    public ResponseEntity<StreamingResponseBody> downloadById(String id) {
         logger.info("Downloading document by id: {}", id);
         Document document = getById(id);
-        byte[] data = minioStorageService.download(document.getPath());
 
         String filename = document.getName() != null ? document.getName() : FilenameUtils.getName(document.getPath());
         String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
@@ -192,7 +191,15 @@ public class DocumentServiceImpl implements DocumentService {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFilename + "\"")
-                .body(data);
+                .body(streamDocument(document.getPath()));
+    }
+
+    private StreamingResponseBody streamDocument(String path) {
+        return output -> {
+            try (var input = minioStorageService.openDownload(path)) {
+                input.transferTo(output);
+            }
+        };
     }
 
     @Override

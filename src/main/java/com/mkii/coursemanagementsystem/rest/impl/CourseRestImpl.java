@@ -162,6 +162,11 @@ public class CourseRestImpl implements CourseRest {
     }
 
     @Override
+    public ResponseEntity<Page<CourseResponseDTO>> browseCourses(String keyword, Double minPrice, Double maxPrice, int page, int size) {
+        return ResponseEntity.ok(courseService.browse(keyword, minPrice, maxPrice, page, size));
+    }
+
+    @Override
     public ResponseEntity<List<CourseResponseDTO>> filterCoursesByPrice(Double minPrice, Double maxPrice) {
         try {
             logger.info("Filtering Courses by price: {} - {}", minPrice, maxPrice);

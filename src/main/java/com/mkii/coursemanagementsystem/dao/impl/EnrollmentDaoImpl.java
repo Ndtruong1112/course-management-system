@@ -8,6 +8,9 @@ import jakarta.persistence.TypedQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -93,6 +96,29 @@ public class EnrollmentDaoImpl extends HibernatePaginationSortingDao<Long, Enrol
         TypedQuery<Enrollment> query = getEntityManager().createQuery(hql, Enrollment.class);
         query.setParameter("kw", "%" + keyword.trim() + "%");
         return query.getResultList();
+    }
+
+    @Override
+    public Page<Enrollment> searchByKeywordPaged(String keyword, int page, int size) {
+        int boundedSize = Math.min(size, 100);
+        var pageable = PageRequest.of(page, boundedSize);
+        if (keyword == null || keyword.isBlank()) {
+            return findAllPaged(page, boundedSize, "id", "desc");
+        }
+        String condition = " WHERE LOWER(e.student.fullName) LIKE LOWER(:kw) "
+                + "OR LOWER(e.student.email) LIKE LOWER(:kw) "
+                + "OR LOWER(e.course.title) LIKE LOWER(:kw) "
+                + "OR LOWER(e.status) LIKE LOWER(:kw)";
+        String term = "%" + keyword.trim() + "%";
+        Long total = getEntityManager().createQuery("SELECT COUNT(e) FROM Enrollment e" + condition, Long.class)
+                .setParameter("kw", term).getSingleResult();
+        List<Enrollment> content = getEntityManager().createQuery(
+                        "SELECT e FROM Enrollment e" + condition + " ORDER BY e.enrolledAt DESC, e.id DESC", Enrollment.class)
+                .setParameter("kw", term)
+                .setFirstResult(Math.toIntExact(pageable.getOffset()))
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(content, pageable, total);
     }
 
     @Override

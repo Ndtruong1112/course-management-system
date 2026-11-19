@@ -1,6 +1,7 @@
 package com.mkii.coursemanagementsystem.common.converter;
 
 import com.mkii.coursemanagementsystem.util.AESUtil;
+import com.mkii.coursemanagementsystem.common.MessageConstants;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import org.slf4j.Logger;
@@ -38,8 +39,8 @@ public class AesEncryptConverter implements AttributeConverter<String, String> {
         try {
             return AESUtil.encryptStringWithIv(attribute, SECRET_KEY);
         } catch (Exception e) {
-            logger.error("Error encrypting entity attribute: {}", e.getMessage());
-            return attribute;
+            logger.error(MessageConstants.ENTITY_ENCRYPTION_FAILED, e);
+            throw new IllegalStateException(MessageConstants.ENTITY_ENCRYPTION_FAILED, e);
         }
     }
 

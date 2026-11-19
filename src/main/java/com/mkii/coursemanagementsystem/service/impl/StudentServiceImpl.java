@@ -11,6 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,6 +101,17 @@ public class StudentServiceImpl implements StudentService {
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StudentResponseDTO> searchPaged(String keyword, int page, int size) {
+        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("id"));
+        String term = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<Student> spec = (root, query, builder) -> term.isEmpty() ? builder.conjunction() :
+                builder.or(builder.like(builder.lower(root.get("fullName")), "%" + term + "%"),
+                           builder.like(builder.lower(root.get("email")), "%" + term + "%"));
+        return studentDao.findAll(spec, pageable).map(this::mapToDTO);
     }
 
     @Override

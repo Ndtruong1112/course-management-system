@@ -35,11 +35,26 @@ Hệ thống kết hợp toàn diện giữa **Backend Quản lý Khóa học ch
 
 ## 1. Giới thiệu tổng quan
 
+> **Lưu ý bảo mật:** Dữ liệu và tài khoản mẫu chỉ được tạo khi đặt
+> `CMS_DEMO_DATA_ENABLED=true`; script `start_all.bat` bật tùy chọn này để chạy
+> thử cục bộ; với Docker Compose, có thể đặt biến này trong `.env` để chạy thử.
+> Profile `prod` luôn tắt khởi tạo mẫu. Tài khoản mẫu đã tồn tại trong cơ sở
+> dữ liệu không được tự động xóa hoặc đổi mật khẩu.
+>
+> Khi triển khai thực tế, bật `SPRING_PROFILES_ACTIVE=prod` và cung cấp
+> `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
+> `SPRING_DATASOURCE_PASSWORD`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
+> `MINIO_SECRET_KEY`, `JWT_SECRET`, `CMS_AES_KEY` và `CMS_AES_SALT` qua môi
+> trường. Profile này yêu cầu schema đã được tạo trước và không tự cập nhật
+> schema. Giữ nguyên khóa AES cũ cho dữ liệu đã mã hóa cho đến khi có quy trình
+> chuyển đổi khóa. `docker-compose.yml` hiện chỉ dành cho chạy thử cục bộ và
+> vẫn sử dụng thông tin đăng nhập mẫu, không dùng nguyên trạng cho production.
+
 Dự án gồm 2 trụ cột cốt lõi:
 
 1. **Enterprise Course Management Backend**: Cung cấp đầy đủ các API RESTful quản lý Khóa học (Courses) và Học viên (Students), áp dụng mô hình phân lớp chuẩn, kết hợp linh hoạt giữa Spring Data JPA và mô hình **Generic DAO (Hibernate Generic DAO)**, xử lý ngoại lệ tập trung (**Global Exception Handling**) và tối ưu hóa truy vấn dữ liệu động qua **DTO Projections**.
-2. **Local-First Hybrid Trợ Lý AI Nội Bộ**: Một trợ lý AI hiểu 100% ngữ cảnh kiến trúc codebase. AI Local (`Qwen2.5-Coder-3B-Instruct` được fine-tune bằng QLoRA trên GPU NVIDIA RTX 4050 6GB) đóng vai trò là "bộ não chỉ huy trung tâm":
-   * **Tác vụ vừa & nhỏ** *(viết hàm DAO, câu HQL, sửa bug, giải thích code)*: Chạy trực tiếp 100% offline trên GPU cục bộ (không tốn chi phí, độ trễ thấp, bảo mật tuyệt đối).
+2. **Local-First Hybrid Trợ Lý AI Nội Bộ**: Trợ lý kết hợp mô hình `Qwen2.5-Coder-3B-Instruct` fine-tune QLoRA với truy xuất các đoạn codebase liên quan. Câu trả lời có thể thiếu hoặc sai ngữ cảnh và cần được kiểm tra:
+   * **Tác vụ vừa & nhỏ** *(viết hàm DAO, câu HQL, sửa bug, giải thích code)*: Có thể chạy cục bộ khi model và các thư viện đã được cài đầy đủ.
    * **Tác vụ tổng hợp quy mô lớn** *(tạo một project mới như Khách sạn, Bệnh viện, Thư viện theo chuẩn kiến trúc của base code)*: Tự động gom cấu trúc kiến trúc dự án và ủy quyền cho Cloud AI (Google Gemini) để sinh toàn bộ source code hoàn chỉnh mà không bị thiếu hụt hay out-of-context.
 
 ---
@@ -58,7 +73,7 @@ Dự án gồm 2 trụ cột cốt lõi:
 ### 2.2. Course Studio — Trợ Lý AI Nội Bộ Thông minh
 * **Fine-Tuning QLoRA 4-bit + RAG**: Huấn luyện `Qwen2.5-Coder-3B-Instruct` trên GPU RTX 4050 (Adapter lưu tại `outputs/course-management-lora-adapter` qua Git LFS), kết hợp `CodebaseRAG` (`chatbot/rag_engine.py`, nút `↻ RAG` làm mới nóng trên sidebar) và bộ nhớ hội thoại nhiều lượt.
 * **Chưng cất tri thức (Knowledge Distillation)**: Thư mục `distillation/` cho phép trích xuất toàn bộ ngữ cảnh codebase để sinh dataset chuyên sâu.
-* **Giao diện Web Studio 7 Chế độ (`http://localhost:7860`)**:
+* **Giao diện Web Studio (`http://localhost:7860`)**:
   1. `Trợ Lý Kỹ Thuật (Hybrid)`: Tự động phân luồng Local GPU vs Cloud Gemini.
   2. `100% Local GPU`: Chạy offline hoàn toàn trên GPU cục bộ.
   3. `Cloud Gemini (1M Context)`: Ủy quyền Cloud với multi-model fallback (`gemini-3-flash-preview`, `gemini-3.5-flash`, `gemini-flash-lite-latest`, `gemini-2.5-flash`).
@@ -66,8 +81,10 @@ Dự án gồm 2 trụ cột cốt lõi:
   5. `So Sánh Hệ Thống`: Dự Án (`LoRA + RAG`) vs AI Tiêu Chuẩn (Zero Context).
   6. `Đấu Trường 3 Chiều`: Chạy tuần tự cả 3 thực thể và chấm điểm đồng bộ sau khi tất cả hoàn tất.
   7. `So Sánh Với Claude`: Đối chiếu trực tiếp với Anthropic API hoặc dán câu trả lời từ Claude.ai.
+  8. `Cloud Free AI (OpenRouter)`: Sử dụng OpenRouter miễn phí với ngữ cảnh RAG của dự án.
+  9. `OpenRouter Zero Context`: Chọn model miễn phí và gửi riêng câu hỏi hiện tại để đối chiếu.
 * **Bộ Đánh Giá Kiến Trúc Tự Động (`evaluate_architecture_compliance`)**: Chấm điểm đồng bộ sau khi hoàn tất phản hồi dựa trên Rubric phù hợp từng dạng bài (Module DAO, HQL Method, DTO Design, Q&A Nghiệp vụ).
-* **Kết quả kiểm thử thực nghiệm**: Backend đạt **64/64 Unit Tests** (`.\mvnw test`); đánh giá 10 câu hỏi đạt **9/10 (90.00%)** với `LoRA + RAG`; Benchmark 5 kịch bản đạt **100.0%** tuân thủ kiến trúc (so với **55.0%** Base Model chưa fine-tune).
+* **Kết quả tham khảo đã lưu**: Báo cáo 10 câu hỏi ghi nhận 9/10 theo tiêu chí từ khóa; benchmark 5 kịch bản dùng rubric heuristic. Các con số này không chứng minh mã sinh ra biên dịch được hoặc phản ánh kết quả mọi lần chạy. Kiểm thử khởi động Spring dùng H2 trong bộ nhớ, không kết nối MySQL thực.
 
 ---
 
@@ -168,14 +185,14 @@ course-management-system/
 ├── training/                                       # Pipeline Huấn luyện & Đánh giá QLoRA
 │   ├── generate_dataset.py / dataset.jsonl         # Sinh dữ liệu từ 95 tệp mã nguồn + docs
 │   ├── train_local.py                              # QLoRA 4-bit (NF4, Attention + MLP) trên GPU 6GB
-│   ├── evaluate_model.py / eval_report.json        # Đánh giá 10 câu hỏi (LoRA Only vs LoRA + RAG)
+│   ├── evaluate_model.py / eval_report.json        # Script và báo cáo 10 câu cũ (chỉ tham khảo lịch sử)
 │   ├── test_model.py / clean_vram.py               # Kiểm thử nhanh & giải phóng VRAM
 │   └── Course_Management_AI_Colab.ipynb            # Notebook huấn luyện trên Colab
 │
 ├── benchmark/                                      # Kiểm thử Thực nghiệm 5 Kịch bản (TC-01..TC-05)
-│   ├── benchmark_comparison.py                     # So sánh External Zero-Context, Base GPU, Project LoRA+RAG
-│   ├── BAO_CAO_SO_SANH_HIEU_QUA.md                 # Báo cáo nghiệm thu Markdown
-│   └── bao_cao_truc_quan.html                      # Dashboard Chart.js (Radar & Bar)
+│   ├── evaluate.py / cases.jsonl                   # Bộ so sánh có đối chứng và 40 tình huống pilot
+│   ├── evaluation_core.py                          # Tổng hợp kết quả được đánh giá thủ công
+│   └── BAO_CAO_SO_SANH_HIEU_QUA.md                 # Báo cáo cũ có cảnh báo, chỉ tham khảo lịch sử
 │
 ├── distillation/                                   # Chưng cất Tri thức từ Teacher Model
 │   ├── 1_export_codebase_context.py                # Đóng gói ngữ cảnh codebase
@@ -273,7 +290,7 @@ scripts\docker_down.bat
    * **Trợ Lý Kỹ Thuật (Hybrid)**: Tự động nhận diện câu hỏi để điều phối giữa Local GPU và Cloud Gemini.
    * **100% Local GPU**: Chạy hoàn toàn trên GPU RTX 4050 của máy, không cần internet.
    * **Cloud Gemini (1M Context)**: Sinh mã nguồn lớn với context codebase + multi-model fallback.
-   * **So Sánh Mô Hình (Base vs Fine-tuned)**: Chạy song song mô hình gốc và mô hình sau khi gắn adapter LoRA.
+   * **So Sánh Mô Hình (Base vs Fine-tuned)**: Chạy lần lượt mô hình gốc và mô hình sau khi gắn adapter LoRA.
    * **So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)**: Đối chiếu hệ thống dự án với AI phổ thông bên ngoài (Zero Context).
    * **Đấu Trường 3 Chiều**: So sánh đồng thời 3 luồng kèm chấm điểm đồng bộ sau khi cả 3 hoàn tất.
    * **So Sánh Với Claude**: Đối chiếu trực tiếp qua Anthropic API hoặc dán câu trả lời từ Claude.ai.
@@ -291,16 +308,16 @@ python chatbot/2_finetuned_model/chat.py
 
 ### 6.4. Chạy Đánh giá Thực nghiệm Khoa học (Benchmark Arena)
 
-Để chạy bộ kiểm thử khoa học 5 tình huống thực tế và tự động xuất báo cáo so sánh:
-* Nhấp đúp chuột vào file: **`scripts/run_benchmark.bat`**
-* Hoặc chạy lệnh trên terminal:
-  ```powershell
-  python benchmark/benchmark_comparison.py
-  ```
-Sau khi hoàn tất, hệ thống tự động sinh 2 báo cáo nằm tại thư mục `benchmark/`:
-1. **`benchmark/BAO_CAO_SO_SANH_HIEU_QUA.md`**: Báo cáo học thuật chi tiết phục vụ nghiệm thu đề tài/đồ án.
-2. **`benchmark/bao_cao_truc_quan.html`**: Bảng điều khiển tương tác trực quan với biểu đồ radar 5 chiều và bar chart.
-3. Hoặc xem trực tiếp qua trình duyệt web tại: **`http://localhost:7860/benchmark-report`**
+Chạy thử một câu với bốn cấu hình Base/LoRA và có/không có RAG:
+
+```powershell
+python -X utf8 benchmark/evaluate.py run --limit 1 --max-tokens 128
+```
+
+Bộ pilot có 40 câu và hỗ trợ đối chứng OpenRouter theo model cụ thể. Các câu trả lời
+cần được chấm thủ công; lỗi API không được tính là lỗi chất lượng. Xem hướng dẫn
+chạy đầy đủ, kiểm tra code và nhập đánh giá trong `benchmark/README.md`. Các báo
+cáo cũ được lưu để tham khảo lịch sử, không dùng làm kết luận khoa học.
 
 ---
 
@@ -340,7 +357,7 @@ Dự án áp dụng trọn vẹn quy trình **Knowledge Distillation (Chưng c�
    *(Toàn bộ cache được lưu tại `D:\.cache\huggingface` để không làm đầy ổ C)*.
 5. **Đánh giá Benchmark chất lượng**:
    ```powershell
-   python training/evaluate_model.py
+   python -X utf8 benchmark/evaluate.py run --limit 1 --max-tokens 128
    ```
 6. **Kiểm thử mô hình tương tác**:
    ```powershell
@@ -378,6 +395,12 @@ Dự án áp dụng trọn vẹn quy trình **Knowledge Distillation (Chưng c�
 ---
 
 ### 8.2. Quản lý Học viên (`/api/students`)
+
+Web quản lý tải danh sách ghi danh và tài liệu theo trang 20 bản ghi; khóa học và sinh viên theo trang 8 bản ghi. Tìm khóa học qua `/api/courses/browse` và tìm sinh viên qua `/api/students/search-paged`; API phân trang giới hạn kích thước ở 100 bản ghi.
+
+Web quản lý tải danh sách ghi danh theo trang 20 bản ghi. Tìm kiếm dùng `GET /api/enrollments/search-paged?keyword=...&page=0&size=20`; API giới hạn tối đa 100 bản ghi mỗi trang. Cách này giảm dữ liệu hiển thị cùng lúc, nhưng không bảo đảm khắc phục mọi lỗi trình duyệt hoặc sự cố thiếu bộ nhớ.
+
+API đọc học viên và ghi danh chỉ cho `ADMIN`, `TEACHER`, `LECTURER`. Tài khoản `USER` chưa có liên kết hồ sơ để tự xem dữ liệu của mình; không được cấp quyền đọc danh sách.
 
 | Phương thức | Endpoint | Mô tả | Query Params / Body |
 | :--- | :--- | :--- | :--- |
@@ -420,8 +443,9 @@ Khi có ngoại lệ xảy ra, hệ thống trả về mã HTTP chuẩn cùng c�
 # 1. Lấy danh sách khóa học
 curl -X GET http://localhost:8080/api/courses
 
-# 2. Thêm mới học viên
+# 2. Thêm mới học viên (đặt TOKEN là JWT của ADMIN/TEACHER/LECTURER)
 curl -X POST http://localhost:8080/api/students \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"fullName":"Tran Thi B","email":"tranb@example.com","phone":"0912345678","address":"TP. Ho Chi Minh"}'
 
@@ -432,6 +456,19 @@ curl -X GET "http://localhost:8080/api/courses/filter?minPrice=100&maxPrice=600"
 ---
 
 ## 9. Bảo mật & Biến môi trường
+
+Nếu chỉ cần web quản lý, chạy `scripts/run_backend.bat`; script không khởi động
+chatbot. Script build JAR mới bằng Maven, đóng Maven rồi mới chạy backend; không dùng JAR cũ khi build lỗi. Mặc định giới hạn heap backend ở 512 MB (đây không phải giới hạn toàn bộ RAM của tiến trình). Đặt biến `CMS_BACKEND_JVM_ARGS` để điều chỉnh, ví dụ
+`-Xms128m -Xmx768m`; kiểm tra tải thực tế nếu gặp lỗi thiếu heap.
+
+Tải tài liệu từ MinIO được truyền theo luồng để không giữ toàn bộ file trong
+RAM. Nút tải trên web gửi token của người dùng; trình duyệt hỗ trợ File System
+Access sẽ hỏi nơi lưu và ghi theo luồng. Với trình duyệt không hỗ trợ, phương án
+dự phòng giữ tối đa 50 MB trong bộ nhớ, vượt mức này cần trình duyệt hỗ trợ ghi
+theo luồng. Nếu kết nối MinIO lỗi sau khi phản hồi đã bắt đầu, lượt tải có thể
+bị ngắt giữa chừng và cần thử lại.
+
+Kiểm thử backend bằng `./mvnw test` (Windows: `mvnw.cmd test`). Hai kiểm thử khởi động ứng dụng dùng cơ sở dữ liệu H2 riêng trong bộ nhớ và tắt dữ liệu mẫu; không dùng MySQL mặc định. Các kiểm thử này không thay thế kiểm thử tích hợp MySQL/MinIO thực.
 
 * Tệp `.env` lưu trữ khóa API đã được cấu hình trong `.gitignore` để **tuyệt đối không bao giờ bị lộ hoặc tự động commit lên GitHub**.
 * Dữ liệu chưng cất thô và cache mô hình nặng (`outputs/`, `D:\.cache`) đều được cách ly hoàn toàn khỏi repository Git.

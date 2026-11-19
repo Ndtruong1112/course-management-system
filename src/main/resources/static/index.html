@@ -136,6 +136,54 @@
                 border-bottom: 1px solid var(--border-subtle);
             }
         }
+
+        /* Một hệ thống thị giác thống nhất cho trang quản lý. */
+        :root { --bg-app:#f6f7f9; --bg-surface:#fff; --border-subtle:#e7e9ee; --text-main:#1b2638; --text-muted:#707d90; --accent:#405b8d; --accent-soft:#edf2fa; }
+        body { font-family:Inter, "Segoe UI", system-ui, sans-serif; letter-spacing:-.01em; }
+        .sidebar-taskbar { width:252px; box-shadow:1px 0 0 rgba(27,38,56,.02); }
+        .sidebar-brand { padding:23px 20px; }
+        .brand-mark { width:40px; height:40px; border-radius:11px; background:#30486f; letter-spacing:.03em; }
+        .nav-section-title { color:#8793a3; font-size:.65rem; letter-spacing:.1em; padding:18px 20px 8px; }
+        .task-btn { width:calc(100% - 24px); margin:3px 12px; padding:11px 12px; border:0; border-radius:9px; color:#586679; font-size:.85rem; }
+        .task-btn i { font-size:1rem; width:20px; text-align:center; }
+        .task-btn.active { border:0; background:#edf2fa; color:#304e7f; font-weight:650; }
+        .main-workspace { padding:32px clamp(20px,3.3vw,52px) 48px; }
+        .workspace-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin:0 0 27px; }
+        .workspace-eyebrow { color:#768398; font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:7px; }
+        .workspace-heading h1 { color:#19283d; font-size:clamp(1.5rem,2.3vw,2rem); font-weight:700; letter-spacing:-.035em; margin:0 0 6px; }
+        .workspace-heading p { margin:0; color:#748195; font-size:.87rem; }
+        .panel-card,.kpi-card { border-color:#e8ebf0; border-radius:13px; box-shadow:0 3px 12px rgba(31,46,68,.035); }
+        .kpi-card { height:100%; padding:19px 18px; }
+        .kpi-label { color:#78869a; font-size:.76rem; margin-bottom:11px; }
+        .kpi-value { color:#23344c!important; font-size:1.55rem; letter-spacing:-.035em; }
+        .panel-card { padding:24px!important; }
+        .panel-card h5 { color:#24354d; font-size:1.03rem; letter-spacing:-.02em; }
+        .panel-card .table-responsive { border:1px solid #edf0f4; border-radius:9px; }
+        .table { margin-bottom:0; }
+        .table thead th { background:#f8f9fb; color:#7e8a9b; font-size:.68rem; letter-spacing:.06em; padding:12px 14px; border-bottom-color:#edf0f4; }
+        .table tbody td { padding:13px 14px; border-bottom-color:#f0f2f5; font-size:.83rem; }
+        .btn { border-radius:8px; font-weight:600; }
+        .btn-primary { --bs-btn-bg:#405b8d; --bs-btn-border-color:#405b8d; --bs-btn-hover-bg:#324b77; --bs-btn-hover-border-color:#324b77; --bs-btn-active-bg:#2c426b; --bs-btn-active-border-color:#2c426b; }
+        .form-control,.form-select { border-color:#dfe5ed; border-radius:8px; }
+        .form-control:focus,.form-select:focus { border-color:#91a8cc; box-shadow:0 0 0 .2rem rgba(64,91,141,.12); }
+        @media (max-width:991px) {
+            .sidebar-taskbar { width:100%; }
+            .sidebar-brand { padding:14px 18px; }
+            .sidebar-taskbar > .flex-grow-1 { display:flex; overflow-x:auto!important; padding:7px 8px!important; gap:3px; }
+            .sidebar-taskbar .nav-section-title { display:none; }
+            .task-btn { flex:0 0 auto; width:auto; margin:0; white-space:nowrap; }
+            .sidebar-taskbar > .p-3.border-top { padding:10px 18px!important; }
+            #loginCompact { display:flex; align-items:center; gap:14px; }
+            #loginCompact > div { margin:0!important; }
+            #loginCompact button { width:auto!important; }
+            .main-workspace { padding:24px 18px 36px; }
+        }
+        @media (max-width:575px) {
+            .workspace-heading { align-items:flex-start; flex-direction:column; }
+            .panel-card { padding:18px!important; }
+            .kpi-card { padding:15px; }
+            .workspace-heading h1 { font-size:1.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -146,14 +194,14 @@
             <span class="brand-mark me-2">CMS</span>
             <div>
                 <div class="fw-bold fs-6 lh-sm">Course Portal</div>
-                <div class="text-muted" style="font-size: 0.72rem;">Spring Boot 3 · Generic DAO</div>
+                <div class="text-muted" style="font-size: 0.72rem;">Không gian quản lý đào tạo</div>
             </div>
         </div>
 
         <div class="flex-grow-1 overflow-auto py-2">
             <div class="nav-section-title">Quản Lý Đào Tạo</div>
             <button class="task-btn active" id="nav-overview" onclick="switchTab('overview')">
-                <i class="bi bi-grid-1x2"></i><span>Tổng Quan &amp; Ghi Danh</span>
+                <i class="bi bi-grid-1x2"></i><span>Tổng quan</span>
             </button>
             <button class="task-btn" id="nav-courses" onclick="switchTab('courses')">
                 <i class="bi bi-book"></i><span>Khóa Học</span>
@@ -165,7 +213,7 @@
                 <i class="bi bi-building"></i><span>Khoa &amp; Ngành</span>
             </button>
             <button class="task-btn" id="nav-documents" onclick="switchTab('documents')">
-                <i class="bi bi-folder2-open"></i><span>Tài Liệu MinIO</span>
+                <i class="bi bi-folder2-open"></i><span>Tài liệu</span>
             </button>
 
             <div class="nav-section-title mt-3">Công Cụ Hệ Thống</div>
@@ -173,10 +221,10 @@
                 <i class="bi bi-braces text-success"></i><span>Swagger API Docs</span>
             </a>
             <a href="http://localhost:7860" target="_blank" class="task-btn text-decoration-none">
-                <i class="bi bi-cpu text-primary"></i><span>AI Studio (Port 7860)</span>
+                <i class="bi bi-cpu text-primary"></i><span>Trợ lý AI</span>
             </a>
             <a href="http://localhost:7860/benchmark-report" target="_blank" class="task-btn text-decoration-none">
-                <i class="bi bi-bar-chart-line text-warning"></i><span>Báo Cáo Benchmark</span>
+                <i class="bi bi-bar-chart-line text-warning"></i><span>Báo cáo đánh giá</span>
             </a>
         </div>
 
@@ -194,11 +242,7 @@
                 </div>
             </div>
             <div id="loginCompact">
-                <div class="small fw-semibold mb-2 text-muted"><i class="bi bi-shield-lock me-1"></i>Đăng nhập JWT</div>
-                <div class="d-flex gap-1 mb-2">
-                    <button class="btn btn-outline-primary btn-sm flex-fill py-1" style="font-size: 0.72rem;" onclick="quickLogin('admin', '123456')">admin</button>
-                    <button class="btn btn-outline-secondary btn-sm flex-fill py-1" style="font-size: 0.72rem;" onclick="quickLogin('gv_nam', '123456')">gv_nam</button>
-                </div>
+                <div class="small fw-semibold mb-2 text-muted"><i class="bi bi-shield-lock me-1"></i>Tài khoản</div>
                 <button class="btn btn-primary btn-sm w-100 py-1" style="font-size: 0.76rem;" onclick="openLoginModal()">
                     Đăng nhập / Đăng ký
                 </button>
@@ -208,6 +252,14 @@
 
     <!-- MAIN WORKSPACE -->
     <main class="main-workspace">
+        <div class="workspace-heading">
+            <div>
+                <div class="workspace-eyebrow">Course Portal / Quản lý</div>
+                <h1>Quản lý đào tạo</h1>
+                <p>Theo dõi khóa học, học viên và hoạt động ghi danh ở một nơi.</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-2" onclick="refreshAllData()"><i class="bi bi-arrow-clockwise me-1"></i>Làm mới dữ liệu</button>
+        </div>
         <!-- KPI SUMMARY STRIP -->
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-4 col-xl-2">
@@ -253,11 +305,11 @@
             <div class="panel-card p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div>
-                        <h5 class="fw-bold mb-1">Quản Lý Ghi Danh Khóa Học (Enrollments)</h5>
-                        <p class="text-muted small mb-0">Liên kết Sinh viên - Khóa học qua <code>EnrollmentDaoImpl</code> (Hibernate Generic DAO)</p>
+                        <h5 class="fw-bold mb-1">Danh sách ghi danh</h5>
+                        <p class="text-muted small mb-0">Theo dõi học viên, khóa học và tiến độ học tập.</p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <input type="text" id="enrollSearchInput" class="form-control form-control-sm" style="width: 220px;" placeholder="Tìm sinh viên, khóa học, trạng thái..." oninput="searchEnrollments()">
+                        <input type="text" id="enrollSearchInput" class="form-control form-control-sm" style="width: 220px;" placeholder="Tìm sinh viên, khóa học, trạng thái..." oninput="scheduleEnrollmentSearch()">
                         <button class="btn btn-primary btn-sm" onclick="openEnrollModal()">
                             <i class="bi bi-plus-circle me-1"></i>Ghi Danh Mới
                         </button>
@@ -281,6 +333,13 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
+                    <span class="small text-muted" id="enrollPageInfo" aria-live="polite">Đăng nhập để xem danh sách.</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Phân trang ghi danh">
+                        <button type="button" id="enrollPrevBtn" class="btn btn-outline-secondary" onclick="changeEnrollmentPage(-1)" disabled>Trước</button>
+                        <button type="button" id="enrollNextBtn" class="btn btn-outline-secondary" onclick="changeEnrollmentPage(1)" disabled>Sau</button>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -289,11 +348,11 @@
             <div class="panel-card p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div>
-                        <h5 class="fw-bold mb-1">Danh Sách Khóa Học (Courses)</h5>
-                        <p class="text-muted small mb-0">Hỗ trợ phân trang Hibernate &amp; lọc khoảng giá HQL</p>
+                        <h5 class="fw-bold mb-1">Khóa học</h5>
+                        <p class="text-muted small mb-0">Quản lý danh sách và tìm kiếm khóa học.</p>
                     </div>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <input type="text" id="courseSearchInput" class="form-control form-control-sm" style="width: 180px;" placeholder="Tìm tên khóa học..." oninput="searchCourses()">
+                        <input type="text" id="courseSearchInput" class="form-control form-control-sm" style="width: 180px;" placeholder="Tìm tên khóa học..." oninput="scheduleCourseSearch()">
                         <input type="number" id="courseMinPrice" class="form-control form-control-sm" style="width: 95px;" placeholder="Giá từ">
                         <input type="number" id="courseMaxPrice" class="form-control form-control-sm" style="width: 95px;" placeholder="Đến">
                         <button class="btn btn-outline-secondary btn-sm" onclick="filterCoursesByPrice()">Lọc giá</button>
@@ -332,11 +391,11 @@
             <div class="panel-card p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div>
-                        <h5 class="fw-bold mb-1">Danh Sách Sinh Viên (Students)</h5>
-                        <p class="text-muted small mb-0">Liên kết @ManyToOne với Khoa &amp; mã hóa PII AES-256</p>
+                        <h5 class="fw-bold mb-1">Sinh viên</h5>
+                        <p class="text-muted small mb-0">Quản lý thông tin học viên và khoa trực thuộc.</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <input type="text" id="studentSearchInput" class="form-control form-control-sm" style="width: 210px;" placeholder="Tìm tên hoặc email..." oninput="searchStudents()">
+                        <input type="text" id="studentSearchInput" class="form-control form-control-sm" style="width: 210px;" placeholder="Tìm tên hoặc email..." oninput="scheduleStudentSearch()">
                         <button class="btn btn-primary btn-sm" onclick="openStudentModal()">
                             <i class="bi bi-plus-circle me-1"></i>Thêm Sinh Viên
                         </button>
@@ -373,7 +432,7 @@
             <div class="panel-card p-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div>
-                        <h5 class="fw-bold mb-1">Khoa &amp; Ngành Đào Tạo (Departments)</h5>
+                        <h5 class="fw-bold mb-1">Khoa và ngành đào tạo</h5>
                         <p class="text-muted small mb-0">Quản lý cơ cấu tổ chức đào tạo</p>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="openDeptModal()">
@@ -443,6 +502,13 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
+                    <span id="docPageInfo" class="small text-muted" aria-live="polite">Chưa tải danh sách.</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Phân trang tài liệu">
+                        <button type="button" id="docPrevBtn" class="btn btn-outline-secondary" onclick="changeDocumentPage(-1)" disabled>Trước</button>
+                        <button type="button" id="docNextBtn" class="btn btn-outline-secondary" onclick="changeDocumentPage(1)" disabled>Sau</button>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -459,11 +525,11 @@
             <div class="modal-body">
                 <div class="mb-2">
                     <label class="form-label small fw-semibold">Tên đăng nhập</label>
-                    <input type="text" id="loginUsername" class="form-control form-control-sm" value="admin">
+                    <input type="text" id="loginUsername" class="form-control form-control-sm" autocomplete="username">
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Mật khẩu</label>
-                    <input type="password" id="loginPassword" class="form-control form-control-sm" value="123456">
+                    <input type="password" id="loginPassword" class="form-control form-control-sm" autocomplete="current-password">
                 </div>
                 <button class="btn btn-primary btn-sm w-100 mb-2" onclick="handleLogin()">Đăng Nhập</button>
                 <button class="btn btn-link btn-sm w-100 text-decoration-none" onclick="openRegisterModal()">Tạo tài khoản mới</button>
@@ -505,11 +571,15 @@
                 <input type="hidden" id="enrollIdInput">
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Sinh Viên *</label>
-                    <select id="enrollStudentSelect" class="form-select"></select>
+                    <input id="enrollStudentSearch" type="search" class="form-control form-control-sm mb-2" placeholder="Tìm sinh viên theo tên hoặc email" oninput="scheduleEnrollmentOptions('student')">
+                    <select id="enrollStudentSelect" class="form-select" onchange="rememberEnrollmentSelection('student')"></select>
+                    <div class="d-flex justify-content-between align-items-center mt-1"><span id="enrollStudentOptionsInfo" class="small text-muted" aria-live="polite"></span><div class="btn-group btn-group-sm"><button type="button" id="enrollStudentPrev" class="btn btn-outline-secondary" onclick="changeEnrollmentOptions('student',-1)">Trước</button><button type="button" id="enrollStudentNext" class="btn btn-outline-secondary" onclick="changeEnrollmentOptions('student',1)">Sau</button></div></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Khóa Học *</label>
-                    <select id="enrollCourseSelect" class="form-select"></select>
+                    <input id="enrollCourseSearch" type="search" class="form-control form-control-sm mb-2" placeholder="Tìm tên khóa học" oninput="scheduleEnrollmentOptions('course')">
+                    <select id="enrollCourseSelect" class="form-select" onchange="rememberEnrollmentSelection('course')"></select>
+                    <div class="d-flex justify-content-between align-items-center mt-1"><span id="enrollCourseOptionsInfo" class="small text-muted" aria-live="polite"></span><div class="btn-group btn-group-sm"><button type="button" id="enrollCoursePrev" class="btn btn-outline-secondary" onclick="changeEnrollmentOptions('course',-1)">Trước</button><button type="button" id="enrollCourseNext" class="btn btn-outline-secondary" onclick="changeEnrollmentOptions('course',1)">Sau</button></div></div>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
@@ -624,13 +694,20 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const API_BASE = window.location.origin;
+    axios.defaults.timeout = 10000;
     let authToken = localStorage.getItem("cms_auth_token") || "";
-    let currentUser = JSON.parse(localStorage.getItem("cms_user") || "null");
+    let currentUser = null;
+    try { currentUser = JSON.parse(localStorage.getItem("cms_user") || "null"); }
+    catch (_) { localStorage.removeItem("cms_user"); }
     if (authToken) axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 
     let cachedCourses = [], cachedStudents = [], cachedDepartments = [], cachedEnrollments = [];
     let coursePage = 0, courseTotalPages = 1;
     let studentPage = 0, studentTotalPages = 1;
+    let courseRequestId = 0, studentRequestId = 0, courseSearchTimer, studentSearchTimer;
+    let enrollmentPage = 0, enrollmentTotalPages = 1, enrollmentRequestId = 0, enrollmentSearchTimer;
+    let documentPage = 0, documentTotalPages = 1, documentRequestId = 0, documentLoadedAppId = "";
+    let enrollmentOptions = {}, enrollmentOptionTimers = {};
 
     function switchTab(name) {
         document.querySelectorAll('.tab-section').forEach(el => el.classList.add('d-none'));
@@ -671,15 +748,9 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById("registerModal")).show();
     }
 
-    async function quickLogin(u, p) {
-        document.getElementById("loginUsername").value = u;
-        document.getElementById("loginPassword").value = p;
-        await handleLogin();
-    }
-
     async function handleLogin() {
         const u = document.getElementById("loginUsername").value.trim();
-        const p = document.getElementById("loginPassword").value.trim();
+        const p = document.getElementById("loginPassword").value;
         if (!u || !p) return showToast("Vui lòng nhập đầy đủ username và password", "warning");
         try {
             const res = await axios.post(`${API_BASE}/api/auth/login`, { username: u, password: p });
@@ -700,7 +771,7 @@
     async function handleRegister() {
         const payload = {
             username: document.getElementById("regUsername").value.trim(),
-            password: document.getElementById("regPassword").value.trim(),
+            password: document.getElementById("regPassword").value,
             fullName: document.getElementById("regFullName").value.trim(),
             email: document.getElementById("regEmail").value.trim()
         };
@@ -779,48 +850,130 @@
         }).join('');
     }
 
-    async function loadEnrollments() {
+    async function loadEnrollments(page = 0) {
+        const requestId = ++enrollmentRequestId;
         try {
-            const res = await axios.get(`${API_BASE}/api/enrollments`);
-            cachedEnrollments = res.data || [];
+            const query = document.getElementById("enrollSearchInput").value.trim();
+            const url = query ? `${API_BASE}/api/enrollments/search-paged?keyword=${encodeURIComponent(query)}&page=${page}&size=20`
+                              : `${API_BASE}/api/enrollments/paged?page=${page}&size=20&sortBy=id&direction=desc`;
+            const res = await axios.get(url);
+            if (requestId !== enrollmentRequestId) return;
+            const data = res.data || {};
+            cachedEnrollments = Array.isArray(data.content) ? data.content : [];
+            enrollmentPage = page;
+            enrollmentTotalPages = Math.max(1, Number(data.totalPages) || 1);
             renderEnrollmentRows(cachedEnrollments);
+            document.getElementById("enrollPageInfo").textContent = `Trang ${page + 1} / ${enrollmentTotalPages} · ${Number(data.totalElements) || 0} lượt ghi danh`;
+            document.getElementById("enrollPrevBtn").disabled = page <= 0;
+            document.getElementById("enrollNextBtn").disabled = page + 1 >= enrollmentTotalPages;
         } catch (err) {
+            if (requestId !== enrollmentRequestId) return;
+            cachedEnrollments = [];
             renderEnrollmentRows([]);
+            document.getElementById("enrollPageInfo").textContent = err.response?.status === 401 ? "Đăng nhập để xem danh sách." : err.response?.status === 403 ? "Tài khoản không có quyền xem ghi danh." : "Không thể tải danh sách ghi danh.";
+            document.getElementById("enrollPrevBtn").disabled = true;
+            document.getElementById("enrollNextBtn").disabled = true;
         }
+    }
+
+    async function changeEnrollmentPage(delta) {
+        const nextPage = enrollmentPage + delta;
+        if (nextPage >= 0 && nextPage < enrollmentTotalPages) await loadEnrollments(nextPage);
+    }
+
+    function scheduleEnrollmentSearch() {
+        ++enrollmentRequestId;
+        clearTimeout(enrollmentSearchTimer);
+        enrollmentSearchTimer = setTimeout(searchEnrollments, 300);
     }
 
     async function searchEnrollments() {
-        const q = document.getElementById("enrollSearchInput").value.trim();
-        if (!q) return loadEnrollments();
-        try {
-            const res = await axios.get(`${API_BASE}/api/enrollments/search?keyword=${encodeURIComponent(q)}`);
-            renderEnrollmentRows(res.data || []);
-        } catch (e) { console.error(e); }
+        return loadEnrollments(0);
     }
 
-    function openEnrollModal(id = null) {
-        if (!cachedStudents.length) loadStudents();
-        if (!cachedCourses.length) loadCourses();
-        const sSel = document.getElementById("enrollStudentSelect");
-        const cSel = document.getElementById("enrollCourseSelect");
-        sSel.innerHTML = cachedStudents.map(s => `<option value="${s.id}">${escapeHtml(s.fullName)} (${escapeHtml(s.email)})</option>`).join('');
-        cSel.innerHTML = cachedCourses.map(c => `<option value="${c.id}">${escapeHtml(c.title)} ($${c.price})</option>`).join('');
-        document.getElementById("enrollIdInput").value = id || "";
-        if (id) {
-            const e = cachedEnrollments.find(item => item.id === id) || {};
-            document.getElementById("enrollModalTitle").innerText = `Cập Nhật Ghi Danh #${id}`;
-            sSel.value = e.studentId || "";
-            cSel.value = e.courseId || "";
-            document.getElementById("enrollStatusSelect").value = e.status || "ENROLLED";
-            document.getElementById("enrollProgressInput").value = e.progressPercent ?? 0;
-            document.getElementById("enrollNotesInput").value = e.notes || "";
-        } else {
-            document.getElementById("enrollModalTitle").innerText = "Ghi Danh Khóa Học Mới";
-            document.getElementById("enrollStatusSelect").value = "ENROLLED";
-            document.getElementById("enrollProgressInput").value = 0;
-            document.getElementById("enrollNotesInput").value = "";
+    async function openEnrollModal(id = null) {
+        const entry = id ? cachedEnrollments.find(item => item.id === id) : null;
+        if (id && !entry) return showToast("Không tìm thấy ghi danh; hãy tải lại danh sách.", "warning");
+        Object.values(enrollmentOptionTimers).forEach(clearTimeout);
+        enrollmentOptionTimers = {};
+        enrollmentOptions = {
+            student: {page: 0, pages: 1, requestId: 0, selected: entry ? {id: entry.studentId, label: entry.studentName || `Sinh viên #${entry.studentId}`} : null},
+            course: {page: 0, pages: 1, requestId: 0, selected: entry ? {id: entry.courseId, label: entry.courseTitle || `Khóa học #${entry.courseId}`} : null}
+        };
+        document.getElementById("enrollStudentSearch").value = "";
+        document.getElementById("enrollCourseSearch").value = "";
+        for (const kind of ["student", "course"]) {
+            const prefix = kind === "student" ? "enrollStudent" : "enrollCourse";
+            const selected = enrollmentOptions[kind].selected;
+            const select = document.getElementById(`${prefix}Select`);
+            select.innerHTML = '<option value="">-- Chọn --</option>' + (selected ? `<option value="${Number(selected.id)}">${escapeHtml(selected.label)}</option>` : '');
+            select.value = selected ? String(selected.id) : '';
+            document.getElementById(`${prefix}OptionsInfo`).innerText = "Đang tải...";
+            document.getElementById(`${prefix}Prev`).disabled = true;
+            document.getElementById(`${prefix}Next`).disabled = true;
         }
+        document.getElementById("enrollIdInput").value = id || "";
+        document.getElementById("enrollModalTitle").innerText = entry ? `Cập Nhật Ghi Danh #${id}` : "Ghi Danh Khóa Học Mới";
+        document.getElementById("enrollStatusSelect").value = entry?.status || "ENROLLED";
+        document.getElementById("enrollProgressInput").value = entry?.progressPercent ?? 0;
+        document.getElementById("enrollNotesInput").value = entry?.notes || "";
         bootstrap.Modal.getOrCreateInstance(document.getElementById("enrollModal")).show();
+        await Promise.all([loadEnrollmentOptions("student", 0), loadEnrollmentOptions("course", 0)]);
+    }
+
+    async function loadEnrollmentOptions(kind, page = 0) {
+        const state = enrollmentOptions[kind];
+        if (!state) return;
+        const prefix = kind === "student" ? "enrollStudent" : "enrollCourse";
+        const keyword = document.getElementById(`${prefix}Search`).value.trim();
+        const params = new URLSearchParams({keyword, page: String(page), size: "20"});
+        const endpoint = kind === "student" ? "students/search-paged" : "courses/browse";
+        const requestId = ++state.requestId;
+        try {
+            const response = await axios.get(`${API_BASE}/api/${endpoint}?${params}`);
+            if (enrollmentOptions[kind] !== state || requestId !== state.requestId) return;
+            const data = response.data || {};
+            const items = Array.isArray(data.content) ? data.content : [];
+            const choices = items.map(item => ({id: Number(item.id), label: kind === "student"
+                ? `${item.fullName || ''} (${item.email || ''})` : `${item.title || ''}`})).filter(item => Number.isSafeInteger(item.id) && item.id > 0);
+            if (state.selected && !choices.some(item => item.id === Number(state.selected.id))) choices.unshift(state.selected);
+            const select = document.getElementById(`${prefix}Select`);
+            select.innerHTML = '<option value="">-- Chọn --</option>' + choices.map(item => `<option value="${Number(item.id)}">${escapeHtml(item.label)}</option>`).join('');
+            select.value = state.selected ? String(state.selected.id) : '';
+            state.page = data.number ?? page;
+            state.pages = Math.max(1, data.totalPages ?? 1);
+            document.getElementById(`${prefix}OptionsInfo`).innerText = `Trang ${state.page + 1} / ${state.pages} · ${data.totalElements ?? items.length} kết quả`;
+            document.getElementById(`${prefix}Prev`).disabled = state.page <= 0;
+            document.getElementById(`${prefix}Next`).disabled = state.page + 1 >= state.pages;
+        } catch (err) {
+            if (enrollmentOptions[kind] === state && requestId === state.requestId) {
+                document.getElementById(`${prefix}OptionsInfo`).innerText = "Không thể tải danh sách.";
+                showToast("Không thể tải lựa chọn ghi danh.", "warning");
+            }
+        }
+    }
+
+    function rememberEnrollmentSelection(kind) {
+        const state = enrollmentOptions[kind];
+        if (!state) return;
+        const prefix = kind === "student" ? "enrollStudent" : "enrollCourse";
+        const select = document.getElementById(`${prefix}Select`);
+        state.selected = select.value ? {id: Number(select.value), label: select.options[select.selectedIndex].text} : null;
+    }
+
+    function scheduleEnrollmentOptions(kind) {
+        const state = enrollmentOptions[kind];
+        if (!state) return;
+        ++state.requestId;
+        clearTimeout(enrollmentOptionTimers[kind]);
+        enrollmentOptionTimers[kind] = setTimeout(() => loadEnrollmentOptions(kind, 0), 300);
+    }
+
+    async function changeEnrollmentOptions(kind, delta) {
+        const state = enrollmentOptions[kind];
+        if (!state) return;
+        const next = state.page + delta;
+        if (next >= 0 && next < state.pages) await loadEnrollmentOptions(kind, next);
     }
 
     async function saveEnrollment() {
@@ -883,8 +1036,19 @@
     }
 
     async function loadCourses(page = coursePage) {
+        const requestId = ++courseRequestId;
+        const keyword = document.getElementById("courseSearchInput")?.value.trim() || "";
+        const min = document.getElementById("courseMinPrice")?.value.trim() || "";
+        const max = document.getElementById("courseMaxPrice")?.value.trim() || "";
+        const params = new URLSearchParams({page: String(page), size: "8"});
+        const filtered = Boolean(keyword || min || max);
+        if (keyword) params.set("keyword", keyword);
+        if (min) params.set("minPrice", min);
+        if (max) params.set("maxPrice", max);
+        if (!filtered) { params.set("sortBy", "id"); params.set("direction", "asc"); }
         try {
-            const res = await axios.get(`${API_BASE}/api/courses/paged?page=${page}&size=8&sortBy=id&direction=asc`);
+            const res = await axios.get(`${API_BASE}/api/courses/${filtered ? 'browse' : 'paged'}?${params}`);
+            if (requestId !== courseRequestId) return;
             const data = res.data;
             cachedCourses = data?.content || [];
             coursePage = data?.number ?? 0;
@@ -892,38 +1056,26 @@
             document.getElementById("coursePageInfo").innerText = `Trang ${coursePage + 1} / ${courseTotalPages} (${data?.totalElements ?? cachedCourses.length} khóa học)`;
             renderCourseRows(cachedCourses);
         } catch (err) {
-            const res = await axios.get(`${API_BASE}/api/courses`);
-            cachedCourses = res.data || [];
-            renderCourseRows(cachedCourses);
+            if (requestId !== courseRequestId) return;
+            cachedCourses = [];
+            document.getElementById("courseTableBody").innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Không thể tải khóa học. Vui lòng thử lại.</td></tr>';
+            document.getElementById("coursePageInfo").innerText = "Không thể tải dữ liệu";
         }
     }
 
-    function changeCoursePage(delta) {
+    async function changeCoursePage(delta) {
         const next = coursePage + delta;
-        if (next >= 0 && next < courseTotalPages) loadCourses(next);
+        if (next >= 0 && next < courseTotalPages) await loadCourses(next);
     }
 
-    async function searchCourses() {
-        const q = document.getElementById("courseSearchInput").value.trim();
-        if (!q) return loadCourses(0);
-        try {
-            const res = await axios.get(`${API_BASE}/api/courses/search?keyword=${encodeURIComponent(q)}`);
-            renderCourseRows(res.data || []);
-        } catch (e) { console.error(e); }
+    function scheduleCourseSearch() {
+        ++courseRequestId;
+        clearTimeout(courseSearchTimer);
+        courseSearchTimer = setTimeout(() => loadCourses(0), 300);
     }
 
-    async function filterCoursesByPrice() {
-        const min = document.getElementById("courseMinPrice").value.trim();
-        const max = document.getElementById("courseMaxPrice").value.trim();
-        if (!min && !max) return loadCourses(0);
-        try {
-            const params = new URLSearchParams();
-            if (min) params.append("minPrice", min);
-            if (max) params.append("maxPrice", max);
-            const res = await axios.get(`${API_BASE}/api/courses/filter?${params.toString()}`);
-            renderCourseRows(res.data || []);
-        } catch (e) { console.error(e); }
-    }
+    async function searchCourses() { return loadCourses(0); }
+    async function filterCoursesByPrice() { return loadCourses(0); }
 
     function openCourseModal(id = null) {
         document.getElementById("courseIdInput").value = id || "";
@@ -1004,8 +1156,14 @@
     }
 
     async function loadStudents(page = studentPage) {
+        const requestId = ++studentRequestId;
+        const keyword = document.getElementById("studentSearchInput")?.value.trim() || "";
+        const params = new URLSearchParams({page: String(page), size: "8"});
+        if (keyword) params.set("keyword", keyword);
+        else { params.set("sortBy", "id"); params.set("direction", "asc"); }
         try {
-            const res = await axios.get(`${API_BASE}/api/students/paged?page=${page}&size=8&sortBy=id&direction=asc`);
+            const res = await axios.get(`${API_BASE}/api/students/${keyword ? 'search-paged' : 'paged'}?${params}`);
+            if (requestId !== studentRequestId) return;
             const data = res.data;
             cachedStudents = data?.content || [];
             studentPage = data?.number ?? 0;
@@ -1013,23 +1171,24 @@
             document.getElementById("studentPageInfo").innerText = `Trang ${studentPage + 1} / ${studentTotalPages} (${data?.totalElements ?? cachedStudents.length} sinh viên)`;
             renderStudentRows(cachedStudents);
         } catch (err) {
+            if (requestId !== studentRequestId) return;
+            cachedStudents = [];
             renderStudentRows([]);
         }
     }
 
-    function changeStudentPage(delta) {
+    async function changeStudentPage(delta) {
         const next = studentPage + delta;
-        if (next >= 0 && next < studentTotalPages) loadStudents(next);
+        if (next >= 0 && next < studentTotalPages) await loadStudents(next);
     }
 
-    async function searchStudents() {
-        const q = document.getElementById("studentSearchInput").value.trim();
-        if (!q) return loadStudents(0);
-        try {
-            const res = await axios.get(`${API_BASE}/api/students/search?keyword=${encodeURIComponent(q)}`);
-            renderStudentRows(res.data || []);
-        } catch (e) { console.error(e); }
+    function scheduleStudentSearch() {
+        ++studentRequestId;
+        clearTimeout(studentSearchTimer);
+        studentSearchTimer = setTimeout(() => loadStudents(0), 300);
     }
+
+    async function searchStudents() { return loadStudents(0); }
 
     function openStudentModal(id = null) {
         const deptSelect = document.getElementById("studentDeptSelect");
@@ -1180,30 +1339,90 @@
     }
 
     // --- DOCUMENTS ---
-    async function loadDocuments() {
+    async function loadDocuments(page = 0) {
         const appId = document.getElementById("docAppId").value.trim();
         if (!appId) return showToast("Vui lòng nhập mã hồ sơ (appId)!", "warning");
+        if (documentLoadedAppId !== appId) page = 0;
+        const requestId = ++documentRequestId;
         try {
-            const res = await axios.get(`${API_BASE}/api/documents/list?appId=${encodeURIComponent(appId)}`);
+            const res = await axios.get(`${API_BASE}/api/documents/app/${encodeURIComponent(appId)}/paged?page=${page}&size=20&sortBy=creationTime&direction=desc`);
+            if (requestId !== documentRequestId) return;
+            const data = res.data || {};
+            const documents = Array.isArray(data.content) ? data.content : [];
+            documentPage = data.number ?? page;
+            documentTotalPages = Math.max(1, data.totalPages ?? 1);
+            documentLoadedAppId = appId;
+            document.getElementById("docPageInfo").innerText = `Trang ${documentPage + 1} / ${documentTotalPages} (${data.totalElements ?? documents.length} tài liệu)`;
+            document.getElementById("docPrevBtn").disabled = documentPage <= 0;
+            document.getElementById("docNextBtn").disabled = documentPage + 1 >= documentTotalPages;
             const tbody = document.getElementById("docTableBody");
-            if (!res.data || res.data.length === 0) {
+            if (documents.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy tài liệu cho mã hồ sơ: ${escapeHtml(appId)}</td></tr>`;
                 return;
             }
-            tbody.innerHTML = res.data.map(doc => `
+            tbody.innerHTML = documents.map(doc => `
                 <tr>
-                    <td class="small font-monospace">${doc.id.substring(0, 8)}...</td>
+                    <td class="small font-monospace">${escapeHtml(String(doc.id).substring(0, 8))}...</td>
                     <td class="fw-semibold text-primary"><i class="bi bi-file-earmark-text me-1"></i>${escapeHtml(doc.name)}</td>
                     <td>${escapeHtml(doc.owner || 'N/A')}</td>
                     <td>v${doc.version}</td>
                     <td>${doc.deleted ? '<span class="badge bg-danger">Đã xóa</span>' : '<span class="badge bg-success">Active</span>'}</td>
                     <td class="text-end">
-                        <a href="${API_BASE}/api/documents/download/${doc.id}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDoc('${doc.id}')"><i class="bi bi-trash"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-document-id="${escapeHtml(String(doc.id))}" data-document-name="${escapeHtml(doc.name || 'tai-lieu')}" onclick="downloadDocument(this.dataset.documentId, this.dataset.documentName)" title="Tải tài liệu"><i class="bi bi-download"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDoc('${escapeHtml(doc.id)}')"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`).join('');
         } catch (err) {
-            showToast("Lỗi tải tài liệu: MinIO có thể đang tắt.", "warning");
+            if (requestId === documentRequestId) showToast("Không thể tải danh sách tài liệu.", "warning");
+        }
+    }
+
+    async function changeDocumentPage(delta) {
+        const next = documentPage + delta;
+        if (next >= 0 && next < documentTotalPages) await loadDocuments(next);
+    }
+
+    async function downloadDocument(id, filename) {
+        if (!authToken) return showToast("Vui lòng đăng nhập để tải tài liệu.", "warning");
+        try {
+            // File picker must run directly from the click, before the network request.
+            const handle = typeof window.showSaveFilePicker === "function"
+                ? await window.showSaveFilePicker({suggestedName: filename || "tai-lieu"}) : null;
+            const response = await fetch(`${API_BASE}/api/documents/download/${encodeURIComponent(id)}`, {
+                headers: {Authorization: `Bearer ${authToken}`}
+            });
+            if (!response.ok) throw new Error(`Không thể tải tài liệu (HTTP ${response.status}).`);
+            if (!response.body) throw new Error("Trình duyệt không hỗ trợ luồng tải tài liệu.");
+            if (handle) {
+                const output = await handle.createWritable();
+                await response.body.pipeTo(output);
+            } else {
+                // Bounded fallback for browsers without the file picker; do not buffer arbitrarily large objects.
+                const reader = response.body.getReader(), chunks = [];
+                const maxBytes = 50 * 1024 * 1024;
+                let total = 0;
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    total += value.byteLength;
+                    if (total > maxBytes) {
+                        await reader.cancel();
+                        throw new Error("Tệp quá 50 MB; hãy dùng trình duyệt hỗ trợ lưu tệp theo luồng.");
+                    }
+                    chunks.push(value);
+                }
+                const url = URL.createObjectURL(new Blob(chunks, {type: "application/octet-stream"}));
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = filename || "tai-lieu";
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            }
+            showToast("Đã tải tài liệu.", "success");
+        } catch (err) {
+            if (err.name !== "AbortError") showToast(err.message || "Không thể tải tài liệu.", "warning");
         }
     }
 
@@ -1238,12 +1457,12 @@
         }
     }
 
-    function refreshAllData() {
-        loadDashboardStats();
-        loadCourses(0);
-        loadStudents(0);
-        loadDepartments();
-        loadEnrollments();
+    async function refreshAllData() {
+        await loadDashboardStats();
+        await loadCourses(0);
+        await loadStudents(0);
+        await loadDepartments();
+        await loadEnrollments(0);
     }
 
     window.addEventListener("DOMContentLoaded", () => {

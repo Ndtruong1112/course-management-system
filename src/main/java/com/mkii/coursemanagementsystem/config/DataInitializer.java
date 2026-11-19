@@ -13,6 +13,8 @@ import com.mkii.coursemanagementsystem.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
+@Profile("!prod")
+@ConditionalOnProperty(name = "cms.demo-data.enabled", havingValue = "true")
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);

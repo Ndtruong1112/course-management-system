@@ -150,6 +150,11 @@ public class StudentRestImpl implements StudentRest {
     }
 
     @Override
+    public ResponseEntity<Page<StudentResponseDTO>> searchStudentsPaged(String keyword, int page, int size) {
+        return ResponseEntity.ok(studentService.searchPaged(keyword, page, size));
+    }
+
+    @Override
     public ResponseEntity<List<StudentResponseDTO>> searchStudents(String keyword, String name) {
         String searchKey = (keyword != null && !keyword.isBlank()) ? keyword : name;
         if (searchKey == null) {

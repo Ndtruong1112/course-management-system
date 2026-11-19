@@ -36,6 +36,12 @@ public interface EnrollmentRest {
     @GetMapping("/search")
     ResponseEntity<List<EnrollmentResponseDTO>> search(@RequestParam(value = "keyword", required = false, defaultValue = "") String keyword);
 
+    @GetMapping("/search-paged")
+    ResponseEntity<Page<EnrollmentResponseDTO>> searchPaged(
+            @RequestParam(value = "keyword", defaultValue = "") String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size);
+
     @GetMapping("/paged")
     ResponseEntity<Page<EnrollmentResponseDTO>> getAllPaged(
             @RequestParam(value = "page", defaultValue = "0") int page,

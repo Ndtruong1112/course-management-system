@@ -21,6 +21,8 @@ public interface CourseService {
 
     List<CourseResponseDTO> searchByTitle(String keyword);
 
+    Page<CourseResponseDTO> browse(String keyword, Double minPrice, Double maxPrice, int page, int size);
+
     List<CourseResponseDTO> filterByPrice(Double minPrice, Double maxPrice);
 
     CourseResponseDTO getByTitle(String title);

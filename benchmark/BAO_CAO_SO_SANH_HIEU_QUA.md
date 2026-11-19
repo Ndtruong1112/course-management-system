@@ -1,5 +1,7 @@
 # BÁO CÁO ĐÁNH GIÁ THỰC NGHIỆM SO SÁNH HIỆU QUẢ FINE-TUNING VÀ ĐIỀU PHỐI KIẾN TRÚC AI
 
+> **Báo cáo lịch sử, không dùng để kết luận:** cả 5 phản hồi Cloud đều là lỗi kết nối nhưng vẫn được tính điểm; điểm còn dựa trên từ khóa và các cấu hình không được đối chứng riêng. Các kết luận và tỷ lệ bên dưới không hợp lệ để so sánh chất lượng model. Dùng `benchmark/evaluate.py` để tạo báo cáo mới.
+
 **Dự án:** Course Management System  
 **Thời gian thực hiện:** 12/11/2026 22:32  
 **Mục tiêu nghiên cứu:** Chứng minh bằng thực nghiệm khoa học sự cần thiết của việc Huấn luyện tinh chỉnh (Fine-tuning) và Điều phối kiến trúc chuyên sâu (Context Orchestration) đối với mô hình ngôn ngữ lớn (LLM) trong các dự án phần mềm doanh nghiệp đặc thù.

@@ -1,7 +1,12 @@
 import os
+import sys
+import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 os.environ["HF_HOME"] = r"D:\.cache\huggingface"
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +40,10 @@ inputs = tokenizer(formatted, return_tensors="pt").to("cuda")
 print("Generated formatted prompt:")
 print(repr(formatted))
 
+if torch.cuda.is_available():
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+started = time.perf_counter()
 with torch.inference_mode():
     outputs = model.generate(
         **inputs,
@@ -46,7 +55,14 @@ with torch.inference_mode():
         pad_token_id=tokenizer.eos_token_id
     )
 
+if torch.cuda.is_available():
+    torch.cuda.synchronize()
+elapsed = time.perf_counter() - started
+
 gen_tokens = outputs[0][inputs.input_ids.shape[1]:]
+print(f"Generation: {len(gen_tokens)} tokens / {elapsed:.2f}s ({len(gen_tokens) / elapsed:.1f} tokens/s)")
+if torch.cuda.is_available():
+    print(f"GPU allocated: {torch.cuda.memory_allocated() / 1024**2:.0f} MiB; peak: {torch.cuda.max_memory_allocated() / 1024**2:.0f} MiB")
 print("Generated token IDs:", gen_tokens.tolist())
 resp = tokenizer.decode(gen_tokens, skip_special_tokens=False)
 print("Decoded with special tokens:")

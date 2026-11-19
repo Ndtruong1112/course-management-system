@@ -57,6 +57,14 @@ public interface CourseRest {
     @GetMapping("/search")
     ResponseEntity<List<CourseResponseDTO>> searchCourses(@RequestParam String keyword);
 
+    @GetMapping("/browse")
+    ResponseEntity<Page<CourseResponseDTO>> browseCourses(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size);
+
     @GetMapping("/filter")
     ResponseEntity<List<CourseResponseDTO>> filterCoursesByPrice(
             @RequestParam Double minPrice,

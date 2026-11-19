@@ -2,8 +2,12 @@ package com.mkii.coursemanagementsystem.common.converter;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import com.mkii.coursemanagementsystem.util.AESUtil;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 
 public class AesEncryptConverterTest {
 
@@ -40,5 +44,14 @@ public class AesEncryptConverterTest {
         String plainLegacyAddress = "123 Cau Giay, Hanoi";
         String result = converter.convertToEntityAttribute(plainLegacyAddress);
         assertEquals(plainLegacyAddress, result);
+    }
+
+    @Test
+    void encryptionFailureDoesNotReturnPlaintext() {
+        try (MockedStatic<AESUtil> aes = mockStatic(AESUtil.class)) {
+            aes.when(() -> AESUtil.encryptStringWithIv(any(), any()))
+                    .thenThrow(new IllegalStateException("encryption unavailable"));
+            assertThrows(IllegalStateException.class, () -> converter.convertToDatabaseColumn("sensitive"));
+        }
     }
 }

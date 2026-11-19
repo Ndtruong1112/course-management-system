@@ -22,6 +22,7 @@ hvac_*.csv
 
 # Python
 __pycache__/
+benchmark/runs/
 *.py[cod]
 *$py.class
 venv/

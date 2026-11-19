@@ -1,26 +1,25 @@
 @echo off
 setlocal
 chcp 65001 > nul
-title Danh Gia Thuc Nghiem So Sanh Trợ Lý AI Dự Án
+title Danh gia AI - Kiem tra nhanh
 
 echo ======================================================================
-echo   CHƯƠNG TRÌNH ĐÁNH GIÁ THỰC NGHIỆM KHOA HỌC:
-echo   - 1. AI Tiêu Chuẩn Bên Ngoài (Cloud AI - Zero Context Chưa Có Kiến Trúc Dự Án)
-echo   - 2. Base Model (Mô hình Gốc chưa Fine-tuning)
-echo   - 3. Hệ Thống Dự Án (Fine-tuned Model với Ngữ Cảnh Kiến Trúc)
+echo   KIEM TRA NHANH: 1 cau hoi, 4 cau hinh Base/LoRA va co/khong RAG.
+echo   Ket qua can duoc danh gia thu cong truoc khi tinh ty le chat luong.
 echo ======================================================================
 echo.
 
 cd /d "%~dp0..\benchmark"
-python benchmark_comparison.py
+python evaluate.py run --limit 1 --max-tokens 128
+if errorlevel 1 (
+    echo Khong co ket qua thanh cong. Vui long kiem tra log.
+    pause
+    exit /b 1
+)
 
 echo.
 echo ======================================================================
-echo   ĐÃ TẠO XONG 2 BÁO CÁO:
-echo   1. BAO_CAO_SO_SANH_HIEU_QUA.md (Báo cáo Nghiệm thu Học thuật)
-echo   2. bao_cao_truc_quan.html (Bảng điều khiển Trực quan & Biểu đồ)
-echo.
-echo   Đang tự động mở Báo cáo Trực quan trên Trình duyệt web...
+echo   Ket qua duoc luu trong benchmark\runs\ theo duong dan da in phia tren.
+echo   Xem benchmark\README.md de chay day du va cham ket qua.
 echo ======================================================================
-start "" "%~dp0..\benchmark\bao_cao_truc_quan.html"
 pause

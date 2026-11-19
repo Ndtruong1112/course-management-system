@@ -148,6 +148,12 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<EnrollmentResponseDTO> searchPaged(String keyword, int page, int size) {
+        return enrollmentDao.searchByKeywordPaged(keyword, page, size).map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<EnrollmentResponseDTO> getAllPaged(int page, int size, String sortBy, String direction) {
         return enrollmentDao.findAllPaged(page, size, sortBy, direction).map(this::mapToDTO);
     }

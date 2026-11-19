@@ -6,7 +6,6 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,19 +56,17 @@ public class MinioStorageService {
         }
     }
 
-    public byte[] download(String objectPath) {
+    /** Caller must close the returned stream after writing the response. */
+    public InputStream openDownload(String objectPath) {
         try {
-            logger.info("Downloading object '{}' from MinIO bucket '{}'", objectPath, bucketName);
-            try (InputStream stream = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(objectPath)
-                            .build())) {
-                return IOUtils.toByteArray(stream);
-            }
+            logger.info("Opening object '{}' from MinIO bucket '{}'", objectPath, bucketName);
+            return minioClient.getObject(GetObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(objectPath)
+                    .build());
         } catch (Exception e) {
-            logger.error("Error downloading object '{}' from MinIO: {}", objectPath, e.getMessage());
-            throw new RuntimeException("Failed to download file from MinIO: " + e.getMessage(), e);
+            logger.error("Error opening object '{}' from MinIO: {}", objectPath, e.getMessage());
+            throw new RuntimeException("Failed to download file from MinIO", e);
         }
     }
 

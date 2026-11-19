@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,7 +40,7 @@ public class DocumentRestImpl implements DocumentRest {
     }
 
     @Override
-    public ResponseEntity<byte[]> downloadDocumentByPath(String filePath) {
+    public ResponseEntity<StreamingResponseBody> downloadDocumentByPath(String filePath) {
         try {
             logger.info("REST: Downloading document by filePath: {}", filePath);
             return documentService.download(filePath);
@@ -50,7 +51,7 @@ public class DocumentRestImpl implements DocumentRest {
     }
 
     @Override
-    public ResponseEntity<byte[]> downloadDocumentById(String id) {
+    public ResponseEntity<StreamingResponseBody> downloadDocumentById(String id) {
         try {
             logger.info("REST: Downloading document by id: {}", id);
             return documentService.downloadById(id);

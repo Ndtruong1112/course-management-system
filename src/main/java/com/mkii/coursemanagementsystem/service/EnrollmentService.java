@@ -24,5 +24,7 @@ public interface EnrollmentService {
 
     List<EnrollmentResponseDTO> search(String keyword);
 
+    Page<EnrollmentResponseDTO> searchPaged(String keyword, int page, int size);
+
     Page<EnrollmentResponseDTO> getAllPaged(int page, int size, String sortBy, String direction);
 }

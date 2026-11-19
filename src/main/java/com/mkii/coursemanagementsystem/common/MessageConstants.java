@@ -63,6 +63,8 @@ public final class MessageConstants {
 
     // Security & Data Processing Messages
     public static final String DATA_TO_ENCRYPT_CANNOT_BE_EMPTY = "Dữ liệu mã hóa không được để trống.";
+    public static final String ENTITY_ENCRYPTION_FAILED = "Không thể mã hóa dữ liệu trước khi lưu.";
+    public static final String USERNAME_INVALID = "Username sau khi loại bỏ khoảng trắng phải có từ 3 đến 50 ký tự.";
     public static final String DATA_TO_DECRYPT_CANNOT_BE_EMPTY = "Dữ liệu giải mã không được để trống.";
     public static final String ENCRYPTION_FAILED = "Lỗi khi thực hiện mã hóa dữ liệu: %s";
     public static final String DECRYPTION_FAILED = "Lỗi khi thực hiện giải mã dữ liệu: %s";

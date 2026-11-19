@@ -1,5 +1,15 @@
 import os
 import sys
+
+# Preserve the historical implementation below for reference, but never run it:
+# it mis-scored failed API calls and compared different prompts/context.
+if __name__ == "__main__":
+    import runpy
+    print("Benchmark cũ đã ngừng sử dụng. Chạy bộ đánh giá mới (mặc định thử 1 câu).")
+    forwarded = sys.argv[1:] or ["--limit", "1", "--max-tokens", "128"]
+    sys.argv = [os.path.join(os.path.dirname(__file__), "evaluate.py"), "run", *forwarded]
+    runpy.run_path(sys.argv[0], run_name="__main__")
+    raise SystemExit(0)
 import time
 import json
 import requests
