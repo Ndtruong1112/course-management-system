@@ -28,11 +28,13 @@ public class StudentServiceImpl implements StudentService {
     private static final Logger logger = LoggerFactory.getLogger(StudentServiceImpl.class);
 
     // Call ONLY IStudentDao (in dao package), never call Hibernate DAO directly
-    @Autowired
-    private IStudentDao studentDao;
+    private final IStudentDao studentDao;
+    private final com.mkii.coursemanagementsystem.dao.IDepartmentDao departmentDao;
 
-    @Autowired
-    private com.mkii.coursemanagementsystem.dao.IDepartmentDao departmentDao;
+    public StudentServiceImpl(IStudentDao studentDao, com.mkii.coursemanagementsystem.dao.IDepartmentDao departmentDao) {
+        this.studentDao = studentDao;
+        this.departmentDao = departmentDao;
+    }
 
     @Override
     public Student create(StudentRequestDTO requestDTO) {

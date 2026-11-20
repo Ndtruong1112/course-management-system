@@ -61,20 +61,23 @@ giao diện báo câu trả lời có thể bị cắt; ở chế độ chat đ�
 Nếu kết nối gián đoạn, giao diện thông báo lỗi thay vì coi phản hồi đã hoàn tất.
 Giới hạn này không áp dụng cho nhà cung cấp cloud, vốn có cấu hình riêng.
 Cloud hiển thị cảnh báo khi nhà cung cấp báo hết token hoặc luồng bị ngắt;
-không tự ghép phản hồi của model khác sau khi đã nhận một phần. Lịch sử phiên
-mới lưu ngữ cảnh hỏi đáp trên trình duyệt; phiên cũ không có dữ liệu này sẽ
-được mở mà không dùng nhầm ngữ cảnh của phiên khác.
+không tự ghép phản hồi của model khác sau khi đã nhận một phần. Giao diện không
+lưu hoặc hiển thị lịch sử phiên; ngữ cảnh gần đây chỉ giữ trong phiên đang mở.
+Dữ liệu lịch sử phiên đã lưu từ trước vẫn nằm trong bộ nhớ trình duyệt, không tự xóa.
 
 ### Đánh giá trực tiếp câu trả lời
 
 Sau khi phản hồi hoàn tất, mỗi câu trả lời có mục **Đánh giá câu trả lời**.
-Chọn **AI đề xuất điểm** để base model local xem câu hỏi và câu trả lời, đề xuất
-điểm 0–100 và nhận xét. Model chấm chỉ là hỗ trợ: không tự đối chiếu codebase,
+Chọn **AI đề xuất điểm** để base model local xem câu hỏi và câu trả lời theo bốn
+tiêu chí: đúng yêu cầu (30), đầy đủ (25), tính hợp lý nhìn thấy trong câu trả lời
+(25) và trình bày (20). AI đề xuất mức 0–4 và nhận xét cho từng tiêu chí; ứng
+dụng quy đổi theo trọng số, làm tròn từng tiêu chí và cộng điểm tổng 0–100.
+Bảng chi tiết là đề xuất gốc của AI, còn điểm và nhận xét
+bạn xác nhận có thể được chỉnh sửa. Model chấm chỉ là hỗ trợ: không tự đối chiếu codebase,
 không chạy mã hay xác nhận sự thật, và không độc lập với base đang được so sánh.
 Bạn có thể chọn **Tự chấm**, sửa điểm/nhận xét và bấm **Xác nhận đánh giá**.
 Nhận xét đã xác nhận lưu trong localStorage của trình duyệt; xóa dữ liệu trình
-duyệt sẽ xóa các nhận xét đó. Các lượt trong cùng một phiên cập nhật một bản lưu
-thay vì tạo bản sao toàn bộ hội thoại sau mỗi lượt; các phiên cũ được giữ lại. Đánh giá trực tiếp không tự ghi vào kết quả
+duyệt sẽ xóa các nhận xét đó. Đánh giá trực tiếp không tự ghi vào kết quả
 benchmark, vì benchmark có bộ câu hỏi và quy trình chấm riêng.
 
 ### OpenRouter Zero Context

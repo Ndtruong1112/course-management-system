@@ -30,8 +30,11 @@ public class CourseServiceImpl implements CourseService {
     private static final Logger logger = LoggerFactory.getLogger(CourseServiceImpl.class);
 
     // Call ONLY ICourseDao (in dao package), never call Hibernate DAO directly
-    @Autowired
-    private ICourseDao courseDao;
+    private final ICourseDao courseDao;
+
+    public CourseServiceImpl(ICourseDao courseDao) {
+        this.courseDao = courseDao;
+    }
 
     @Override
     public Course create(CourseRequestDTO requestDTO) {

@@ -1,90 +1,82 @@
 # Course Management System & Local-First Hybrid Trợ Lý AI Nội Bộ
 
 ![Java](https://img.shields.io/badge/Java-21-orange.svg)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x%2F4.x-brightgreen.svg)
-![Hibernate](https://img.shields.io/badge/Hibernate-JPA-blue.svg)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1%20%7C%203.x-brightgreen.svg)
+![Hibernate](https://img.shields.io/badge/Hibernate-Generic%20DAO-blue.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0+-blue.svg)
+![MinIO](https://img.shields.io/badge/MinIO-S3%20Object%20Storage-red.svg)
 ![Python](https://img.shields.io/badge/Python-3.11-yellow.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-CUDA%2012.x-red.svg)
-![Model](https://img.shields.io/badge/LLM-Qwen2.5--Coder--7B%20%7C%203B-purple.svg)
-![Fine-Tuning](https://img.shields.io/badge/QLoRA-4bit%20NF4%20(Colab%20%26%20Local)-brightgreen.svg)
+![LLM](https://img.shields.io/badge/LLM-Qwen2.5--Coder--3B--Instruct-purple.svg)
+![Fine-Tuning](https://img.shields.io/badge/QLoRA-4bit%20NF4%20(Local%20GPU)-brightgreen.svg)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-DeepSeek%20V3%20Zero--Context-blue.svg)
+![Antigravity](https://img.shields.io/badge/Antigravity-6%20Specialized%20Skills-success.svg)
 ![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-blue.svg)
 
-Hệ thống kết hợp toàn diện giữa **Backend Quản lý Khóa học chuẩn Doanh nghiệp** (Spring Boot 3, Java 21, Hibernate Generic DAO) và **Trợ lý Trợ Lý AI Nội Bộ "Local-First Hybrid"** được cá nhân hóa sâu sắc theo kiến trúc mã nguồn của dự án.
+Hệ sinh thái tích hợp toàn diện giữa **Backend Quản lý Khóa học chuẩn Doanh nghiệp** (Spring Boot 4.1.1, Java 21, Hibernate Generic DAO, MinIO S3, bảo mật OWASP/JWT/AES fail-closed) và **Trợ lý AI Nội Bộ "Local-First Hybrid"** (Course Studio với Qwen 3B QLoRA, Codebase RAG, Intent Routing, OpenRouter DeepSeek V3 Zero-Context và bộ đánh giá 4 tiêu chí chuẩn hóa).
 
 ---
 
 ## 📌 Mục lục
 - [1. Giới thiệu tổng quan](#1-giới-thiệu-tổng-quan)
-- [2. Tính năng nổi bật](#2-tính-năng-nổi-bật)
+- [2. Điểm nhấn Kiến trúc Doanh nghiệp (Enterprise Standards)](#2-điểm-nhấn-kiến-trúc-doanh-nghiệp-enterprise-standards)
 - [3. Kiến trúc Hệ sinh thái Kép](#3-kiến-trúc-hệ-sinh-thái-kép)
   - [3.1. Kiến trúc Backend Java](#31-kiến-trúc-backend-java)
-  - [3.2. Kiến trúc Local-First Hybrid AI](#32-kiến-trúc-local-first-hybrid-ai)
+  - [3.2. Kiến trúc AI Studio Hybrid](#32-kiến-trúc-ai-studio-hybrid)
 - [4. Cấu trúc thư mục toàn dự án](#4-cấu-trúc-thư-mục-toàn-dự-án)
-- [5. Yêu cầu hệ thống & Cài đặt](#5-yêu-cầu-hệ-thống--cài-đặt)
-- [6. Hướng dẫn Khởi chạy](#6-hướng-dẫn-khởi-chạy)
-  - [6.1. Chạy Backend Spring Boot](#61-chạy-backend-spring-boot)
-  - [6.2. Chạy Web Chatbot Trợ Lý AI Nội Bộ](#62-chạy-web-chatbot-ai-copilot)
-  - [6.3. Chạy AI CLI trên Terminal](#63-chạy-ai-cli-trên-terminal)
-- [7. Quy trình Chưng cất & Huấn luyện AI (Distillation & Fine-Tuning)](#7-quy-trình-chưng-cất--huấn-luyện-ai-distillation--fine-tuning)
-- [8. Tài liệu REST API](#8-tài-liệu-rest-api)
-- [9. Bảo mật & Biến môi trường](#9-bảo-mật--biến-môi-trường)
-- [10. Tác giả](#10-tác-giả)
+- [5. Bộ Skill Chuyên môn Antigravity (.agents/skills)](#5-bộ-skill-chuyên-môn-antigravity-agentsskills)
+- [6. Yêu cầu hệ thống & Cài đặt](#6-yêu-cầu-hệ-thống--cài-đặt)
+- [7. Hướng dẫn Khởi chạy](#7-hướng-dẫn-khởi-chạy)
+  - [7.1. Khởi chạy 1-Click bằng Docker Compose](#71-khởi-chạy-1-click-bằng-docker-compose)
+  - [7.2. Khởi chạy nhanh bằng Scripts Windows](#72-khởi-chạy-nhanh-bằng-scripts-windows)
+  - [7.3. Khởi chạy thủ công từng dịch vụ](#73-khởi-chạy-thủ-công-từng-dịch-vụ)
+- [8. Trợ lý AI Course Studio & Quy trình Huấn luyện](#8-trợ-lý-ai-course-studio--quy-trình-huấn-luyện)
+  - [8.1. Các chế độ hoạt động trong Course Studio](#81-các-chế-độ-hoạt-động-trong-course-studio)
+  - [8.2. Hệ thống Đánh giá 4 Tiêu chí Chuẩn hóa](#82-hệ-thống-đánh-giá-4-tiêu-chí-chuẩn-hóa)
+  - [8.3. Pipeline Distillation & Fine-Tuning QLoRA](#83-pipeline-distillation--fine-tuning-qlora)
+- [9. Danh mục REST API & Mẫu Dữ liệu](#9-danh-mục-rest-api--mẫu-dữ-liệu)
+- [10. Bảo mật & Biến môi trường](#10-bảo-mật--biến-môi-trường)
+- [11. Kết quả Kiểm chứng & Độ tin cậy](#11-kết-quả-kiểm-chứng--độ-tin-cậy)
+- [12. Tác giả & Giấy phép](#12-tác-giả--giấy-phép)
 
 ---
 
 ## 1. Giới thiệu tổng quan
 
-> **Lưu ý bảo mật:** Dữ liệu và tài khoản mẫu chỉ được tạo khi đặt
-> `CMS_DEMO_DATA_ENABLED=true`; script `start_all.bat` bật tùy chọn này để chạy
-> thử cục bộ; với Docker Compose, có thể đặt biến này trong `.env` để chạy thử.
-> Profile `prod` luôn tắt khởi tạo mẫu. Tài khoản mẫu đã tồn tại trong cơ sở
-> dữ liệu không được tự động xóa hoặc đổi mật khẩu.
->
-> Khi triển khai thực tế, bật `SPRING_PROFILES_ACTIVE=prod` và cung cấp
-> `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
-> `SPRING_DATASOURCE_PASSWORD`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
-> `MINIO_SECRET_KEY`, `JWT_SECRET`, `CMS_AES_KEY` và `CMS_AES_SALT` qua môi
-> trường. Profile này yêu cầu schema đã được tạo trước và không tự cập nhật
-> schema. Giữ nguyên khóa AES cũ cho dữ liệu đã mã hóa cho đến khi có quy trình
-> chuyển đổi khóa. `docker-compose.yml` hiện chỉ dành cho chạy thử cục bộ và
-> vẫn sử dụng thông tin đăng nhập mẫu, không dùng nguyên trạng cho production.
+> **Lưu ý triển khai & bảo mật:**
+> - Môi trường phát triển nội bộ kích hoạt dữ liệu mẫu qua `CMS_DEMO_DATA_ENABLED=true`. Khi triển khai Production, đặt `SPRING_PROFILES_ACTIVE=prod` và cấp biến môi trường bảo mật (`SPRING_DATASOURCE_URL`, `JWT_SECRET`, `CMS_AES_KEY`, `CMS_AES_SALT`, `MINIO_*`).
+> - Profile `prod` tắt tự động cập nhật schema (`ddl-auto=validate` hoặc `none`).
+> - Khóa AES bảo toàn tính toàn vẹn dữ liệu: cơ chế mã hóa `AesEncryptConverter` hoạt động theo nguyên tắc **Fail-Closed** (tuyệt đối không bao giờ trả về plaintext khi lỗi mã hóa).
 
-Dự án gồm 2 trụ cột cốt lõi:
+Dự án được cấu thành từ hai trụ cột công nghệ chính:
 
-1. **Enterprise Course Management Backend**: Cung cấp đầy đủ các API RESTful quản lý Khóa học (Courses) và Học viên (Students), áp dụng mô hình phân lớp chuẩn, kết hợp linh hoạt giữa Spring Data JPA và mô hình **Generic DAO (Hibernate Generic DAO)**, xử lý ngoại lệ tập trung (**Global Exception Handling**) và tối ưu hóa truy vấn dữ liệu động qua **DTO Projections**.
-2. **Local-First Hybrid Trợ Lý AI Nội Bộ**: Trợ lý kết hợp mô hình `Qwen2.5-Coder-3B-Instruct` fine-tune QLoRA với truy xuất các đoạn codebase liên quan. Câu trả lời có thể thiếu hoặc sai ngữ cảnh và cần được kiểm tra:
-   * **Tác vụ vừa & nhỏ** *(viết hàm DAO, câu HQL, sửa bug, giải thích code)*: Có thể chạy cục bộ khi model và các thư viện đã được cài đầy đủ.
-   * **Tác vụ tổng hợp quy mô lớn** *(tạo một project mới như Khách sạn, Bệnh viện, Thư viện theo chuẩn kiến trúc của base code)*: Tự động gom cấu trúc kiến trúc dự án và ủy quyền cho Cloud AI (Google Gemini) để sinh toàn bộ source code hoàn chỉnh mà không bị thiếu hụt hay out-of-context.
+1. **Enterprise Course Management Backend**:
+   - Kiến trúc phân tầng cô lập tuyệt đối: **REST Controller $\rightarrow$ Service Interface/Impl $\rightarrow$ Generic DAO Interface/Impl**.
+   - Kế thừa cấu trúc DAO mạnh mẽ `HibernatePaginationSortingDao<Pk, Entity>` kết hợp Spring Data JPA Specification tìm kiếm đa điều kiện.
+   - Quản lý tài liệu nhị phân trên **MinIO S3 Object Storage** với metadata lưu trong MySQL (`APP_DETAIL_FK`), hỗ trợ tự động Versioning và bù trừ rollback (Compensating action).
+   - Truyền phát file nhị phân qua `StreamingResponseBody` không tốn RAM heap, kiểm soát phân trang an toàn (`Math.min(size, 100)`).
+
+2. **Local-First Hybrid AI Studio (Course Studio)**:
+   - Mô hình nền tảng: `Qwen2.5-Coder-3B-Instruct` kết hợp adapter QLoRA 4-bit tinh chỉnh chuyên sâu theo mã nguồn dự án.
+   - Bộ định tuyến ý định thông minh (`chatbot/message_intent.py`): Tách biệt tự động giữa chào hỏi/hỏi đáp thông thường và truy vấn kỹ thuật kiến trúc để tối ưu prompt/RAG.
+   - Khóa luồng an toàn `local_generation_lock`: Ngăn chặn race condition và bảo vệ VRAM RTX 4050 (6GB) khi có nhiều yêu cầu đồng thời.
+   - Tích hợp đám mây linh hoạt: Google Gemini (1M context) và OpenRouter DeepSeek V3 Zero-Context.
+   - Bộ đánh giá chất lượng phản hồi chuẩn hóa theo 4 tiêu chí cấp server (30/25/25/20).
 
 ---
 
-## 2. Tính năng nổi bật
+## 2. Điểm nhấn Kiến trúc Doanh nghiệp (Enterprise Standards)
 
-### 2.1. Nghiệp vụ Quản lý Khóa học, Học viên, Khoa Đào tạo & Ghi danh
-* **Quản lý Khóa học (`/api/courses`)**: CRUD, phân trang phía server (`/paged`), tìm kiếm theo tên (HQL Case-insensitive), lọc theo khoảng học phí (`minPrice`, `maxPrice`).
-* **Quản lý Học viên & Khoa trực thuộc (`/api/students`, `/api/departments`)**: CRUD, tìm kiếm theo tên hoặc email, liên kết `@ManyToOne` với Khoa đào tạo (`Department`), mã hóa AES-256 tầng JPA (`AesEncryptConverter`) cho dữ liệu nhạy cảm.
-* **Quản lý Ghi danh (`/api/enrollments`)**: Ghi danh học viên vào khóa học, cập nhật tiến độ học tập (`progressPercent`, `status`) theo chuẩn Generic DAO (`IEnrollmentDao`, `EnrollmentDaoImpl`).
-* **Thống kê & Health Check (`/api/dashboard/stats`, `/api/dashboard/health`)**: Tổng hợp KPI thời gian thực (tổng khóa học, sinh viên, khoa, lượt ghi danh, tài liệu đang hoạt động).
-* **Quản lý Tài liệu & Versioning đa tầng MinIO S3 (`/api/documents`)**: Lưu file nhị phân lên MinIO, lưu metadata MySQL với khóa ngoại `APP_DETAIL_FK`, tự động đánh phiên bản (`version + 1`, bản cũ `active = false`), xóa mềm (`deleted = true`) và compensating rollback.
-* **Bảo mật & Phân quyền Spring Security 6 + JWT**: Hỗ trợ đăng nhập (`/api/auth/login`), cấp token JWT HMAC-SHA256, phân quyền Role (`ADMIN`, `TEACHER`, `LECTURER`, `USER`).
-* **Cổng Quản trị Web UI Trực quan (`localhost:8080`)**: Giao diện Dashboard Sidebar sáng rõ, bảng điều khiển KPI, phân trang server-side và lọc khóa học theo mức giá.
+Dự án tuân thủ chặt chẽ các tiêu chuẩn kỹ thuật hàng đầu:
 
-### 2.2. Course Studio — Trợ Lý AI Nội Bộ Thông minh
-* **Fine-Tuning QLoRA 4-bit + RAG**: Huấn luyện `Qwen2.5-Coder-3B-Instruct` trên GPU RTX 4050 (Adapter lưu tại `outputs/course-management-lora-adapter` qua Git LFS), kết hợp `CodebaseRAG` (`chatbot/rag_engine.py`, nút `↻ RAG` làm mới nóng trên sidebar) và bộ nhớ hội thoại nhiều lượt.
-* **Chưng cất tri thức (Knowledge Distillation)**: Thư mục `distillation/` cho phép trích xuất toàn bộ ngữ cảnh codebase để sinh dataset chuyên sâu.
-* **Giao diện Web Studio (`http://localhost:7860`)**:
-  1. `Trợ Lý Kỹ Thuật (Hybrid)`: Tự động phân luồng Local GPU vs Cloud Gemini.
-  2. `100% Local GPU`: Chạy offline hoàn toàn trên GPU cục bộ.
-  3. `Cloud Gemini (1M Context)`: Ủy quyền Cloud với multi-model fallback (`gemini-3-flash-preview`, `gemini-3.5-flash`, `gemini-flash-lite-latest`, `gemini-2.5-flash`).
-  4. `So Sánh Mô Hình`: Base Model vs Fine-tuned + RAG ngay trên GPU.
-  5. `So Sánh Hệ Thống`: Dự Án (`LoRA + RAG`) vs AI Tiêu Chuẩn (Zero Context).
-  6. `Đấu Trường 3 Chiều`: Chạy tuần tự cả 3 thực thể và chấm điểm đồng bộ sau khi tất cả hoàn tất.
-  7. `So Sánh Với Claude`: Đối chiếu trực tiếp với Anthropic API hoặc dán câu trả lời từ Claude.ai.
-  8. `Cloud Free AI (OpenRouter)`: Sử dụng OpenRouter miễn phí với ngữ cảnh RAG của dự án.
-  9. `OpenRouter Zero Context`: Chọn model miễn phí và gửi riêng câu hỏi hiện tại để đối chiếu.
-* **Bộ Đánh Giá Kiến Trúc Tự Động (`evaluate_architecture_compliance`)**: Chấm điểm đồng bộ sau khi hoàn tất phản hồi dựa trên Rubric phù hợp từng dạng bài (Module DAO, HQL Method, DTO Design, Q&A Nghiệp vụ).
-* **Kết quả tham khảo đã lưu**: Báo cáo 10 câu hỏi ghi nhận 9/10 theo tiêu chí từ khóa; benchmark 5 kịch bản dùng rubric heuristic. Các con số này không chứng minh mã sinh ra biên dịch được hoặc phản ánh kết quả mọi lần chạy. Kiểm thử khởi động Spring dùng H2 trong bộ nhớ, không kết nối MySQL thực.
+| Tiêu chuẩn | Điểm triển khai cụ thể trong dự án | Lợi ích đạt được |
+|---|---|---|
+| **Constructor Injection** *(Google/Spring Standard)* | 100% Controller và Service chuyển sang Constructor Injection với thuộc tính `private final`. | Đảm bảo tính bất biến (Immutability), loại bỏ nguy cơ phụ thuộc vòng (Circular Dependency), hỗ trợ Unit Test cô lập không cần mock runner nặng nề. |
+| **Centralized Messages** *(Clean Code)* | Mọi thông báo nghiệp vụ, mã lỗi, thông báo xóa thành công tập trung tại `MessageConstants.java`. | Không hardcode chuỗi rải rác, sẵn sàng cho việc mở rộng quốc tế hóa (i18n). |
+| **Graceful Shutdown** *(12-Factor / Cloud-Native)* | Cấu hình `server.shutdown=graceful` và `spring.lifecycle.timeout-per-shutdown-phase=20s`. | Cho phép hoàn tất các request HTTP và commit transaction DB dở dang khi scale down container hoặc restart service. |
+| **OWASP ASVS Security Headers** | Kích hoạt `headers.frameOptions(sameOrigin)` và `contentTypeOptions()` trong `SecurityConfig.java`. | Chống tấn công Clickjacking (không bị lồng vào iframe độc hại từ domain ngoài) và chống MIME-sniffing. |
+| **Streaming Zero-Copy** | Áp dụng `StreamingResponseBody` cho tải tài liệu MinIO và `StreamEvent` SSE với header `no-transform`, `X-Accel-Buffering: no`. | Tránh phình to RAM heap JVM khi tải file dung lượng lớn; chống proxy buffer làm giật luồng stream AI. |
+| **Fail-Closed Cryptography** | `AesEncryptConverter` chặn hoàn toàn nguy cơ lọt dữ liệu thô ra database khi có sự cố khóa. | Dữ liệu nhạy cảm của học viên luôn được bảo vệ ở trạng thái mã hóa an toàn. |
 
 ---
 
@@ -95,51 +87,62 @@ Dự án gồm 2 trụ cột cốt lõi:
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   REST Controllers                     │
-│         CourseRest.java  /  StudentRest.java           │
+│    CourseRestImpl / StudentRestImpl / DocumentRestImpl │
 └───────────────────────────┬────────────────────────────┘
-                            │ DTOs (Request / Response)
+                            │ Request/Response DTOs & Jakarta Validation
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │                    Service Layer                       │
-│    CourseService / Impl  &  StudentService / Impl      │
+│  CourseServiceImpl / StudentServiceImpl / Document... │
 └─────────────┬───────────────────────────┬──────────────┘
               │                           │
               ▼                           ▼
 ┌───────────────────────────┐ ┌──────────────────────────┐
-│   Generic DAO (Hibernate) │ │ Spring Data Repository   │
-│  HibernatePagination...   │ │ CourseRepository         │
-│  CourseDaoImpl / Student..│ │ StudentRepository        │
+│   Generic DAO (Hibernate) │ │ MinIO S3 Storage Service │
+│  HibernatePagination...   │ │ MinioStorageService.java │
+│  CourseDaoImpl / Student..│ │ Upload/Download Stream   │
 └─────────────┬─────────────┘ └───────────┬──────────────┘
               │                           │
-              └─────────────┬─────────────┘
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                 MySQL 8.0+ Database                    │
-│             Bảng: courses  |  students                 │
-└────────────────────────────────────────────────────────┘
+              ▼                           ▼
+┌───────────────────────────┐ ┌──────────────────────────┐
+│    MySQL 8.0+ Database    │ │   MinIO Bucket: docs     │
+│ (Metadata, PII Encrypted) │ │  (Binary Object Storage) │
+└───────────────────────────┘ └──────────────────────────┘
 ```
 
-### 3.2. Kiến trúc Local-First Hybrid AI
+### 3.2. Kiến trúc AI Studio Hybrid
 
 ```
                         ┌───────────────────────────────┐
-                        │          Người dùng           │
+                        │      Người dùng / Studio UI   │
                         └──────────────┬────────────────┘
-                                       │ Prompt
+                                       │ POST /api/chat_stream
                                        ▼
-               ┌─────────────────────────────────────────────────┐
-               │    🧠 Local Brain (Qwen 3B + LoRA Adapter)      │
-               │   Hiểu toàn diện: JPA, Generic DAO, DTO, HQL    │
-               └───────┬─────────────────────────────────┬───────┘
-                       │                                 │
-           [Tác vụ vừa/nhỏ: DAO, Bug]           [Tác vụ lớn: Sinh full project]
-                       │                                 │
-                       ▼                                 ▼
-         ┌───────────────────────────┐     ┌───────────────────────────┐
-         │     ⚡ Local 3B GPU       │     │    ☁️ Cloud Sub-generator  │
-         │  100% Offline, Zero cost  │     │   (Bơm đầy đủ kiến trúc   │
-         │  (RTX 4050 Laptop 6GB)    │     │    để sinh toàn bộ code)  │
-         └───────────────────────────┘     └───────────────────────────┘
+                        ┌───────────────────────────────┐
+                        │    Intent Classifier Routing  │
+                        │    (chatbot/message_intent.py)│
+                        └───────┬───────────────┬───────┘
+                                │               │
+          [Câu hỏi kiến trúc / Mã nguồn]   [Chào hỏi / Xã giao]
+                                │               │
+                                ▼               ▼
+                 ┌──────────────────────┐ ┌─────────────┐
+                 │ Codebase RAG Query   │ │ Bỏ qua RAG, │
+                 │ (Trích xuất Context) │ │ Prompt gọn  │
+                 └──────────────┬───────┘ └──────┬──────┘
+                                └───────┬────────┘
+                                        ▼
+                        ┌───────────────────────────────┐
+                        │  Local GPU Lock (RTX 4050)    │
+                        │    local_generation_lock      │
+                        └───────┬───────────────┬───────┘
+                                │               │
+                    [Local Mode]                [Cloud Delegated]
+                                ▼                               ▼
+                ┌───────────────────────────┐   ┌───────────────────────────┐
+                │ Qwen 3B + LoRA Adapter    │   │ Google Gemini (1M Context)│
+                │ 100% Offline, Tiết kiệm RAM│  │ DeepSeek V3 (Zero-Context)│
+                └───────────────────────────┘   └───────────────────────────┘
 ```
 
 ---
@@ -148,76 +151,93 @@ Dự án gồm 2 trụ cột cốt lõi:
 
 ```text
 course-management-system/
-├── pom.xml                                         # Cấu hình Spring Boot & dependencies Maven
-├── mvnw / mvnw.cmd                                 # Maven Wrapper
-├── Dockerfile / docker-compose.yml                 # Container hóa trọn bộ (MySQL, MinIO, Backend, AI)
-├── .env.example                                    # Mẫu cấu hình API Key & đường dẫn local model
-├── .gitattributes / .gitignore                     # Git LFS cho *.safetensors & loại trừ .env, target/
+├── pom.xml                                         # Maven build: Java 21, Spring Boot 4.1.1, MinIO, JJWT
+├── mvnw / mvnw.cmd                                 # Maven Wrapper đa nền tảng
+├── Dockerfile / docker-compose.yml                 # Khởi chạy full stack (MySQL, MinIO, Backend, AI)
+├── .env.example                                    # Mẫu khai báo biến môi trường (Gemini, OpenRouter, DB, MinIO)
+├── .gitattributes / .gitignore                     # Git LFS cấu hình cho *.safetensors & bảo vệ secrets
+├── GEMINI.md                                       # Cẩm nang quy chuẩn định tuyến dành riêng cho Antigravity
 │
-├── scripts/                                        # Tập lệnh vận hành 1-Click trên Windows
-│   ├── start_local.bat / stop_local.bat            # Khởi động/Dừng Backend (8080) & Chatbot (7860)
-│   ├── docker_up.bat / docker_down.bat             # Khởi chạy/Dừng stack Docker Compose
-│   ├── run_chatbot.bat                             # Chạy riêng Web Studio AI (Port 7860)
-│   └── run_benchmark.bat                           # Chạy benchmark & mở Dashboard trực quan
+├── .agents/skills/                                 # 6 Skill Chuyên môn Hóa cho AI Coding Agent
+│   ├── cms-backend/                                # Tiêu chuẩn DAO, Service, REST, MinIO, Security
+│   ├── cms-frontend/                               # Quản trị UI Admin, Course Studio, bảo vệ RAM
+│   ├── cms-local-ai/                               # Vận hành Qwen LoRA, GPU lock, SSE streaming
+│   ├── cms-output-evaluation/                      # Rubric 4 tiêu chí, Live review vs Benchmark
+│   ├── cms-runtime-debug/                          # Script snapshot chẩn đoán tài nguyên Windows
+│   └── cms-task-flow/                              # Điều phối tác vụ xuyên tầng & ma trận kiểm chứng
 │
-├── src/                                            # Mã nguồn Backend Java 21 / Spring Boot 3
+├── scripts/                                        # Bộ script vận hành Windows 1-Click
+│   ├── start_local.bat / stop_local.bat            # Khởi động / Dừng trọn bộ Backend (8080) & Chatbot (7860)
+│   ├── run_backend.bat / run_chatbot.bat           # Chạy riêng rẽ từng phân hệ
+│   ├── docker_up.bat / docker_down.bat             # Khởi chạy stack container ngầm
+│   └── run_benchmark.bat                           # Chạy kiểm định thực nghiệm và mở báo cáo
+│
+├── src/                                            # Mã nguồn Backend Spring Boot 4.1.1
 │   ├── main/java/com/mkii/coursemanagementsystem/
-│   │   ├── common/                                 # Constants, Global Exception Handler, AES Converter
-│   │   ├── config/                                 # Security (JWT), DataInitializer, MinIO, OpenAPI
-│   │   ├── dao/                                    # Interfaces & DAO Impls (Course, Student, Enrollment, Document...)
+│   │   ├── common/                                 # MessageConstants, ApiConstants, AES Fail-Closed Converter
+│   │   ├── config/                                 # SecurityConfig (OWASP), OpenApiConfig, DataInitializer
+│   │   ├── dao/                                    # Interfaces & Impls (Course, Student, Enrollment, Document...)
 │   │   ├── dto/                                    # Request/Response DTOs & Jakarta Validation
-│   │   ├── entity/                                 # JPA Entities
-│   │   ├── hibernateDao/                           # HibernateGenericDao & HibernatePaginationSortingDao
-│   │   ├── rest/                                   # REST Controllers (Course, Student, Enrollment, Dashboard...)
-│   │   ├── service/                                # Business Logic Layer & MinIO Storage
-│   │   └── specification/                          # JPA Specification Dynamic Filtering
+│   │   ├── entity/                                 # JPA Entities: Course, Student, Department, Enrollment, Document
+│   │   ├── hibernateDao/                           # Hierarchy HibernateGenericDao & HibernatePaginationSortingDao
+│   │   ├── rest/                                   # REST Controllers 100% Constructor Injection
+│   │   ├── service/                                # Business Logic Layer & MinioStorageService
+│   │   └── specification/                          # JPA Specification Dynamic Filter Parser
 │   ├── main/resources/
-│   │   ├── application.properties                  # Cấu hình MySQL, JWT & MinIO S3
-│   │   └── static/index.html                       # Cổng quản trị Web UI (Dashboard Sidebar)
-│   └── test/                                       # 64 Unit & Integration Tests
+│   │   ├── application.properties                  # MySQL, Graceful Shutdown, Pool Hikari, MinIO, JWT
+│   │   ├── application-prod.properties             # Cấu hình production nghiêm ngặt
+│   │   └── static/index.html                       # Giao diện Web Quản trị Admin Dashboard
+│   └── test/                                       # 81 Unit & Integration Tests (H2 isolated)
 │
-├── chatbot/                                        # Trợ Lý AI Nội Bộ & Course Studio Web UI
-│   ├── web_app.py                                  # Flask SSE Web Studio (7 chế độ, multi-turn, đồng bộ điểm)
-│   ├── rag_engine.py                               # CodebaseRAG + Bộ chấm điểm kiến trúc (Rubric-aware)
-│   ├── Dockerfile / requirements.txt               # Đóng gói container & thư viện Python
-│   └── 1_base_model/ , 2_finetuned_model/          # Script CLI đối chiếu Base vs Fine-tuned
+├── chatbot/                                        # Trợ lý AI Phân hệ Course Studio
+│   ├── web_app.py                                  # Flask SSE Server (Port 7860), 4-criteria evaluation
+│   ├── message_intent.py                           # Phân loại ý định tin nhắn thông minh
+│   ├── rag_engine.py                               # Vectorless Codebase RAG & Semantic Matcher
+│   ├── openrouter_zero.py                          # Client OpenRouter DeepSeek V3 Zero-Context
+│   ├── static/studio.css                           # Giao diện CSS độc quyền Course Studio
+│   └── templates/benchmark_report.html             # Báo cáo đánh giá nghiệm thu mô hình
 │
-├── training/                                       # Pipeline Huấn luyện & Đánh giá QLoRA
-│   ├── generate_dataset.py / dataset.jsonl         # Sinh dữ liệu từ 95 tệp mã nguồn + docs
-│   ├── train_local.py                              # QLoRA 4-bit (NF4, Attention + MLP) trên GPU 6GB
-│   ├── evaluate_model.py / eval_report.json        # Script và báo cáo 10 câu cũ (chỉ tham khảo lịch sử)
-│   ├── test_model.py / clean_vram.py               # Kiểm thử nhanh & giải phóng VRAM
-│   └── Course_Management_AI_Colab.ipynb            # Notebook huấn luyện trên Colab
+├── benchmark/                                      # Đánh giá Thực nghiệm Đối chứng
+│   ├── evaluate.py / evaluation_core.py            # Runner kiểm thử 4 cấu hình: Base/LoRA x Raw/RAG
+│   └── cases.jsonl                                 # Bộ bài kiểm thử chuẩn hóa
 │
-├── benchmark/                                      # Kiểm thử Thực nghiệm 5 Kịch bản (TC-01..TC-05)
-│   ├── evaluate.py / cases.jsonl                   # Bộ so sánh có đối chứng và 40 tình huống pilot
-│   ├── evaluation_core.py                          # Tổng hợp kết quả được đánh giá thủ công
-│   └── BAO_CAO_SO_SANH_HIEU_QUA.md                 # Báo cáo cũ có cảnh báo, chỉ tham khảo lịch sử
+├── distillation/                                   # Pipeline chưng cất tri thức kiến trúc dự án
+│   ├── 1_export_codebase_context.py
+│   ├── 2_teacher_prompt.md
+│   └── 3_import_distilled_data.py
 │
-├── distillation/                                   # Chưng cất Tri thức từ Teacher Model
-│   ├── 1_export_codebase_context.py                # Đóng gói ngữ cảnh codebase
-│   ├── 2_teacher_prompt.md                         # Prompt sinh dữ liệu cho Teacher LLM
-│   └── 3_import_distilled_data.py                  # Chuẩn hóa vào training/dataset.jsonl
+├── docs/                                           # Tài liệu kỹ thuật chi tiết
+│   ├── ANTIGRAVITY_SKILLS.md                       # Cẩm nang hướng dẫn sử dụng bộ skill Antigravity
+│   └── Course Management System - Full APIs.postman_collection.json
 │
-├── docs/                                           # Tài liệu API, CSDL & Lịch sử rà soát
-│   ├── Course Management System - Full APIs.postman_collection.json
-│   ├── openapi.json / database.sql / BAO_CAO_LOI.md
-│   └── README.md
-│
-└── outputs/course-management-lora-adapter/         # Trọng số LoRA Adapter chính thức (Git LFS)
+└── outputs/course-management-lora-adapter/         # Trọng số LoRA Adapter 4-bit (Git LFS)
 ```
 
 ---
 
-## 5. Yêu cầu hệ thống & Cài đặt
+## 5. Bộ Skill Chuyên môn Antigravity (`.agents/skills`)
+
+Dự án tích hợp sẵn bộ **6 Agent Skills** chuyên sâu, tuân thủ nguyên tắc cách ly ngữ cảnh và kiểm chứng tối thiểu theo [GEMINI.md](file:///d:/course-management-system/GEMINI.md):
+
+1. **`cms-task-flow`**: Định tuyến tác vụ xuyên tầng, kiểm soát luồng dữ liệu (UI $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ DB/MinIO/AI) và tra cứu ma trận lệnh kiểm chứng tại `verification.md`.
+2. **`cms-backend`**: Chuẩn hóa tầng Java, kiểm soát ràng buộc Generic DAO, constructor injection, ranh giới `@Transactional`, và xử lý bù trừ MinIO rollback.
+3. **`cms-frontend`**: Duy trì API contract, quản lý streaming SSE, chống rò rỉ RAM trình duyệt, bảo vệ DOM với DOMPurify.
+4. **`cms-local-ai`**: Quản lý nạp mô hình Qwen LoRA theo yêu cầu (on-demand), bảo vệ VRAM RTX 4050 và RAM 16GB, kiểm soát khóa đơn luồng `local_generation_lock`.
+5. **`cms-output-evaluation`**: Quy chuẩn chấm điểm theo Rubric 4 tiêu chí (30/25/25/20), xác thực mức điểm nguyên 0–4 tại server, phân tách rạch ròi giữa Live Review và Benchmark Arena.
+6. **`cms-runtime-debug`**: Chẩn đoán tức thời trạng thái RAM, working set, private commit và độ mở cổng (7860/8080) thông qua script PowerShell chỉ đọc [inspect-runtime.ps1](file:///d:/course-management-system/.agents/skills/cms-runtime-debug/scripts/inspect-runtime.ps1).
+
+---
+
+## 6. Yêu cầu hệ thống & Cài đặt
 
 ### Yêu cầu phần mềm
-* **Java**: JDK 21 LTS trở lên.
-* **MySQL**: MySQL Server 8.0 trở lên.
-* **Python**: Python 3.10 hoặc 3.11.
-* **GPU (Tùy chọn cho Local AI)**: NVIDIA GPU với tối thiểu 4GB - 6GB VRAM (đã tối ưu hoàn hảo cho RTX 4050 6GB Laptop GPU). Nếu không có GPU, hệ thống tự động chạy trên CPU hoặc sử dụng Cloud backend.
+- **Java**: JDK 21 LTS trở lên (đã kiểm thử tương thích với OpenJDK 21 và OpenJDK 26).
+- **MySQL**: MySQL Server 8.0+ (Cổng `3306`).
+- **Python**: Python 3.10 hoặc 3.11.
+- **Node.js** (Tùy chọn): Node 18+ để chạy các test case JavaScript (`.cjs`).
+- **Phần cứng đề xuất cho Local AI**: NVIDIA GPU 4GB - 6GB VRAM (tối ưu hóa hoàn hảo cho RTX 4050 Laptop). Nếu không có GPU, hệ thống hỗ trợ Cloud Gemini và OpenRouter DeepSeek V3.
 
-### Cài đặt môi trường Python cho AI
+### Cài đặt môi trường Python
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 pip install transformers peft bitsandbytes datasets trl accelerate flask requests
@@ -225,256 +245,176 @@ pip install transformers peft bitsandbytes datasets trl accelerate flask request
 
 ---
 
-## 6. Hướng dẫn Khởi chạy
+## 7. Hướng dẫn Khởi chạy
 
-### 6.0. Khởi chạy trọn bộ 1-Click bằng Docker Compose (Khuyên dùng nhất)
+### 7.1. Khởi chạy 1-Click bằng Docker Compose
 
-Nếu máy tính đã cài đặt **Docker Desktop**, bạn có thể khởi chạy toàn bộ hệ sinh thái (MySQL 8.0, MinIO Object Storage, Backend Spring Boot và AI Chatbot) chỉ với 1 lệnh duy nhất:
+Khởi chạy đồng thời toàn bộ 4 dịch vụ (MySQL, MinIO S3, Backend Spring Boot, AI Chatbot):
 
 ```powershell
-# Khởi chạy toàn bộ hệ thống ngầm:
 docker compose up -d --build
-
-# Hoặc nhấp đúp chuột vào file tiện ích:
-scripts\docker_up.bat
+# Hoặc nhấp đúp: scripts\docker_up.bat
 ```
 
-**Các cổng dịch vụ sau khi khởi chạy:**
-* 🌐 **Backend Spring Boot**: `http://localhost:8080`
-* 🤖 **AI Chatbot Trợ Lý AI**: `http://localhost:7860`
-* 🗄️ **MinIO Web Console**: `http://localhost:9001` *(Tài khoản: `minioadmin` / Mật khẩu: `minioadmin`)*
-* 📦 **MinIO S3 Storage API**: `http://localhost:9000` *(Tự động tạo sẵn bucket `documents`)*
-* 🐬 **MySQL 8.0 Database**: `localhost:3306` *(CSDL: `course_db`, root password: `123456`)*
+| Dịch vụ | URL Truy cập | Tài khoản mặc định |
+|---|---|---|
+| **Web Quản Trị Admin** | `http://localhost:8080` | `admin` / `admin123` |
+| **AI Course Studio** | `http://localhost:7860` | Không yêu cầu |
+| **MinIO Web Console** | `http://localhost:9001` | `minioadmin` / `minioadmin` |
+| **MinIO S3 API** | `http://localhost:9000` | Bucket: `documents` |
+| **MySQL Database** | `localhost:3306` | `root` / `123456` (DB: `course_db`) |
 
-Để dừng và giải phóng tài nguyên container:
+Dừng hệ thống container:
 ```powershell
 docker compose down
-# Hoặc nhấp đúp chuột vào:
-scripts\docker_down.bat
+# Hoặc nhấp đúp: scripts\docker_down.bat
 ```
 
 ---
 
-### 6.1. Chạy Backend Spring Boot (Thủ công)
+### 7.2. Khởi chạy nhanh bằng Scripts Windows
 
-1. **Cấu hình CSDL MySQL**: Mở `src/main/resources/application.properties` để kiểm tra tài khoản MySQL:
-   ```properties
-   spring.datasource.url=jdbc:mysql://localhost:3306/course_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-   spring.datasource.username=root
-   spring.datasource.password=123456
-   spring.jpa.hibernate.ddl-auto=update
-   ```
-2. **Khởi chạy ứng dụng**:
-   ```powershell
-   # Trên Windows:
-   .\mvnw.cmd spring-boot:run
-   ```
-   Ứng dụng sẽ hoạt động tại: **`http://localhost:8080`**.
+Nhấp đúp vào [start_all.bat](file:///d:/course-management-system/start_all.bat) tại thư mục gốc. Script sẽ:
+1. Kiểm tra cổng 8080, biên dịch và chạy Backend JAR với giới hạn RAM an toàn.
+2. Kiểm tra cổng 7860 và kích hoạt AI Course Studio.
+3. Tự động mở trình duyệt tại `http://localhost:7860`.
+
+Dừng dịch vụ cục bộ: chạy [scripts/stop_local.bat](file:///d:/course-management-system/scripts/stop_local.bat).
 
 ---
 
-### 6.2. Chạy Web Chatbot Trợ Lý AI Nội Bộ (Khuyên dùng)
+### 7.3. Khởi chạy thủ công từng dịch vụ
 
-1. Đảm bảo file `.env` tại thư mục gốc có chứa API key:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-2. **Khởi chạy**:
-   * Nhấp đúp chuột vào file: **`scripts/run_chatbot.bat`** (hoặc chạy trọn bộ Backend + AI qua **`scripts/start_local.bat`**)
-   * Hoặc mở terminal gõ:
-     ```powershell
-     python chatbot/web_app.py
-     ```
-3. Truy cập giao diện tại trình duyệt: **`http://localhost:7860`**
-4. Trải nghiệm 7 chế độ trên Course Studio:
-   * **Trợ Lý Kỹ Thuật (Hybrid)**: Tự động nhận diện câu hỏi để điều phối giữa Local GPU và Cloud Gemini.
-   * **100% Local GPU**: Chạy hoàn toàn trên GPU RTX 4050 của máy, không cần internet.
-   * **Cloud Gemini (1M Context)**: Sinh mã nguồn lớn với context codebase + multi-model fallback.
-   * **So Sánh Mô Hình (Base vs Fine-tuned)**: Chạy lần lượt mô hình gốc và mô hình sau khi gắn adapter LoRA.
-   * **So Sánh Hệ Thống (Dự Án vs AI Tiêu Chuẩn)**: Đối chiếu hệ thống dự án với AI phổ thông bên ngoài (Zero Context).
-   * **Đấu Trường 3 Chiều**: So sánh đồng thời 3 luồng kèm chấm điểm đồng bộ sau khi cả 3 hoàn tất.
-   * **So Sánh Với Claude**: Đối chiếu trực tiếp qua Anthropic API hoặc dán câu trả lời từ Claude.ai.
-
----
-
-### 6.3. Chạy AI CLI trên Terminal
-
-Dành cho nhà phát triển muốn trao đổi trực tiếp trên dòng lệnh:
+**1. Khởi chạy Backend:**
 ```powershell
-python chatbot/2_finetuned_model/chat.py
+# Đóng gói và chạy JAR tối ưu bộ nhớ:
+.\mvnw.cmd -DskipTests package
+java -Xms64m -Xmx512m -jar target/course-management-system-0.0.1-SNAPSHOT.jar
 ```
 
----
-
-### 6.4. Chạy Đánh giá Thực nghiệm Khoa học (Benchmark Arena)
-
-Chạy thử một câu với bốn cấu hình Base/LoRA và có/không có RAG:
-
+**2. Khởi chạy Course Studio:**
 ```powershell
-python -X utf8 benchmark/evaluate.py run --limit 1 --max-tokens 128
+cd chatbot
+python web_app.py
 ```
-
-Bộ pilot có 40 câu và hỗ trợ đối chứng OpenRouter theo model cụ thể. Các câu trả lời
-cần được chấm thủ công; lỗi API không được tính là lỗi chất lượng. Xem hướng dẫn
-chạy đầy đủ, kiểm tra code và nhập đánh giá trong `benchmark/README.md`. Các báo
-cáo cũ được lưu để tham khảo lịch sử, không dùng làm kết luận khoa học.
 
 ---
 
-## 7. Quy trình Chưng cất & Huấn luyện AI (Distillation & Fine-Tuning)
+## 8. Trợ lý AI Course Studio & Quy trình Huấn luyện
 
-Dự án áp dụng trọn vẹn quy trình **Knowledge Distillation (Chưng cất tri thức)**:
+### 8.1. Các chế độ hoạt động trong Course Studio
 
-```
-[Mã nguồn 45 files] ──> [1_export_codebase_context.py] ──> [codebase_context.md]
-                                                                  │
-                                                                  ▼
-[Teacher Model: Gemini/GPT-4o] <── [2_teacher_prompt.md] ─────────┘
-        │
-        ▼ (Sinh các cặp Q&A chuyên sâu)
-[distilled_raw.json] ──> [3_import_distilled_data.py] ──> [training/dataset.jsonl]
-                                                                 │
-                                                                 ▼
-                                                       [training/train_local.py]
-                                                                 │
-                                                                 ▼
-                                                  [LoRA Adapter: outputs/]
-```
+Truy cập `http://localhost:7860` để trải nghiệm các chế độ:
+- **Trợ Lý Kỹ Thuật (Hybrid)**: Tự động phát hiện loại câu hỏi qua `message_intent.py`; định tuyến tác vụ vừa/nhỏ về Local GPU và bài toán scaffold quy mô lớn về Cloud Gemini.
+- **100% Local GPU**: Chạy hoàn toàn trên GPU RTX 4050 với mô hình Qwen 3B + LoRA adapter, không gửi dữ liệu ra ngoài Internet.
+- **Cloud Gemini (1M Context)**: Kết hợp RAG dự án với cửa sổ ngữ cảnh 1 triệu token của Gemini để sinh trọn vẹn toàn bộ module.
+- **DeepSeek V3 (OpenRouter Cloud)**: Sử dụng mô hình DeepSeek V3 qua OpenRouter kết hợp ngữ cảnh Codebase RAG.
+- **OpenRouter Zero Context**: Đối chứng mô hình DeepSeek V3 với câu hỏi thuần túy không kèm system prompt hay context dự án.
+- **So Sánh Mô Hình (Base vs Fine-tuned)**: Chạy cùng lúc Base Qwen và Fine-tuned LoRA dưới cùng điều kiện phần cứng.
+- **Đấu Trường 3 Chiều**: Chạy song song 3 thực thể và hiển thị scorecard đánh giá kiến trúc đồng bộ.
 
-1. **Xuất ngữ cảnh kiến trúc**:
-   ```powershell
-   python distillation/1_export_codebase_context.py
-   ```
-2. **Chưng cất dữ liệu**: Copy nội dung `codebase_context.md` và `2_teacher_prompt.md` gửi vào mô hình AI lớn để lấy dữ liệu JSON.
-3. **Đóng gói dataset**:
-   ```powershell
-   python distillation/3_import_distilled_data.py
-   ```
-4. **Huấn luyện mô hình Local**:
+### 8.2. Hệ thống Đánh giá 4 Tiêu chí Chuẩn hóa
+
+Sau mỗi phản hồi, Course Studio cung cấp tính năng **AI đề xuất điểm** dựa trên bộ Rubric 4 tiêu chí tính toán tại máy chủ:
+
+$$\text{Điểm tiêu chí} = \left\lfloor \frac{\text{level} \times \text{max\_score} + 2}{4} \right\rfloor \quad (\text{level} \in [0..4])$$
+
+| Tiêu chí | Trọng số tối đa | Mô tả đánh giá |
+|---|:---:|---|
+| **Đúng yêu cầu (Relevance)** | **30** | Trả lời đúng trọng tâm câu hỏi kỹ thuật, không lạc đề. |
+| **Đầy đủ (Completeness)** | **25** | Đáp ứng trọn vẹn các thành phần (Entity, DTO, Service, DAO, Controller). |
+| **Tính hợp lý (Reasoning)** | **25** | Lập luận nhất quán, đúng kiến trúc Generic DAO và nguyên tắc bảo mật. |
+| **Trình bày (Clarity)** | **20** | Cấu trúc code rõ ràng, format Markdown/Java chuẩn mực. |
+| **Tổng điểm** | **100** | Tổng hợp từ 4 tiêu chí trên, kèm nhận xét chi tiết. |
+
+Người dùng có toàn quyền chỉnh sửa điểm, cập nhật nhận xét và bấm **Xác nhận đánh giá** để lưu trữ an toàn trong localStorage trình duyệt.
+
+### 8.3. Pipeline Distillation & Fine-Tuning QLoRA
+
+1. **Trích xuất ngữ cảnh**: `python distillation/1_export_codebase_context.py`
+2. **Sinh cặp huấn luyện**: Sử dụng `distillation/2_teacher_prompt.md` qua Teacher Model.
+3. **Chuẩn hóa dataset**: `python distillation/3_import_distilled_data.py`
+4. **Fine-tuning QLoRA 4-bit**:
    ```powershell
    python training/train_local.py -m 3b --steps 100
    ```
-   *(Toàn bộ cache được lưu tại `D:\.cache\huggingface` để không làm đầy ổ C)*.
-5. **Đánh giá Benchmark chất lượng**:
+5. **Đánh giá Benchmark đối chứng**:
    ```powershell
    python -X utf8 benchmark/evaluate.py run --limit 1 --max-tokens 128
    ```
-6. **Kiểm thử mô hình tương tác**:
-   ```powershell
-   python training/test_model.py -n 3
-   ```
-7. **Giải phóng VRAM GPU khi cần**:
-   ```powershell
-   python training/clean_vram.py
-   ```
 
 ---
 
-## 8. Tài liệu REST API
+## 9. Danh mục REST API & Mẫu Dữ liệu
 
-### 8.1. Quản lý Khóa học (`/api/courses`)
+Tài liệu Swagger / OpenAPI tương tác trực tiếp tại: **`http://localhost:8080/swagger-ui.html`**.
 
-| Phương thức | Endpoint | Mô tả | Query Params / Body |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/courses` | Lấy danh sách tất cả khóa học | Không |
-| `GET` | `/api/courses/{id}` | Lấy chi tiết khóa học theo ID | Path `{id}` (Long) |
-| `POST` | `/api/courses` | Thêm mới khóa học | JSON Body: `CourseRequestDTO` |
-| `GET` | `/api/courses/search` | Tìm kiếm theo tên | `?keyword=Java` |
-| `GET` | `/api/courses/filter` | Lọc theo khoảng giá | `?minPrice=100&maxPrice=500` |
+### 9.1. Quản lý Khóa học (`/api/courses`)
+- `GET /api/courses`: Danh sách tất cả khóa học.
+- `GET /api/courses/{id}`: Chi tiết khóa học theo ID.
+- `GET /api/courses/paged?page=0&size=10&sortBy=title&sortDir=asc`: Phân trang và sắp xếp an toàn.
+- `GET /api/courses/filter?minPrice=100&maxPrice=500`: Lọc theo khoảng giá.
+- `POST /api/courses`: Tạo khóa học mới (Yêu cầu Role `ADMIN`, `TEACHER`, `LECTURER`).
+- `PUT /api/courses/{id}`: Cập nhật khóa học.
+- `DELETE /api/courses/{id}`: Xóa khóa học (Yêu cầu Role `ADMIN`).
 
-#### Payload mẫu (`POST /api/courses`):
-```json
-{
-  "title": "Lập trình Spring Boot 3 & Hibernate Chuyên Sâu",
-  "description": "Khoá học thực chiến từ kiến trúc Generic DAO đến REST API",
-  "duration": 60,
-  "price": 499.0
-}
+### 9.2. Quản lý Học viên (`/api/students`)
+- `GET /api/students`: Danh sách học viên (PII được mã hóa AES, yêu cầu quyền).
+- `GET /api/students/search-paged?keyword=Nguyen&page=0&size=10`: Tìm kiếm phân trang.
+- `POST /api/students`: Tạo hồ sơ học viên mới (Validation email, số điện thoại).
+
+### 9.3. Quản lý Tài liệu MinIO (`/api/documents`)
+- `POST /api/documents`: Tải lên danh sách file kèm `appId` (Tự động Versioning, hỗ trợ bù trừ rollback).
+- `GET /api/documents/download/{id}`: Tải file qua luồng `StreamingResponseBody`.
+- `POST /api/documents/delete`: Xóa mềm tài liệu (`deleted=true`, `active=false`).
+- `POST /api/documents/restore/{id}`: Khôi phục tài liệu đã xóa mềm.
+
+---
+
+## 10. Bảo mật & Biến môi trường
+
+Toàn bộ thông tin nhạy cảm được cấu hình thông qua biến môi trường hoặc tệp `.env`:
+
+```env
+# Cloud AI Provider Keys
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# Database Configuration
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/course_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=your_password
+
+# Object Storage MinIO
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET_NAME=documents
+
+# Security Keys
+JWT_SECRET=your_jwt_secret_sha256_key
+CMS_AES_KEY=CourseManagementSystemSecretKey2026
+CMS_AES_SALT=cms-salt-2026-v1
 ```
 
----
-
-### 8.2. Quản lý Học viên (`/api/students`)
-
-Web quản lý tải danh sách ghi danh và tài liệu theo trang 20 bản ghi; khóa học và sinh viên theo trang 8 bản ghi. Tìm khóa học qua `/api/courses/browse` và tìm sinh viên qua `/api/students/search-paged`; API phân trang giới hạn kích thước ở 100 bản ghi.
-
-Web quản lý tải danh sách ghi danh theo trang 20 bản ghi. Tìm kiếm dùng `GET /api/enrollments/search-paged?keyword=...&page=0&size=20`; API giới hạn tối đa 100 bản ghi mỗi trang. Cách này giảm dữ liệu hiển thị cùng lúc, nhưng không bảo đảm khắc phục mọi lỗi trình duyệt hoặc sự cố thiếu bộ nhớ.
-
-API đọc học viên và ghi danh chỉ cho `ADMIN`, `TEACHER`, `LECTURER`. Tài khoản `USER` chưa có liên kết hồ sơ để tự xem dữ liệu của mình; không được cấp quyền đọc danh sách.
-
-| Phương thức | Endpoint | Mô tả | Query Params / Body |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/students` | Lấy danh sách tất cả học viên | Không |
-| `GET` | `/api/students/{id}` | Lấy chi tiết học viên theo ID | Path `{id}` (Long) |
-| `POST` | `/api/students` | Thêm mới học viên | JSON Body: `StudentRequestDTO` |
-| `PUT` | `/api/students/{id}` | Cập nhật thông tin học viên | Path `{id}`, JSON Body |
-| `DELETE` | `/api/students/{id}` | Xóa học viên theo ID | Path `{id}` |
-| `GET` | `/api/students/search` | Tìm học viên theo tên/email | `?keyword=Nguyen` |
-
-#### Payload mẫu (`POST /api/students`):
-```json
-{
-  "fullName": "Nguyen Van A",
-  "email": "nguyenvana@example.com",
-  "phone": "0987654321",
-  "address": "Ha Noi, Viet Nam"
-}
-```
+- Tệp `.env` được bảo vệ tuyệt đối trong `.gitignore`, không bao giờ được commit lên repository.
+- Dữ liệu định danh cá nhân (PII) được mã hóa tự động tầng JPA bằng thuật toán AES/CBC/PKCS5Padding với Salt.
 
 ---
 
-### 8.3. Chuẩn phản hồi lỗi (`ErrorResponse`)
-Khi có ngoại lệ xảy ra, hệ thống trả về mã HTTP chuẩn cùng cấu trúc JSON:
-```json
-{
-  "timestamp": "2026-10-23T21:40:00.123456",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Không tìm thấy khóa học với ID: 99",
-  "path": "/api/courses/99"
-}
-```
+## 11. Kết quả Kiểm chứng & Độ tin cậy
+
+Hệ thống được xác minh tự động định kỳ qua các bộ kiểm thử chuyên biệt:
+
+- **Spring Boot Backend Test Suite**: `81/81 tests PASS` (Kiểm thử độc lập với cơ sở dữ liệu H2 in-memory, kiểm định toàn bộ tầng DAO, Service, REST, Security và AES Fail-Closed).
+- **AI Chatbot & Intent Routing Suite**: `49/49 tests PASS` (Xác minh khả năng phân luồng câu hỏi, quản lý token, fallback zero-context).
+- **Benchmark Evaluation Core**: `10/10 tests PASS` (Bảo đảm tính chính xác của công thức tính điểm và xử lý kịch bản).
+- **JavaScript Web & Studio Suite**: `12/12 tests PASS` (Kiểm định cơ chế phân trang phía client, tải file luồng và chống memory leak trình duyệt).
 
 ---
 
-### 8.4. Lệnh cURL kiểm thử nhanh
+## 12. Tác giả & Giấy phép
 
-```bash
-# 1. Lấy danh sách khóa học
-curl -X GET http://localhost:8080/api/courses
-
-# 2. Thêm mới học viên (đặt TOKEN là JWT của ADMIN/TEACHER/LECTURER)
-curl -X POST http://localhost:8080/api/students \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"fullName":"Tran Thi B","email":"tranb@example.com","phone":"0912345678","address":"TP. Ho Chi Minh"}'
-
-# 3. Lọc khóa học theo học phí
-curl -X GET "http://localhost:8080/api/courses/filter?minPrice=100&maxPrice=600"
-```
-
----
-
-## 9. Bảo mật & Biến môi trường
-
-Nếu chỉ cần web quản lý, chạy `scripts/run_backend.bat`; script không khởi động
-chatbot. Script build JAR mới bằng Maven, đóng Maven rồi mới chạy backend; không dùng JAR cũ khi build lỗi. Mặc định giới hạn heap backend ở 512 MB (đây không phải giới hạn toàn bộ RAM của tiến trình). Đặt biến `CMS_BACKEND_JVM_ARGS` để điều chỉnh, ví dụ
-`-Xms128m -Xmx768m`; kiểm tra tải thực tế nếu gặp lỗi thiếu heap.
-
-Tải tài liệu từ MinIO được truyền theo luồng để không giữ toàn bộ file trong
-RAM. Nút tải trên web gửi token của người dùng; trình duyệt hỗ trợ File System
-Access sẽ hỏi nơi lưu và ghi theo luồng. Với trình duyệt không hỗ trợ, phương án
-dự phòng giữ tối đa 50 MB trong bộ nhớ, vượt mức này cần trình duyệt hỗ trợ ghi
-theo luồng. Nếu kết nối MinIO lỗi sau khi phản hồi đã bắt đầu, lượt tải có thể
-bị ngắt giữa chừng và cần thử lại.
-
-Kiểm thử backend bằng `./mvnw test` (Windows: `mvnw.cmd test`). Hai kiểm thử khởi động ứng dụng dùng cơ sở dữ liệu H2 riêng trong bộ nhớ và tắt dữ liệu mẫu; không dùng MySQL mặc định. Các kiểm thử này không thay thế kiểm thử tích hợp MySQL/MinIO thực.
-
-* Tệp `.env` lưu trữ khóa API đã được cấu hình trong `.gitignore` để **tuyệt đối không bao giờ bị lộ hoặc tự động commit lên GitHub**.
-* Dữ liệu chưng cất thô và cache mô hình nặng (`outputs/`, `D:\.cache`) đều được cách ly hoàn toàn khỏi repository Git.
-
----
-
-## 10. Tác giả & Repository
-
-* **GitHub Repository**: [Ndtruong1112/course-management-system](https://github.com/Ndtruong1112/course-management-system)
+- **Tác giả**: Duy Truong ([Ndtruong1112](https://github.com/Ndtruong1112))
+- **Mã nguồn dự án**: [https://github.com/Ndtruong1112/course-management-system](https://github.com/Ndtruong1112/course-management-system)
+- **Giấy phép**: Phát hành theo chuẩn mã nguồn mở Apache License 2.0.

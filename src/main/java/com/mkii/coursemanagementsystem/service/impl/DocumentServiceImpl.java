@@ -37,11 +37,13 @@ public class DocumentServiceImpl implements DocumentService {
     };
 
     // Strict architectural compliance: call ONLY IDocumentDao interface
-    @Autowired
-    private IDocumentDao documentDao;
+    private final IDocumentDao documentDao;
+    private final MinioStorageService minioStorageService;
 
-    @Autowired
-    private MinioStorageService minioStorageService;
+    public DocumentServiceImpl(IDocumentDao documentDao, MinioStorageService minioStorageService) {
+        this.documentDao = documentDao;
+        this.minioStorageService = minioStorageService;
+    }
 
     @Override
     @Transactional

@@ -78,12 +78,17 @@ class ZeroContextRoutesTests(unittest.TestCase):
     def test_live_review_uses_local_base_and_validates_judgement(self):
         with patch.object(web_app, "local_ready", True), patch.object(web_app, "model", Mock()), \
              patch.object(web_app, "generate_local", return_value=(
-                 '{"score": 72, "feedback": "Trả lời đúng trọng tâm nhưng còn thiếu ví dụ."}', 1.1)) as generate:
+                 '{"criteria":[{"id":"relevance","level":3,"reason":"Đúng trọng tâm"},'
+                 '{"id":"completeness","level":2,"reason":"Thiếu ví dụ"},'
+                 '{"id":"reasoning","level":3,"reason":"Hợp lý"},'
+                 '{"id":"clarity","level":3,"reason":"Dễ đọc"}]}', 1.1)) as generate:
             response = self.client.post("/api/evaluate_response", json={"question": "Java là gì?", "answer": "Một ngôn ngữ lập trình."})
         self.assertEqual(response.status_code, 200)
         result = response.get_json()
-        self.assertEqual(result["score"], 72)
-        self.assertIn("thiếu", result["feedback"])
+        self.assertEqual(result["score"], 70)
+        self.assertIn("Thiếu", result["feedback"])
+        self.assertEqual([x["max_score"] for x in result["criteria"]], [30, 25, 25, 20])
+        self.assertEqual(result["rubric_version"], "live-v1")
         self.assertFalse(result["quality_verified"])
         self.assertFalse(generate.call_args.kwargs["use_adapter"])
         self.assertFalse(generate.call_args.kwargs["use_rag"])

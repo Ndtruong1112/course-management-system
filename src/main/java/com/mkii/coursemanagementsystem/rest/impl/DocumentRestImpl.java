@@ -24,8 +24,11 @@ public class DocumentRestImpl implements DocumentRest {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentRestImpl.class);
 
-    @Autowired
-    private DocumentService documentService;
+    private final DocumentService documentService;
+
+    public DocumentRestImpl(DocumentService documentService) {
+        this.documentService = documentService;
+    }
 
     @Override
     public ResponseEntity<List<Document>> createDocument(List<MultipartFile> files, String appId) {

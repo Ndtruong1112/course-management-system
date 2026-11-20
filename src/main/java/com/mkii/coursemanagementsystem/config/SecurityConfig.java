@@ -91,6 +91,10 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
+                .contentTypeOptions(content -> {})
+            )
             .authorizeHttpRequests(auth -> auth
                 // Public giao diện Web tĩnh (Frontend)
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/*.html", "/*.css", "/*.js", "/static/**", "/error").permitAll()

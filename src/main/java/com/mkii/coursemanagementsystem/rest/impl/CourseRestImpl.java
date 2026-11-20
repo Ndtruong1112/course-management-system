@@ -1,6 +1,7 @@
 package com.mkii.coursemanagementsystem.rest.impl;
 
 import com.mkii.coursemanagementsystem.common.ApiConstants;
+import com.mkii.coursemanagementsystem.common.MessageConstants;
 import com.mkii.coursemanagementsystem.dto.CourseRequestDTO;
 import com.mkii.coursemanagementsystem.dto.CourseResponseDTO;
 import com.mkii.coursemanagementsystem.entity.Course;
@@ -24,8 +25,11 @@ public class CourseRestImpl implements CourseRest {
 
     private static final Logger logger = LoggerFactory.getLogger(CourseRestImpl.class);
 
-    @Autowired
-    private CourseService courseService;
+    private final CourseService courseService;
+
+    public CourseRestImpl(CourseService courseService) {
+        this.courseService = courseService;
+    }
 
     @Override
     public ResponseEntity<Course> createCourse(@jakarta.validation.Valid CourseRequestDTO requestDTO) {
@@ -56,7 +60,7 @@ public class CourseRestImpl implements CourseRest {
         try {
             logger.info("Deleting Course: {}", id);
             courseService.delete(id);
-            return ResponseEntity.ok("Course deleted successfully");
+            return ResponseEntity.ok(MessageConstants.COURSE_DELETED_SUCCESS);
         } catch (Exception e) {
             logger.error("Error deleting Course: ", e);
             throw e;
